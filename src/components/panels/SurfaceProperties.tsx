@@ -1,7 +1,8 @@
 "use client";
 
 import { useProjectStore } from "@/store/project-store";
-import { Trash2, Copy, Eye, EyeOff } from "lucide-react";
+import { EffectsPanel } from "./EffectsPanel";
+import { Trash2, Copy, Eye } from "lucide-react";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -244,6 +245,9 @@ export function SurfaceProperties() {
                     </div>
                 </div>
             </div>
+
+            {/* Effects Panel */}
+            <EffectsPanel />
         </aside>
     );
 }
