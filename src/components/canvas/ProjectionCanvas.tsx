@@ -4,9 +4,11 @@ import { Canvas } from "@react-three/fiber";
 import { OrthographicCamera } from "@react-three/drei";
 import { useProjectStore } from "@/store/project-store";
 import { Surface } from "./Surface";
+import { CornerPin } from "./CornerPin";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
+    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const projectSettings = useProjectStore((state) => state.projectSettings);
 
     return (
@@ -38,6 +40,13 @@ export function ProjectionCanvas() {
             {surfaces.map((surface) => (
                 <Surface key={surface.id} surface={surface} />
             ))}
+
+            {/* Render corner-pin controls for selected surfaces */}
+            {surfaces
+                .filter((surface) => selectedIds.includes(surface.id))
+                .map((surface) => (
+                    <CornerPin key={`corner-${surface.id}`} surface={surface} />
+                ))}
         </Canvas>
     );
 }

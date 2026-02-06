@@ -1,13 +1,19 @@
 "use client";
 
 import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
+import { MediaLibrary } from "@/components/panels/MediaLibrary";
+import { SurfaceProperties } from "@/components/panels/SurfaceProperties";
 import { useProjectStore } from "@/store/project-store";
+import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
+import { MousePointer2, Move, Grid3x3 } from "lucide-react";
 
 export default function Home() {
     const addSurface = useProjectStore((state) => state.addSurface);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
     const surfaces = useProjectStore((state) => state.surfaces);
+    const toolMode = useUIStore((state) => state.toolMode);
+    const setToolMode = useUIStore((state) => state.setToolMode);
 
     const handleAddTestSurface = () => {
         // Add a test color media asset
@@ -25,14 +31,7 @@ export default function Home() {
     return (
         <main className="h-screen w-screen overflow-hidden bg-dark-900 flex">
             {/* Left Panel - Media Library */}
-            <aside className="w-80 glass border-r border-white/10 flex flex-col">
-                <div className="p-4 border-b border-white/10">
-                    <h2 className="text-lg font-semibold text-electric-purple">Media Library</h2>
-                </div>
-                <div className="flex-1 p-4">
-                    <p className="text-sm text-muted-foreground">Asset browser coming soon...</p>
-                </div>
-            </aside>
+            <MediaLibrary />
 
             {/* Center - Main Canvas */}
             <div className="flex-1 flex flex-col">
@@ -41,6 +40,41 @@ export default function Home() {
                     <h1 className="text-xl font-bold bg-gradient-to-r from-electric-purple to-electric-cyan bg-clip-text text-transparent">
                         ProjectionX
                     </h1>
+
+                    {/* Tool Mode Switcher */}
+                    <div className="flex gap-1 glass rounded-md p-1">
+                        <button
+                            onClick={() => setToolMode("select")}
+                            className={`p-2 rounded transition-colors ${toolMode === "select"
+                                ? "bg-electric-purple text-white"
+                                : "hover:bg-white/10"
+                                }`}
+                            title="Select (V)"
+                        >
+                            <MousePointer2 className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setToolMode("transform")}
+                            className={`p-2 rounded transition-colors ${toolMode === "transform"
+                                ? "bg-electric-purple text-white"
+                                : "hover:bg-white/10"
+                                }`}
+                            title="Transform (T)"
+                        >
+                            <Move className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={() => setToolMode("corner-pin")}
+                            className={`p-2 rounded transition-colors ${toolMode === "corner-pin"
+                                ? "bg-electric-purple text-white"
+                                : "hover:bg-white/10"
+                                }`}
+                            title="Corner Pin (C)"
+                        >
+                            <Grid3x3 className="w-4 h-4" />
+                        </button>
+                    </div>
+
                     <div className="flex-1" />
                     <div className="flex gap-2">
                         <button
@@ -82,14 +116,7 @@ export default function Home() {
             </div>
 
             {/* Right Panel - Properties */}
-            <aside className="w-80 glass border-l border-white/10 flex flex-col">
-                <div className="p-4 border-b border-white/10">
-                    <h2 className="text-lg font-semibold text-electric-cyan">Properties</h2>
-                </div>
-                <div className="flex-1 p-4">
-                    <p className="text-sm text-muted-foreground">Select a surface to edit properties</p>
-                </div>
-            </aside>
+            <SurfaceProperties />
         </main>
     );
 }
