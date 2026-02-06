@@ -3,6 +3,7 @@
 import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
 import { MediaLibrary } from "@/components/panels/MediaLibrary";
 import { SurfaceProperties } from "@/components/panels/SurfaceProperties";
+import { TimelinePanel } from "@/components/panels/TimelinePanel";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
