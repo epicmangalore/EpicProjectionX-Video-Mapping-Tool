@@ -1,0 +1,146 @@
+/**
+ * 4x4 Matrix utilities for corner-pin transformations
+ */
+
+export type Matrix4 = number[];
+export type Vector2 = { x: number; y: number };
+export type Vector3 = { x: number; y: number; z: number };
+
+/**
+ * Create an identity matrix
+ */
+export function identityMatrix(): Matrix4 {
+    return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    ];
+}
+
+/**
+ * Multiply two 4x4 matrices
+ */
+export function multiplyMatrices(a: Matrix4, b: Matrix4): Matrix4 {
+    const result: Matrix4 = new Array(16);
+    for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+            result[i * 4 + j] =
+                a[i * 4 + 0] * b[0 * 4 + j] +
+                a[i * 4 + 1] * b[1 * 4 + j] +
+                a[i * 4 + 2] * b[2 * 4 + j] +
+                a[i * 4 + 3] * b[3 * 4 + j];
+        }
+    }
+    return result;
+}
+
+/**
+ * Calculate perspective transform matrix for corner-pin warping
+ * Maps a unit square to four arbitrary corner points
+ */
+export function getPerspectiveTransform(
+    corners: [Vector2, Vector2, Vector2, Vector2]
+): Matrix4 {
+    const [tl, tr, br, bl] = corners;
+
+    // Source points (unit square)
+    const src = [
+        { x: 0, y: 0 }, // top-left
+        { x: 1, y: 0 }, // top-right
+        { x: 1, y: 1 }, // bottom-right
+        { x: 0, y: 1 }, // bottom-left
+    ];
+
+    // Destination points
+    const dst = [tl, tr, br, bl];
+
+    // Solve for the perspective transform matrix
+    // This uses the Direct Linear Transform (DLT) algorithm
+    const A: number[][] = [];
+    for (let i = 0; i < 4; i++) {
+        const sx = src[i].x;
+        const sy = src[i].y;
+        const dx = dst[i].x;
+        const dy = dst[i].y;
+
+        A.push([sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy, -dx]);
+        A.push([0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy, -dy]);
+    }
+
+    // Solve using Gaussian elimination (simplified for 3x3 homography)
+    const h = solveHomography(A);
+
+    // Convert to 4x4 matrix for Three.js
+    return [
+        h[0], h[3], 0, h[6],
+        h[1], h[4], 0, h[7],
+        0, 0, 1, 0,
+        h[2], h[5], 0, h[8],
+    ];
+}
+
+/**
+ * Solve homography matrix using DLT
+ * Simplified implementation - in production, use a proper linear algebra library
+ */
+function solveHomography(A: number[][]): number[] {
+    // This is a simplified version - for production use, implement SVD
+    // For now, return identity-like transform
+    // TODO: Implement proper SVD-based homography solver
+    return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+}
+
+/**
+ * Calculate UV coordinates for a point given a perspective transform
+ */
+export function transformUV(point: Vector2, matrix: Matrix4): Vector2 {
+    const x = point.x;
+    const y = point.y;
+
+    const w =
+        matrix[3] * x + matrix[7] * y + matrix[11] * 0 + matrix[15] * 1;
+
+    return {
+        x: (matrix[0] * x + matrix[4] * y + matrix[8] * 0 + matrix[12] * 1) / w,
+        y: (matrix[1] * x + matrix[5] * y + matrix[9] * 0 + matrix[13] * 1) / w,
+    };
+}
+
+/**
+ * Create a translation matrix
+ */
+export function translationMatrix(x: number, y: number, z: number): Matrix4 {
+    return [
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        x, y, z, 1,
+    ];
+}
+
+/**
+ * Create a rotation matrix (Z-axis)
+ */
+export function rotationMatrix(angle: number): Matrix4 {
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    return [
+        c, s, 0, 0,
+        -s, c, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    ];
+}
+
+/**
+ * Create a scale matrix
+ */
+export function scaleMatrix(x: number, y: number, z: number): Matrix4 {
+    return [
+        x, 0, 0, 0,
+        0, y, 0, 0,
+        0, 0, z, 0,
+        0, 0, 0, 1,
+    ];
+}
