@@ -59,6 +59,10 @@ export interface MediaAsset {
     duration?: number; // for videos
     color?: string; // for color fills
     text?: string; // for text overlays
+    fontSize?: number;
+    fontFamily?: string;
+    textColor?: string;
+    textAlign?: string;
 }
 
 export interface Cue {

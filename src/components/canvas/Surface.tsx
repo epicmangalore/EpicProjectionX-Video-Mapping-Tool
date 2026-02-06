@@ -1,26 +1,31 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Surface } from "@/store/project-store";
+import type { Surface as SurfaceType } from "@/store/project-store";
 import { useProjectStore } from "@/store/project-store";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
+import { usePlaybackStore } from "@/store/playback-store";
 
 // Import shaders
 import vertexShader from "@/shaders/surface.vert.glsl";
 import fragmentShader from "@/shaders/surface.frag.glsl";
 
 interface SurfaceProps {
-    surface: Surface;
+    surface: SurfaceType;
 }
 
 export function Surface({ surface }: SurfaceProps) {
     const meshRef = useRef<THREE.Mesh>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
     const selectSurface = useProjectStore((state) => state.selectSurface);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
+    const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
 
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
@@ -31,12 +36,60 @@ export function Surface({ surface }: SurfaceProps) {
         return mediaAssets.find((a) => a.id === surface.mediaId);
     }, [surface.mediaId, mediaAssets]);
 
+    // Manage Video/Webcam elements
+    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+
+    useEffect(() => {
+        if (!mediaAsset) return;
+
+        if (mediaAsset.type === "video" && mediaAsset.url) {
+            const video = document.createElement("video");
+            video.src = mediaAsset.url;
+            video.crossOrigin = "anonymous";
+            video.loop = true;
+            video.muted = true;
+            video.playsInline = true;
+            if (isPlayingGlobal) video.play().catch(() => { });
+            setVideoElement(video);
+            videoRef.current = video;
+
+            return () => {
+                video.pause();
+                video.src = "";
+                setVideoElement(null);
+            };
+        }
+
+        if (mediaAsset.type === "webcam") {
+            let stream: MediaStream | null = null;
+            const startWebcam = async () => {
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const video = document.createElement("video");
+                    video.srcObject = stream;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.muted = true;
+                    setVideoElement(video);
+                    videoRef.current = video;
+                    streamRef.current = stream;
+                } catch (e) {
+                    console.error("Webcam failed", e);
+                }
+            };
+            startWebcam();
+            return () => {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                setVideoElement(null);
+            };
+        }
+    }, [mediaAsset, isPlayingGlobal]);
+
     // Create texture from media
     const texture = useMemo(() => {
         if (!mediaAsset) return null;
 
         if (mediaAsset.type === "color") {
-            // Create a solid color texture
             const canvas = document.createElement("canvas");
             canvas.width = 64;
             canvas.height = 64;
@@ -53,9 +106,30 @@ export function Surface({ surface }: SurfaceProps) {
             return loader.load(mediaAsset.url);
         }
 
-        // TODO: Handle video, webcam, text, shader types
+        if ((mediaAsset.type === "video" || mediaAsset.type === "webcam") && videoElement) {
+            const tex = new THREE.VideoTexture(videoElement);
+            tex.minFilter = THREE.LinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            return tex;
+        }
+
+        if (mediaAsset.type === "text") {
+            const canvas = document.createElement("canvas");
+            canvas.width = 1024;
+            canvas.height = 512;
+            const ctx = canvas.getContext("2d");
+            if (ctx) {
+                ctx.fillStyle = mediaAsset.color || "#ffffff";
+                ctx.font = "bold 80px sans-serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(mediaAsset.name || "Text", 512, 256);
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
         return null;
-    }, [mediaAsset]);
+    }, [mediaAsset, videoElement]);
 
     // Create shader material with uniforms
     const shaderMaterial = useMemo(() => {
@@ -76,7 +150,7 @@ export function Surface({ surface }: SurfaceProps) {
                         effects.colorTint.r,
                         effects.colorTint.g,
                         effects.colorTint.b
-                    ),
+                    )
                 },
                 uBlurAmount: { value: effects.blur },
                 uChromaticAberration: { value: effects.chromaticAberration },
@@ -99,7 +173,6 @@ export function Surface({ surface }: SurfaceProps) {
         meshRef.current.rotation.z = surface.rotation;
         meshRef.current.scale.set(surface.scale.x, surface.scale.y, 1);
 
-        // Update shader uniforms
         if (shaderMaterial) {
             shaderMaterial.uniforms.uOpacity.value = surface.opacity;
             shaderMaterial.uniforms.uBrightness.value = effects.brightness;
@@ -122,9 +195,7 @@ export function Surface({ surface }: SurfaceProps) {
         selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
     };
 
-    if (!shaderMaterial) {
-        return null;
-    }
+    if (!shaderMaterial) return null;
 
     return (
         <>
@@ -132,8 +203,6 @@ export function Surface({ surface }: SurfaceProps) {
                 <planeGeometry args={[1, 1, 1, 1]} />
                 <primitive object={shaderMaterial} attach="material" />
             </mesh>
-
-            {/* Selection outline */}
             {isSelected && (
                 <mesh position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}>
                     <lineSegments>

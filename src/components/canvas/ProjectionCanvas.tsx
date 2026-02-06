@@ -5,6 +5,7 @@ import { OrthographicCamera } from "@react-three/drei";
 import { useProjectStore } from "@/store/project-store";
 import { Surface } from "./Surface";
 import { CornerPin } from "./CornerPin";
+import { MeshWarp } from "./MeshWarp";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -41,11 +42,14 @@ export function ProjectionCanvas() {
                 <Surface key={surface.id} surface={surface} />
             ))}
 
-            {/* Render corner-pin controls for selected surfaces */}
+            {/* Render corner-pin or mesh-warp controls for selected surfaces */}
             {surfaces
                 .filter((surface) => selectedIds.includes(surface.id))
                 .map((surface) => (
-                    <CornerPin key={`corner-${surface.id}`} surface={surface} />
+                    <group key={`controls-${surface.id}`}>
+                        <CornerPin surface={surface} />
+                        <MeshWarp surface={surface} />
+                    </group>
                 ))}
         </Canvas>
     );

@@ -51,8 +51,6 @@ export function TransformControls({ surface, meshRef }: TransformControlsProps) 
             ref={controlsRef}
             object={meshRef.current}
             mode="translate"
-            camera={camera}
-            gl={gl}
         />
     );
 }
