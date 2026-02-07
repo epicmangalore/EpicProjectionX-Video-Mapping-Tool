@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useMemo, useEffect, useState } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Surface as SurfaceType } from "@/store/project-store";
 import { useProjectStore, type Vector2 } from "@/store/project-store";
@@ -383,6 +383,57 @@ export function Surface({ surface }: SurfaceProps) {
         selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
     };
 
+    // Add drag functionality for select mode
+    const updateSurface = useProjectStore((state) => state.updateSurface);
+    const { camera, gl } = useThree();
+
+    const handlePointerDown = (e: any) => {
+        if (surface.locked || toolMode !== "select") return;
+
+        e.stopPropagation();
+
+        // Select the surface first
+        selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
+
+        const rect = gl.domElement.getBoundingClientRect();
+        const startX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const startY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+        const startVector = new THREE.Vector3(startX, startY, 0.5);
+        startVector.unproject(camera);
+
+        const startPosX = surface.position.x;
+        const startPosY = surface.position.y;
+
+        const onPointerMove = (moveEvent: PointerEvent) => {
+            const x = ((moveEvent.clientX - rect.left) / rect.width) * 2 - 1;
+            const y = -((moveEvent.clientY - rect.top) / rect.height) * 2 + 1;
+
+            const vector = new THREE.Vector3(x, y, 0.5);
+            vector.unproject(camera);
+
+            const deltaX = vector.x - startVector.x;
+            const deltaY = vector.y - startVector.y;
+
+            updateSurface(surface.id, {
+                position: {
+                    x: startPosX + deltaX,
+                    y: startPosY + deltaY
+                }
+            });
+        };
+
+        const onPointerUp = () => {
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+            gl.domElement.style.cursor = "default";
+        };
+
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+        gl.domElement.style.cursor = "move";
+    };
+
     // Fallback material if shader/texture is not ready
     const fallbackMaterial = useMemo(() => new THREE.MeshBasicMaterial({
         color: "#ff00ff",
@@ -398,6 +449,7 @@ export function Surface({ surface }: SurfaceProps) {
             <mesh
                 ref={meshRef}
                 onClick={handleClick}
+                onPointerDown={handlePointerDown}
                 onPointerOver={() => setHovered(true)}
                 onPointerOut={() => setHovered(false)}
             >
