@@ -35,7 +35,6 @@ export default function Home() {
     // Initialize Global Hotkeys
     useHotkeys([
         { key: APP_HOTKEYS.SELECT_MODE, callback: () => setToolMode("select") },
-        { key: APP_HOTKEYS.TRANSFORM_MODE, callback: () => setToolMode("transform") },
         { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
         { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
         { key: APP_HOTKEYS.PEN_MODE, callback: () => setToolMode("pen") },
@@ -78,22 +77,6 @@ export default function Home() {
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent>Select (V)</TooltipContent>
-                            </Tooltip>
-
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={() => setToolMode("transform")}
-                                        className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "transform"
-                                            ? "bg-zinc-800 text-white shadow-sm"
-                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
-                                            }`}
-                                    >
-                                        <Move className="w-3 h-3" />
-                                        <span className="hidden lg:inline">Transform</span>
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent>Transform (T)</TooltipContent>
                             </Tooltip>
 
                             <Tooltip>

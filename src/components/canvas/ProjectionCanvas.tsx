@@ -9,6 +9,7 @@ import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { CanvasFrame } from "./CanvasFrame";
+import { SpacebarPan } from "./SpacebarPan";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -66,11 +67,14 @@ export function ProjectionCanvas() {
                 enablePan={true}
                 enableZoom={true}
                 mouseButtons={{
-                    LEFT: undefined, // Create/Select logic handles left click
+                    LEFT: undefined, // Surface selection/dragging handles left click
                     MIDDLE: THREE.MOUSE.PAN,
                     RIGHT: THREE.MOUSE.PAN
                 }}
             />
+
+            {/* Spacebar panning */}
+            <SpacebarPan />
         </Canvas>
     );
 }

@@ -437,9 +437,9 @@ export function Surface({ surface }: SurfaceProps) {
     // Fallback material if shader/texture is not ready
     const fallbackMaterial = useMemo(() => new THREE.MeshBasicMaterial({
         color: "#ff00ff",
-        wireframe: true,
+        wireframe: false,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.3
     }), []);
 
     if (!surface.visible) return null;
