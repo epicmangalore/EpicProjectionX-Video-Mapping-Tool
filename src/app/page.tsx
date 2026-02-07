@@ -159,6 +159,7 @@ export default function Home() {
                         </button>
 
                         <button
+                            onClick={() => setShowSettings(!showSettings)}
                             className={`p-1.5 rounded transition-all ${showSettings
                                 ? "bg-zinc-800 text-white"
                                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
@@ -175,6 +176,7 @@ export default function Home() {
                         )}
 
                         <button
+                            onClick={openOutputWindow}
                             className="ml-2 px-3 py-1.5 text-xs font-bold bg-zinc-100 text-zinc-900 hover:bg-white rounded transition-all shadow-sm active:scale-95 border border-white/5"
                             data-tour="launch-output"
                         >

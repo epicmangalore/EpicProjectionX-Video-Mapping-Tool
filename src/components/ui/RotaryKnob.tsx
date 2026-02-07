@@ -32,15 +32,21 @@ export function RotaryKnob({
     const rotation = -135 + (percentage * 270);
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         setIsDragging(true);
         startY.current = e.clientY;
         startValue.current = value;
         document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
     };
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isDragging) return;
+
+            e.preventDefault();
+            e.stopPropagation();
 
             const deltaY = startY.current - e.clientY;
             // Sensitivity: full range in 200px drag
@@ -55,24 +61,32 @@ export function RotaryKnob({
             }
 
             newValue = Math.max(min, Math.min(max, newValue));
-            onChange(newValue);
+
+            // Only call onChange if value actually changed
+            if (newValue !== value) {
+                onChange(newValue);
+            }
         };
 
-        const handleMouseUp = () => {
+        const handleMouseUp = (e: MouseEvent) => {
+            e.preventDefault();
             setIsDragging(false);
             document.body.style.cursor = 'default';
+            document.body.style.userSelect = '';
         };
 
         if (isDragging) {
-            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mousemove', handleMouseMove, { passive: false });
             window.addEventListener('mouseup', handleMouseUp);
         }
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'default';
+            document.body.style.userSelect = '';
         };
-    }, [isDragging, min, max, onChange, step]);
+    }, [isDragging, min, max, onChange, step, value]);
 
     // SVG Geometry
     const radius = size * 0.4;
