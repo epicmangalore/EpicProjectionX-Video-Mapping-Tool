@@ -256,7 +256,7 @@ export function Surface({ surface }: SurfaceProps) {
         return geometry;
     }, [surface.corners, isQuad, surface.meshWarp]);
 
-    // Create shader material with uniforms
+    // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;
 
@@ -300,7 +300,7 @@ export function Surface({ surface }: SurfaceProps) {
         });
 
         return mat;
-    }, [texture, warpMatrix, effects, projectSettings]);
+    }, [texture]); // Only recreate if texture changes
 
     // Update mesh geometry for MeshWarp
     useEffect(() => {
@@ -365,28 +365,45 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if (shaderMaterial) {
-            // Always copy warpMatrix to shader.
-            // This allows for 'Source' (Input) mapping even on distorted MeshWarp grids.
-            shaderMaterial.uniforms.uWarpMatrix.value.copy(warpMatrix);
+            // Efficiently update uniforms without recompiling shader
+            const uniforms = shaderMaterial.uniforms;
 
-            shaderMaterial.uniforms.uOpacity.value = reactiveOpacity;
-            shaderMaterial.uniforms.uBrightness.value = effects.brightness;
-            shaderMaterial.uniforms.uContrast.value = effects.contrast;
-            shaderMaterial.uniforms.uSaturation.value = effects.saturation;
-            shaderMaterial.uniforms.uHue.value = effects.hue;
-            shaderMaterial.uniforms.uColorTint.value.set(
-                effects.colorTint.r,
-                effects.colorTint.g,
-                effects.colorTint.b
-            );
-            shaderMaterial.uniforms.uBlurAmount.value = reactiveBlur;
-            shaderMaterial.uniforms.uChromaticAberration.value = reactiveChromatic;
-            shaderMaterial.uniforms.uRGBShift.value = effects.rgbShift;
+            // Allow for optimized updates by modifying uniform values directly
+            if (uniforms.uWarpMatrix) uniforms.uWarpMatrix.value.copy(warpMatrix);
+            if (uniforms.uOpacity) uniforms.uOpacity.value = reactiveOpacity;
+            if (uniforms.uBrightness) uniforms.uBrightness.value = effects.brightness;
+            if (uniforms.uContrast) uniforms.uContrast.value = effects.contrast;
+            if (uniforms.uSaturation) uniforms.uSaturation.value = effects.saturation;
+            if (uniforms.uHue) uniforms.uHue.value = effects.hue;
+
+            if (uniforms.uColorTint) {
+                uniforms.uColorTint.value.set(
+                    effects.colorTint.r,
+                    effects.colorTint.g,
+                    effects.colorTint.b
+                );
+            }
+
+            if (uniforms.uBlurAmount) uniforms.uBlurAmount.value = reactiveBlur;
+            if (uniforms.uChromaticAberration) uniforms.uChromaticAberration.value = reactiveChromatic;
+            if (uniforms.uRGBShift) uniforms.uRGBShift.value = effects.rgbShift;
+
+            // Update Blend Uniforms
+            if (uniforms.uBlendZones) {
+                uniforms.uBlendZones.value.set(
+                    effects.blendLeft,
+                    effects.blendRight,
+                    effects.blendTop,
+                    effects.blendBottom
+                );
+            }
+            if (uniforms.uBlendFeather) uniforms.uBlendFeather.value = effects.blendFeather;
+            if (uniforms.uBlendGamma) uniforms.uBlendGamma.value = effects.blendGamma;
 
             // Global controls
-            shaderMaterial.uniforms.uMasterOpacity.value = projectSettings.masterOpacity;
-            shaderMaterial.uniforms.uMasterBrightness.value = projectSettings.masterBrightness;
-            shaderMaterial.uniforms.uBlackout.value = projectSettings.blackout ? 1.0 : 0.0;
+            if (uniforms.uMasterOpacity) uniforms.uMasterOpacity.value = projectSettings.masterOpacity;
+            if (uniforms.uMasterBrightness) uniforms.uMasterBrightness.value = projectSettings.masterBrightness;
+            if (uniforms.uBlackout) uniforms.uBlackout.value = projectSettings.blackout ? 1.0 : 0.0;
         }
     });
 

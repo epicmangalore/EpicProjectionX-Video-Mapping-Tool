@@ -52,28 +52,30 @@ export function LeftSidebar() {
     return (
         <div className="w-80 h-full bg-zinc-900 border-r border-white/5 flex flex-col font-sans relative">
 
-            {/* Tabs Header */}
-            <div className="flex border-b border-white/5">
+            {/* Tabs Header - Simplified */}
+            <div className="flex border-b border-white/5 bg-zinc-900/50">
                 <button
                     onClick={() => setActiveTab("layers")}
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === "layers"
-                        ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "layers"
+                        ? "text-white"
+                        : "text-zinc-500 hover:text-zinc-300"
                         }`}
                 >
-                    <Layers className="w-4 h-4" />
-                    LAYERS
+                    <Layers className="w-3.5 h-3.5" />
+                    Layers
+                    {activeTab === "layers" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-cyan" />}
                 </button>
                 <button
                     onClick={() => setActiveTab("assets")}
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === "assets"
-                        ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "assets"
+                        ? "text-white"
+                        : "text-zinc-500 hover:text-zinc-200 hover:text-zinc-300"
                         }`}
                     data-tour="assets-tab"
                 >
-                    <Image className="w-4 h-4" />
-                    ASSETS
+                    <Image className="w-3.5 h-3.5" />
+                    Assets
+                    {activeTab === "assets" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
             </div>
 

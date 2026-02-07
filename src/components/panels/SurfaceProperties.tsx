@@ -41,19 +41,16 @@ export function SurfaceProperties() {
 
     if (!selectedSurface) {
         return (
-            <aside className="w-80 h-full bg-zinc-900 border-l border-white/5 flex flex-col">
-                <div className="px-4 py-3 border-b border-white/5 bg-zinc-900">
-                    <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Properties</h2>
+            <aside className="w-80 h-full bg-zinc-950 border-l border-white/5 flex flex-col">
+                <div className="panel-header">
+                    Properties
                 </div>
-                <div className="flex-1 p-4 flex items-center justify-center">
+                <div className="flex-1 p-4 flex items-center justify-center opacity-50">
                     <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-800 flex items-center justify-center">
-                            <Eye className="w-6 h-6 text-zinc-600" />
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/5 flex items-center justify-center">
+                            <MousePointer2 className="w-5 h-5 text-zinc-600" />
                         </div>
-                        <p className="text-sm text-zinc-500">No surface selected</p>
-                        <p className="text-xs text-zinc-600 mt-1">
-                            Click a surface to edit properties
-                        </p>
+                        <p className="text-sm text-zinc-500">Select a surface</p>
                     </div>
                 </div>
             </aside>
@@ -61,9 +58,25 @@ export function SurfaceProperties() {
     }
 
     return (
-        <aside className="w-80 h-full bg-zinc-900 border-l border-white/5 flex flex-col font-sans">
-            <div className="px-4 py-3 border-b border-white/5 bg-zinc-900">
-                <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Properties</h2>
+        <aside className="w-80 h-full bg-zinc-950 border-l border-white/5 flex flex-col font-sans">
+            <div className="panel-header">
+                Properties
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => duplicateSurface(selectedSurface.id)}
+                        className="p-1.5 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
+                        title="Duplicate"
+                    >
+                        <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        onClick={() => deleteSurface(selectedSurface.id)}
+                        className="p-1.5 hover:bg-red-500/10 rounded text-zinc-400 hover:text-red-400 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
@@ -192,11 +205,11 @@ export function SurfaceProperties() {
                     Fit to Media
                 </button>
 
-                {/* Transform Deck */}
-                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
-                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transformation</h3>
-                        <div className="w-2 h-2 rounded-full bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.5)]"></div>
+                {/* Transform Deck - simplified */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Transform</h3>
+                        <div className="h-px bg-white/5 flex-1 ml-3" />
                     </div>
 
                     <div className="grid grid-cols-3 gap-0 justify-items-center items-end">
@@ -445,10 +458,10 @@ export function SurfaceProperties() {
                 })()}
 
                 {/* Appearance Deck */}
-                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
-                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
-                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Appearance</h3>
-                        <div className="w-2 h-2 rounded-full bg-electric-purple shadow-[0_0_5px_rgba(180,0,255,0.5)]"></div>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Appearance</h3>
+                        <div className="h-px bg-white/5 flex-1 ml-3" />
                     </div>
 
                     <div className="flex gap-4 justify-center">
@@ -675,8 +688,8 @@ export function SurfaceProperties() {
                 </div>
 
                 {/* Border & Glow Deck */}
-                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
-                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                <div className="bg-zinc-900/30 border border-white/5 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between p-3 border-b border-white/5 pb-2">
                         <div className="flex items-center gap-2">
                             <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Border & Glow</h3>
                             <button
