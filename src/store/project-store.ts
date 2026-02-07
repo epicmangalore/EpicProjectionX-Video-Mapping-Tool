@@ -214,8 +214,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             corners: [
                 { x: -0.5, y: 0.5 },  // TL
                 { x: 0.5, y: 0.5 },   // TR
-                { x: 0.5, y: -0.5 },  // BR
                 { x: -0.5, y: -0.5 }, // BL
+                { x: 0.5, y: -0.5 },  // BR
             ],
             meshWarp: null,
             effects: [],
@@ -416,8 +416,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                     corners: [
                         { x: -0.5, y: 0.5 },  // TL
                         { x: 0.5, y: 0.5 },   // TR
-                        { x: 0.5, y: -0.5 },  // BR
                         { x: -0.5, y: -0.5 }, // BL
+                        { x: 0.5, y: -0.5 },  // BR
                     ],
                 };
             }),

@@ -46,10 +46,10 @@ export function getPerspectiveTransform(
 
     // Source points (matching Three.js PlaneGeometry TL, TR, BR, BL)
     const src = [
-        { x: -0.5, y: 0.5 },  // top-left
-        { x: 0.5, y: 0.5 },   // top-right
-        { x: 0.5, y: -0.5 },  // bottom-right
-        { x: -0.5, y: -0.5 }, // bottom-left
+        { x: -0.5, y: 0.5 },  // top-left (0)
+        { x: 0.5, y: 0.5 },   // top-right (1)
+        { x: -0.5, y: -0.5 }, // bottom-left (2)
+        { x: 0.5, y: -0.5 },  // bottom-right (3)
     ];
 
     // Destination points

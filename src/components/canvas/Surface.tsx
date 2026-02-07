@@ -183,8 +183,8 @@ export function Surface({ surface }: SurfaceProps) {
 
         const shape = new THREE.Shape();
         surface.corners.forEach((p, i) => {
-            if (i === 0) shape.moveTo(p.x, -p.y);
-            else shape.lineTo(p.x, -p.y);
+            if (i === 0) shape.moveTo(p.x, p.y);
+            else shape.lineTo(p.x, p.y);
         });
         shape.closePath();
 
@@ -212,9 +212,8 @@ export function Surface({ surface }: SurfaceProps) {
             const y = posAttribute.getY(i);
 
             // Map to 0-1 range based on bounding box
-            // Note: Y is flipped in geometry, so we need to account for that
             const u = (x - minX) / width;
-            const v = 1 - ((y + maxY) / height); // Flip V coordinate
+            const v = (y - minY) / height; // Use natural Y mapping
 
             uvAttribute.setXY(i, u, v);
         }
