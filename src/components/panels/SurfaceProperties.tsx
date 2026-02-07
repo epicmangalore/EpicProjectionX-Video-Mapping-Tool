@@ -264,31 +264,6 @@ export function SurfaceProperties() {
 
 
                     <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
-                        {/* Horizontal Alignment */}
-                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
-                            <button
-                                onClick={() => alignSurfaces("left")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Left"
-                            >
-                                <AlignStartHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => alignSurfaces("center")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Center"
-                            >
-                                <AlignCenterHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => alignSurfaces("right")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Right"
-                            >
-                                <AlignEndHorizontal className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
                         {/* Vertical Alignment */}
                         <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
                             <button
@@ -311,6 +286,31 @@ export function SurfaceProperties() {
                                 title="Align Bottom"
                             >
                                 <AlignEndVertical className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Horizontal Alignment */}
+                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
+                            <button
+                                onClick={() => alignSurfaces("left")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Left"
+                            >
+                                <AlignStartHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("center")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Center"
+                            >
+                                <AlignCenterHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("right")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Right"
+                            >
+                                <AlignEndHorizontal className="w-3.5 h-3.5" />
                             </button>
                         </div>
                     </div>
