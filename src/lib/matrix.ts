@@ -81,14 +81,56 @@ export function getPerspectiveTransform(
 }
 
 /**
- * Solve homography matrix using DLT
- * Simplified implementation - in production, use a proper linear algebra library
+ * Solve homography matrix using DLT and Gaussian elimination
+ * Solution for Ah = 0 where A is the 8x9 matrix from getPerspectiveTransform
  */
 function solveHomography(A: number[][]): number[] {
-    // This is a simplified version - for production use, implement SVD
-    // For now, return identity-like transform
-    // TODO: Implement proper SVD-based homography solver
-    return [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    // Add the constraint h9 = 1 to turn it into an 8x8 system Ax = B
+    // We solve for h1-h8 and set h9 = 1
+    const B = A.map(row => -row[8]);
+    const matrix = A.map(row => row.slice(0, 8));
+
+    // Gaussian elimination with pivoting
+    const n = 8;
+    for (let i = 0; i < n; i++) {
+        // Pivot selection
+        let max = Math.abs(matrix[i][i]);
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+            if (Math.abs(matrix[k][i]) > max) {
+                max = Math.abs(matrix[k][i]);
+                maxRow = k;
+            }
+        }
+
+        // Swap rows
+        [matrix[i], matrix[maxRow]] = [matrix[maxRow], matrix[i]];
+        [B[i], B[maxRow]] = [B[maxRow], B[i]];
+
+        // Eliminate
+        for (let k = i + 1; k < n; k++) {
+            const c = -matrix[k][i] / matrix[i][i];
+            for (let j = i; j < n; j++) {
+                if (i === j) {
+                    matrix[k][j] = 0;
+                } else {
+                    matrix[k][j] += c * matrix[i][j];
+                }
+            }
+            B[k] += c * B[i];
+        }
+    }
+
+    // Back substitution
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+        x[i] = B[i] / matrix[i][i];
+        for (let k = i - 1; k >= 0; k--) {
+            B[k] -= matrix[k][i] * x[i];
+        }
+    }
+
+    return [...x, 1]; // [h1, h2, h3, h4, h5, h6, h7, h8, 1]
 }
 
 /**

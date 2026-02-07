@@ -2,7 +2,10 @@
 
 import { useProjectStore } from "@/store/project-store";
 import { EffectsPanel } from "./EffectsPanel";
-import { Trash2, Copy, Eye } from "lucide-react";
+import { AudioReactivity } from "./AudioReactivity";
+import { EdgeBlendingControls } from "./EdgeBlendingControls";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw } from "lucide-react";
+import { MasterControls } from "./MasterControls";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -10,6 +13,9 @@ export function SurfaceProperties() {
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
     const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
+    const addCorner = useProjectStore((state) => state.addCorner);
+    const removeCorner = useProjectStore((state) => state.removeCorner);
+    const resetCorners = useProjectStore((state) => state.resetCorners);
 
     const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
 
@@ -244,10 +250,96 @@ export function SurfaceProperties() {
                         </div>
                     </div>
                 </div>
+
+                {/* Polygon Mapping */}
+                <div className="border-t border-white/5 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold">Polygon Mapping</h3>
+                        <div className="flex gap-1">
+                            <button
+                                onClick={() => {
+                                    const sumX = selectedSurface.corners.reduce((sum, p) => sum + p.x, 0);
+                                    const sumY = selectedSurface.corners.reduce((sum, p) => sum + p.y, 0);
+                                    const avgX = sumX / selectedSurface.corners.length;
+                                    const avgY = sumY / selectedSurface.corners.length;
+                                    addCorner(selectedSurface.id, selectedSurface.corners.length, { x: avgX, y: avgY });
+                                }}
+                                className="p-1.5 rounded bg-white/5 hover:bg-electric-purple/20 text-white/60 hover:text-electric-purple transition-all"
+                                title="Add Corner"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => removeCorner(selectedSurface.id, selectedSurface.corners.length - 1)}
+                                disabled={selectedSurface.corners.length <= 3}
+                                className="p-1.5 rounded bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-500 transition-all disabled:opacity-30 disabled:hover:bg-white/5"
+                                title="Remove Last Corner"
+                            >
+                                <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => resetCorners(selectedSurface.id)}
+                                className="p-1.5 rounded bg-white/5 hover:bg-electric-cyan/20 text-white/60 hover:text-electric-cyan transition-all"
+                                title="Reset to Quad"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                        {selectedSurface.corners.map((corner, idx) => (
+                            <div key={idx} className="flex items-center gap-2 group">
+                                <span className="text-[10px] text-muted-foreground w-4 font-mono">{idx}</span>
+                                <div className="grid grid-cols-2 gap-2 flex-1">
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-dark-800 border border-white/5 rounded">
+                                        <span className="text-[10px] text-white/30 font-mono">X</span>
+                                        <input
+                                            type="number"
+                                            value={corner.x.toFixed(3)}
+                                            onChange={(e) => {
+                                                const newCorners = [...selectedSurface.corners];
+                                                newCorners[idx] = { ...newCorners[idx], x: parseFloat(e.target.value) || 0 };
+                                                updateSurface(selectedSurface.id, { corners: newCorners });
+                                            }}
+                                            step="0.001"
+                                            className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-dark-800 border border-white/5 rounded">
+                                        <span className="text-[10px] text-white/30 font-mono">Y</span>
+                                        <input
+                                            type="number"
+                                            value={corner.y.toFixed(3)}
+                                            onChange={(e) => {
+                                                const newCorners = [...selectedSurface.corners];
+                                                newCorners[idx] = { ...newCorners[idx], y: parseFloat(e.target.value) || 0 };
+                                                updateSurface(selectedSurface.id, { corners: newCorners });
+                                            }}
+                                            step="0.001"
+                                            className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Edge Blending */}
+                <EdgeBlendingControls surfaceId={selectedSurface.id} />
+
+                {/* Effects Panel */}
+                <EffectsPanel />
+
+                {/* Audio Reactivity */}
+                <AudioReactivity />
             </div>
 
-            {/* Effects Panel */}
-            <EffectsPanel />
+            {/* Global Master Controls */}
+            <div className="border-t border-white/10">
+                <MasterControls />
+            </div>
         </aside>
     );
 }

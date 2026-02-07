@@ -16,9 +16,21 @@ export interface Surface {
     zIndex: number;
     mediaId: string | null;
     blendMode: BlendMode;
-    corners: [Vector2, Vector2, Vector2, Vector2]; // TL, TR, BR, BL
+    corners: Vector2[]; // Support N-point polygons
     meshWarp: MeshWarpData | null;
     effects: Effect[];
+    visible: boolean;
+    locked: boolean;
+    audioMappings: AudioMapping[];
+}
+
+export interface AudioMapping {
+    id: string;
+    band: "bass" | "mid" | "treble" | "volume";
+    property: string; // e.g., "opacity", "blur", "chromatic"
+    min: number;
+    max: number;
+    enabled: boolean;
 }
 
 export interface MeshWarpData {
@@ -78,6 +90,12 @@ export interface ProjectSettings {
     resolution: { width: number; height: number };
     fps: number;
     backgroundColor: string;
+    masterOpacity: number;
+    masterBrightness: number;
+    blackout: boolean;
+    snapToGrid: boolean;
+    snapToSurfaces: boolean;
+    snapThreshold: number;
 }
 
 interface ProjectStore {
@@ -87,12 +105,16 @@ interface ProjectStore {
     cues: Cue[];
     projectSettings: ProjectSettings;
     selectedSurfaceIds: string[];
+    currentProjectId: number | null;
 
     // Surface actions
     addSurface: (mediaId?: string) => void;
     updateSurface: (id: string, updates: Partial<Surface>) => void;
     deleteSurface: (id: string) => void;
     duplicateSurface: (id: string) => void;
+    toggleVisibility: (id: string) => void;
+    toggleLock: (id: string) => void;
+    reorderSurface: (id: string, newIndex: number) => void;
 
     // Selection actions
     selectSurface: (id: string, multi?: boolean) => void;
@@ -109,7 +131,22 @@ interface ProjectStore {
 
     // Project actions
     updateProjectSettings: (settings: Partial<ProjectSettings>) => void;
+    addCorner: (surfaceId: string, index: number, point: Vector2) => void;
+    removeCorner: (surfaceId: string, index: number) => void;
+    resetCorners: (surfaceId: string) => void;
     resetProject: () => void;
+
+    // History
+    history: HistoryState[];
+    future: HistoryState[];
+    undo: () => void;
+    redo: () => void;
+    saveHistory: () => void;
+}
+
+interface HistoryState {
+    surfaces: Surface[];
+    projectSettings: ProjectSettings;
 }
 
 const defaultProjectSettings: ProjectSettings = {
@@ -117,6 +154,12 @@ const defaultProjectSettings: ProjectSettings = {
     resolution: { width: 1920, height: 1080 },
     fps: 60,
     backgroundColor: "#0a0a0f",
+    masterOpacity: 1,
+    masterBrightness: 1,
+    blackout: false,
+    snapToGrid: true,
+    snapToSurfaces: true,
+    snapThreshold: 0.05,
 };
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({
@@ -126,9 +169,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     cues: [],
     projectSettings: defaultProjectSettings,
     selectedSurfaceIds: [],
+    currentProjectId: null,
 
     // Surface actions
     addSurface: (mediaId) => {
+        get().saveHistory();
         const newSurface: Surface = {
             id: generateId(),
             name: `Surface ${get().surfaces.length + 1}`,
@@ -147,6 +192,9 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             ],
             meshWarp: null,
             effects: [],
+            visible: true,
+            locked: false,
+            audioMappings: [],
         };
         set((state) => ({
             surfaces: [...state.surfaces, newSurface],
@@ -163,6 +211,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     },
 
     deleteSurface: (id) => {
+        get().saveHistory();
         set((state) => ({
             surfaces: state.surfaces.filter((s) => s.id !== id),
             selectedSurfaceIds: state.selectedSurfaceIds.filter((sid) => sid !== id),
@@ -170,6 +219,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     },
 
     duplicateSurface: (id) => {
+        get().saveHistory();
         const surface = get().surfaces.find((s) => s.id === id);
         if (!surface) return;
 
@@ -188,6 +238,41 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             surfaces: [...state.surfaces, newSurface],
             selectedSurfaceIds: [newSurface.id],
         }));
+    },
+
+    toggleVisibility: (id) => {
+        set((state) => ({
+            surfaces: state.surfaces.map((s) =>
+                s.id === id ? { ...s, visible: !s.visible } : s
+            ),
+        }));
+    },
+
+    toggleLock: (id) => {
+        set((state) => ({
+            surfaces: state.surfaces.map((s) =>
+                s.id === id ? { ...s, locked: !s.locked } : s
+            ),
+        }));
+    },
+
+    reorderSurface: (id, newIndex) => {
+        set((state) => {
+            const currentSurfaces = [...state.surfaces].sort((a, b) => a.zIndex - b.zIndex);
+            const index = currentSurfaces.findIndex(s => s.id === id);
+            if (index === -1) return state;
+
+            const [removed] = currentSurfaces.splice(index, 1);
+            currentSurfaces.splice(newIndex, 0, removed);
+
+            // Re-assign z-indices based on new order
+            const updatedSurfaces = state.surfaces.map(s => {
+                const newZ = currentSurfaces.findIndex(cs => cs.id === s.id);
+                return { ...s, zIndex: newZ };
+            });
+
+            return { surfaces: updatedSurfaces };
+        });
     },
 
     // Selection actions
@@ -256,6 +341,48 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         }));
     },
 
+    addCorner: (surfaceId, index, point) => {
+        get().saveHistory();
+        set((state) => ({
+            surfaces: state.surfaces.map((s) => {
+                if (s.id !== surfaceId) return s;
+                const newCorners = [...s.corners];
+                newCorners.splice(index, 0, point);
+                return { ...s, corners: newCorners };
+            }),
+        }));
+    },
+
+    removeCorner: (surfaceId, index) => {
+        get().saveHistory();
+        set((state) => ({
+            surfaces: state.surfaces.map((s) => {
+                if (s.id !== surfaceId || s.corners.length <= 3) return s;
+                const newCorners = [...s.corners];
+                newCorners.splice(index, 1);
+                return { ...s, corners: newCorners };
+            }),
+        }));
+    },
+
+    resetCorners: (surfaceId) => {
+        get().saveHistory();
+        set((state) => ({
+            surfaces: state.surfaces.map((s) => {
+                if (s.id !== surfaceId) return s;
+                return {
+                    ...s,
+                    corners: [
+                        { x: -0.5, y: -0.5 },
+                        { x: 0.5, y: -0.5 },
+                        { x: 0.5, y: 0.5 },
+                        { x: -0.5, y: 0.5 },
+                    ],
+                };
+            }),
+        }));
+    },
+
     resetProject: () => {
         set({
             surfaces: [],
@@ -263,6 +390,60 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             cues: [],
             projectSettings: defaultProjectSettings,
             selectedSurfaceIds: [],
+        });
+    },
+
+    // History Implementation
+    history: [],
+    future: [],
+
+    saveHistory: () => {
+        const { surfaces, projectSettings, history } = get();
+        const snapshot = {
+            surfaces: JSON.parse(JSON.stringify(surfaces)),
+            projectSettings: JSON.parse(JSON.stringify(projectSettings))
+        };
+        set({
+            history: [...history, snapshot].slice(-50),
+            future: []
+        });
+    },
+
+    undo: () => {
+        const { history, future, surfaces, projectSettings } = get();
+        if (history.length === 0) return;
+
+        const previous = history[history.length - 1];
+        const newHistory = history.slice(0, -1);
+        const currentSnapshot = {
+            surfaces: JSON.parse(JSON.stringify(surfaces)),
+            projectSettings: JSON.parse(JSON.stringify(projectSettings))
+        };
+
+        set({
+            history: newHistory,
+            future: [currentSnapshot, ...future].slice(0, 50),
+            surfaces: previous.surfaces,
+            projectSettings: previous.projectSettings
+        });
+    },
+
+    redo: () => {
+        const { history, future, surfaces, projectSettings } = get();
+        if (future.length === 0) return;
+
+        const next = future[0];
+        const newFuture = future.slice(1);
+        const currentSnapshot = {
+            surfaces: JSON.parse(JSON.stringify(surfaces)),
+            projectSettings: JSON.parse(JSON.stringify(projectSettings))
+        };
+
+        set({
+            history: [...history, currentSnapshot].slice(-50),
+            future: newFuture,
+            surfaces: next.surfaces,
+            projectSettings: next.projectSettings
         });
     },
 }));

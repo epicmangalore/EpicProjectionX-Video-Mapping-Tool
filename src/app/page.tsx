@@ -11,8 +11,13 @@ import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import { useOutputStore } from "@/store/output-store";
 import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { useSync } from "@/hooks/useSync";
 import { generateId } from "@/lib/utils";
-import { MousePointer2, Move, Grid3x3, Monitor, Layers } from "lucide-react";
+import { MIDIMapper } from "@/components/panels/MIDIMapper";
+import { SurfaceOutliner } from "@/components/panels/SurfaceOutliner";
+import { useState } from "react";
+import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Wand2, Sparkles, Heart, Star, Ghost } from "lucide-react";
 
 export default function Home() {
     const addSurface = useProjectStore((state) => state.addSurface);
@@ -20,6 +25,15 @@ export default function Home() {
     const setToolMode = useUIStore((state) => state.setToolMode);
     const toolMode = useUIStore((state) => state.toolMode);
     const openOutputWindow = useOutputStore((state) => state.openOutputWindow);
+    const simpleMode = useUIStore((state) => state.simpleMode);
+    const toggleSimpleMode = useUIStore((state) => state.toggleSimpleMode);
+
+    // Activate Auto-Save and Sync
+    useAutoSave();
+    useSync();
+
+    // UI State for MIDI Panel
+    const [showMIDIPanel, setShowMIDIPanel] = useState(false);
 
     // Initialize Global Hotkeys
     useHotkeys([
@@ -27,6 +41,7 @@ export default function Home() {
         { key: APP_HOTKEYS.TRANSFORM_MODE, callback: () => setToolMode("transform") },
         { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
         { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
+        { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
     ]);
 
     const handleAddTestSurface = () => {
@@ -106,32 +121,59 @@ export default function Home() {
 
                 <div className="flex gap-2">
                     <button
-                        onClick={handleAddTestSurface}
-                        className="px-4 py-1.5 text-xs font-medium glass glass-hover rounded-lg border border-white/10 transition-all hover:border-white/30"
+                        onClick={toggleSimpleMode}
+                        className={`p-2 rounded-lg border transition-all ${simpleMode
+                            ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white border-transparent shadow-lg shadow-pink-500/40 animate-pulse"
+                            : "glass border-white/10 text-white hover:border-white/30"}`}
+                        title="Magic Mode (for kids!)"
                     >
-                        + New Surface
+                        <Wand2 className={`w-4 h-4 ${simpleMode ? "animate-spin-slow" : ""}`} />
                     </button>
                     <button
-                        onClick={openOutputWindow}
-                        className="px-4 py-1.5 text-xs font-bold bg-electric-cyan text-black hover:bg-electric-cyan/80 rounded-lg transition-all shadow-lg shadow-electric-cyan/20 active:scale-95"
+                        onClick={() => setShowMIDIPanel(!showMIDIPanel)}
+                        className={`p-2 rounded-lg border transition-all ${showMIDIPanel
+                            ? "bg-electric-cyan text-black border-electric-cyan shadow-lg shadow-electric-cyan/20"
+                            : "glass border-white/10 text-white hover:border-white/30"}`}
+                        title="Toggle MIDI Mapping (Ctrl+M)"
                     >
-                        LAUNCH OUTPUT
+                        <Zap className="w-4 h-4" />
                     </button>
+                    {!simpleMode && (
+                        <>
+                            <button
+                                onClick={handleAddTestSurface}
+                                className="px-4 py-1.5 text-xs font-medium glass glass-hover rounded-lg border border-white/10 transition-all hover:border-white/30"
+                            >
+                                + New Surface
+                            </button>
+                            <button
+                                onClick={openOutputWindow}
+                                className="px-4 py-1.5 text-xs font-bold bg-electric-cyan text-black hover:bg-electric-cyan/80 rounded-lg transition-all shadow-lg shadow-electric-cyan/20 active:scale-95"
+                            >
+                                LAUNCH OUTPUT
+                            </button>
+                        </>
+                    )}
                 </div>
             </header>
 
             {/* Application Body */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left Side: Media & Cues */}
-                <div className="w-72 flex flex-col border-r border-white/5 bg-dark-900/50">
-                    <div className="flex-1 overflow-hidden flex flex-col">
-                        <MediaLibrary />
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Left Side: Media & Cues (Hidden in Simple Mode) */}
+                {!simpleMode && (
+                    <div className="w-72 flex flex-col border-r border-white/5 bg-dark-900/50">
+                        <div className="h-2/5 overflow-hidden flex flex-col">
+                            <MediaLibrary />
+                        </div>
+                        <div className="h-px bg-white/5" />
+                        <div className="h-2/5 overflow-hidden flex flex-col border-b border-white/5">
+                            <SurfaceOutliner />
+                        </div>
+                        <div className="flex-1 overflow-hidden flex flex-col">
+                            <CueList />
+                        </div>
                     </div>
-                    <div className="h-px bg-white/5" />
-                    <div className="h-1/2 overflow-hidden flex flex-col">
-                        <CueList />
-                    </div>
-                </div>
+                )}
 
                 {/* Main Workspace */}
                 <div className="flex-1 flex flex-col relative">
@@ -140,19 +182,103 @@ export default function Home() {
                         <ProjectionCanvas />
 
                         {/* Performance Monitor Overlay */}
-                        <PerformanceMonitor />
+                        {!simpleMode && <PerformanceMonitor />}
+
+                        {/* MIDI Panel Overlay */}
+                        {showMIDIPanel && !simpleMode && (
+                            <div className="absolute top-4 right-4 bottom-4 w-64 z-50 animate-in slide-in-from-right-4 duration-300">
+                                <MIDIMapper />
+                            </div>
+                        )}
+
+                        {/* Magic Tray (Only in Simple Mode) */}
+                        {simpleMode && (
+                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 p-4 glass-dark rounded-2xl border-2 border-pink-500/50 shadow-2xl shadow-pink-500/20 animate-in slide-in-from-bottom-10 duration-500 z-50">
+                                <button
+                                    onClick={() => {
+                                        const mediaId = generateId();
+                                        addMediaAsset({
+                                            id: mediaId,
+                                            name: "⭐ Magic Star",
+                                            type: "image",
+                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_star_sticker_1770437101472.png",
+                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_star_sticker_1770437101472.png"
+                                        });
+                                        addSurface(mediaId);
+                                    }}
+                                    className="w-16 h-16 rounded-xl bg-yellow-400 text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-transform shadow-lg group"
+                                    title="Add Star"
+                                >
+                                    <Star className="w-10 h-10 fill-current" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const mediaId = generateId();
+                                        addMediaAsset({
+                                            id: mediaId,
+                                            name: "❤️ Magic Heart",
+                                            type: "image",
+                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_heart_sticker_1770437115482.png",
+                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_heart_sticker_1770437115482.png"
+                                        });
+                                        addSurface(mediaId);
+                                    }}
+                                    className="w-16 h-16 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-transform shadow-lg"
+                                    title="Add Heart"
+                                >
+                                    <Heart className="w-10 h-10 fill-current" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const mediaId = generateId();
+                                        addMediaAsset({
+                                            id: mediaId,
+                                            name: "👻 Magic Ghost",
+                                            type: "image",
+                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_ghost_sticker_1770437129767.png",
+                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_ghost_sticker_1770437129767.png"
+                                        });
+                                        addSurface(mediaId);
+                                    }}
+                                    className="w-16 h-16 rounded-xl bg-purple-500 text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-transform shadow-lg"
+                                    title="Add Ghost"
+                                >
+                                    <Ghost className="w-10 h-10 fill-current" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        const mediaId = generateId();
+                                        addMediaAsset({
+                                            id: mediaId,
+                                            name: "✨ Sparkles",
+                                            type: "color",
+                                            color: "#22d3ee"
+                                        });
+                                        addSurface(mediaId);
+                                    }}
+                                    className="w-16 h-16 rounded-xl bg-cyan-400 text-white flex items-center justify-center hover:scale-110 active:scale-90 transition-transform shadow-lg"
+                                    title="Add Sparkles"
+                                >
+                                    <Sparkles className="w-10 h-10 fill-current" />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Bottom Panel: Timeline */}
-                    <div className="h-64 border-t border-white/10 relative z-30">
-                        <TimelinePanel />
-                    </div>
+                    {/* Bottom Panel: Timeline (Hidden in Simple Mode) */}
+                    {!simpleMode && (
+                        <div className="h-64 border-t border-white/10 relative z-30">
+                            <TimelinePanel />
+                        </div>
+                    )}
                 </div>
 
-                {/* Right Side: Properties */}
-                <div className="w-80 border-l border-white/5 bg-dark-900/50 flex flex-col">
-                    <SurfaceProperties />
-                </div>
+                {/* Right Side: Properties (Hidden in Simple Mode) */}
+                {!simpleMode && (
+                    <div className="w-80 border-l border-white/5 bg-dark-900/50 flex flex-col">
+                        <SurfaceProperties />
+                    </div>
+                )}
             </div>
         </main>
     );

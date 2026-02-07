@@ -12,6 +12,14 @@ export interface EffectSettings {
     blur: number; // 0 to 10
     chromaticAberration: number; // 0 to 10
     rgbShift: number; // 0 to 10
+
+    // Edge blending
+    blendLeft: number;
+    blendRight: number;
+    blendTop: number;
+    blendBottom: number;
+    blendFeather: number;
+    blendGamma: number;
 }
 
 export const defaultEffectSettings: EffectSettings = {
@@ -23,6 +31,12 @@ export const defaultEffectSettings: EffectSettings = {
     blur: 0,
     chromaticAberration: 0,
     rgbShift: 0,
+    blendLeft: 0,
+    blendRight: 0,
+    blendTop: 0,
+    blendBottom: 0,
+    blendFeather: 1,
+    blendGamma: 2.2,
 };
 
 interface EffectsState {

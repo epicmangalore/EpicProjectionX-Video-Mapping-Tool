@@ -4,13 +4,17 @@ import { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Surface as SurfaceType } from "@/store/project-store";
-import { useProjectStore } from "@/store/project-store";
+import { useProjectStore, type Vector2 } from "@/store/project-store";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { usePlaybackStore } from "@/store/playback-store";
+import { useAudioStore } from "@/store/audio-store";
 
-// Import shaders
+// Import shaders and utils
 import vertexShader from "@/shaders/surface.vert.glsl";
 import fragmentShader from "@/shaders/surface.frag.glsl";
+import { getPerspectiveTransform } from "@/lib/matrix";
+import { TransformControls } from "./TransformControls";
+import { useUIStore } from "@/store/ui-store";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -26,6 +30,8 @@ export function Surface({ surface }: SurfaceProps) {
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
     const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
+    const toolMode = useUIStore((state) => state.toolMode);
+    const projectSettings = useProjectStore((state) => state.projectSettings);
 
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
@@ -131,11 +137,56 @@ export function Surface({ surface }: SurfaceProps) {
         return null;
     }, [mediaAsset, videoElement]);
 
+    // Calculate warping matrix or polygon geometry
+    const isQuad = surface.corners.length === 4;
+
+    // Calculate warping matrix for corner-pin (only for quads)
+    const warpMatrix = useMemo(() => {
+        if (!isQuad) return new THREE.Matrix4();
+        const matrix = getPerspectiveTransform(surface.corners as [Vector2, Vector2, Vector2, Vector2]);
+        return new THREE.Matrix4().fromArray(matrix);
+    }, [surface.corners, isQuad]);
+
+    // Create custom geometry for polygons
+    const polygonGeometry = useMemo(() => {
+        if (isQuad && !surface.meshWarp) return null; // Use PlaneGeometry for quads
+
+        const shape = new THREE.Shape();
+        surface.corners.forEach((p, i) => {
+            if (i === 0) shape.moveTo(p.x, -p.y);
+            else shape.lineTo(p.x, -p.y);
+        });
+        shape.closePath();
+
+        const geometry = new THREE.ShapeGeometry(shape);
+        // Calculate UVs for the shape (simple planar mapping 0-1)
+        // Find bounding box
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        surface.corners.forEach(p => {
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        });
+
+        const width = maxX - minX;
+        const height = maxY - minY;
+
+        const uvAttribute = geometry.attributes.uv;
+        for (let i = 0; i < uvAttribute.count; i++) {
+            const x = geometry.attributes.position.getX(i);
+            const y = geometry.attributes.position.getY(i);
+            uvAttribute.setXY(i, (x - minX) / width, (y + maxY) / height);
+        }
+
+        return geometry;
+    }, [surface.corners, isQuad, surface.meshWarp]);
+
     // Create shader material with uniforms
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;
 
-        return new THREE.ShaderMaterial({
+        const mat = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader,
             uniforms: {
@@ -155,15 +206,103 @@ export function Surface({ surface }: SurfaceProps) {
                 uBlurAmount: { value: effects.blur },
                 uChromaticAberration: { value: effects.chromaticAberration },
                 uRGBShift: { value: effects.rgbShift },
+                uWarpMatrix: { value: warpMatrix },
+                uBlendZones: {
+                    value: new THREE.Vector4(
+                        effects.blendLeft,
+                        effects.blendRight,
+                        effects.blendTop,
+                        effects.blendBottom
+                    )
+                },
+                uBlendFeather: { value: effects.blendFeather },
+                uBlendGamma: { value: effects.blendGamma },
+                uMasterOpacity: { value: projectSettings.masterOpacity },
+                uMasterBrightness: { value: projectSettings.masterBrightness },
+                uBlackout: { value: projectSettings.blackout ? 1.0 : 0.0 },
             },
             transparent: true,
             side: THREE.DoubleSide,
         });
-    }, [texture, surface.opacity, effects]);
+
+        return mat;
+    }, [texture, warpMatrix, effects, projectSettings]);
+
+    // Update mesh geometry for MeshWarp
+    useEffect(() => {
+        if (!meshRef.current || !surface.meshWarp) return;
+
+        const geometry = meshRef.current.geometry as THREE.PlaneGeometry;
+        const { gridSize, controlPoints } = surface.meshWarp;
+
+        // Check if geometry segments match gridSize
+        if (geometry.parameters.widthSegments !== gridSize || geometry.parameters.heightSegments !== gridSize) {
+            meshRef.current.geometry = new THREE.PlaneGeometry(1, 1, gridSize, gridSize);
+            return;
+        }
+
+        const positions = geometry.attributes.position;
+        const count = positions.count;
+
+        for (let i = 0; i < count; i++) {
+            // PlaneGeometry vertices are ordered TL to BR
+            // Calculate row and col for the vertex
+            const xIdx = i % (gridSize + 1);
+            const yIdx = Math.floor(i / (gridSize + 1));
+
+            const point = controlPoints[yIdx][xIdx];
+            if (point) {
+                positions.setXY(i, point.x, -point.y); // Flip Y because 3D coordinates
+            }
+        }
+        positions.needsUpdate = true;
+    }, [surface.meshWarp, surface.id]);
+
+    const updateLevels = useAudioStore((state) => state.updateLevels);
+    const audioLevels = useAudioStore((state) => state.levels);
+
+    const simpleMode = useUIStore((state) => state.simpleMode);
+    const [hovered, setHovered] = useState(false);
+    const bounceRef = useRef(1.0);
+    const audioReactiveScale = useRef(1.0);
 
     // Update mesh transform and uniforms
-    useFrame(() => {
+    useFrame((state) => {
         if (!meshRef.current) return;
+
+        // Apply audio mappings if enabled
+        let reactiveOpacity = surface.opacity;
+        let reactiveBlur = effects.blur;
+        let reactiveChromatic = effects.chromaticAberration;
+
+        updateLevels();
+        const levels = audioLevels as any;
+
+        // Magic Mode Auto-Reactivity
+        if (simpleMode) {
+            // Auto scale bounce to bass/kick
+            const bass = levels.bass || 0;
+            audioReactiveScale.current = THREE.MathUtils.lerp(audioReactiveScale.current, 1.0 + bass * 0.2, 0.2);
+
+            // Subtle auto-glow
+            reactiveOpacity = THREE.MathUtils.clamp(surface.opacity + bass * 0.2, 0, 1);
+        }
+
+        if (surface.audioMappings.length > 0) {
+            surface.audioMappings.forEach(mapping => {
+                if (!mapping.enabled) return;
+                const level = levels[mapping.band];
+                const value = mapping.min + (mapping.max - mapping.min) * level;
+
+                if (mapping.property === "opacity") reactiveOpacity = value;
+                if (mapping.property === "blur") reactiveBlur = value;
+                if (mapping.property === "chromatic") reactiveChromatic = value;
+            });
+        }
+
+        // Bouncy UI Logic
+        const targetBounce = (isSelected || hovered) && simpleMode ? 1.1 : 1.0;
+        bounceRef.current = THREE.MathUtils.lerp(bounceRef.current, targetBounce, 0.15);
 
         meshRef.current.position.set(
             surface.position.x,
@@ -171,10 +310,21 @@ export function Surface({ surface }: SurfaceProps) {
             surface.zIndex * 0.01
         );
         meshRef.current.rotation.z = surface.rotation;
-        meshRef.current.scale.set(surface.scale.x, surface.scale.y, 1);
+
+        // Combine base scale, bounce, and audio pulse
+        const finalScaleX = surface.scale.x * bounceRef.current * audioReactiveScale.current;
+        const finalScaleY = surface.scale.y * bounceRef.current * audioReactiveScale.current;
+        meshRef.current.scale.set(finalScaleX, finalScaleY, 1);
 
         if (shaderMaterial) {
-            shaderMaterial.uniforms.uOpacity.value = surface.opacity;
+            // If MeshWarp is active, don't apply the corner-pin WarpMatrix (or use identity)
+            if (surface.meshWarp) {
+                shaderMaterial.uniforms.uWarpMatrix.value.identity();
+            } else {
+                shaderMaterial.uniforms.uWarpMatrix.value.copy(warpMatrix);
+            }
+
+            shaderMaterial.uniforms.uOpacity.value = reactiveOpacity;
             shaderMaterial.uniforms.uBrightness.value = effects.brightness;
             shaderMaterial.uniforms.uContrast.value = effects.contrast;
             shaderMaterial.uniforms.uSaturation.value = effects.saturation;
@@ -184,32 +334,54 @@ export function Surface({ surface }: SurfaceProps) {
                 effects.colorTint.g,
                 effects.colorTint.b
             );
-            shaderMaterial.uniforms.uBlurAmount.value = effects.blur;
-            shaderMaterial.uniforms.uChromaticAberration.value = effects.chromaticAberration;
+            shaderMaterial.uniforms.uBlurAmount.value = reactiveBlur;
+            shaderMaterial.uniforms.uChromaticAberration.value = reactiveChromatic;
             shaderMaterial.uniforms.uRGBShift.value = effects.rgbShift;
+
+            // Global controls
+            shaderMaterial.uniforms.uMasterOpacity.value = projectSettings.masterOpacity;
+            shaderMaterial.uniforms.uMasterBrightness.value = projectSettings.masterBrightness;
+            shaderMaterial.uniforms.uBlackout.value = projectSettings.blackout ? 1.0 : 0.0;
         }
     });
 
     const handleClick = (e: any) => {
+        if (surface.locked) return;
         e.stopPropagation();
         selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
     };
 
-    if (!shaderMaterial) return null;
+    if (!shaderMaterial || !surface.visible) return null;
 
     return (
         <>
-            <mesh ref={meshRef} onClick={handleClick}>
-                <planeGeometry args={[1, 1, 1, 1]} />
+            <mesh
+                ref={meshRef}
+                onClick={handleClick}
+                onPointerOver={() => setHovered(true)}
+                onPointerOut={() => setHovered(false)}
+            >
+                {polygonGeometry ? (
+                    <primitive object={polygonGeometry} attach="geometry" />
+                ) : (
+                    <planeGeometry args={[1, 1, surface.meshWarp ? surface.meshWarp.gridSize : 1, surface.meshWarp ? surface.meshWarp.gridSize : 1]} />
+                )}
                 <primitive object={shaderMaterial} attach="material" />
             </mesh>
             {isSelected && (
-                <mesh position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}>
-                    <lineSegments>
-                        <edgesGeometry args={[new THREE.PlaneGeometry(surface.scale.x, surface.scale.y)]} />
-                        <lineBasicMaterial color="#7c3aed" linewidth={2} />
-                    </lineSegments>
-                </mesh>
+                <>
+                    <mesh position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}>
+                        <lineSegments scale={[surface.scale.x, surface.scale.y, 1]}>
+                            <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
+                            <lineBasicMaterial color="#7c3aed" linewidth={2} />
+                        </lineSegments>
+                    </mesh>
+
+                    {/* Transform Controller Gizmos */}
+                    {toolMode === "transform" && (
+                        <TransformControls surface={surface} meshRef={meshRef} />
+                    )}
+                </>
             )}
         </>
     );

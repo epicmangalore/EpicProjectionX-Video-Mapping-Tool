@@ -16,7 +16,10 @@ interface OutputState {
     frameTime: number;
     memoryUsage: number;
 
+    isOutput: boolean;
+
     // Actions
+    setIsOutput: (isOutput: boolean) => void;
     openOutputWindow: () => void;
     closeOutputWindow: () => void;
     toggleFullscreen: () => void;
@@ -36,7 +39,9 @@ export const useOutputStore = create<OutputState>((set, get) => ({
     fps: 60,
     frameTime: 16.67,
     memoryUsage: 0,
+    isOutput: false,
 
+    setIsOutput: (isOutput) => set({ isOutput }),
     openOutputWindow: () => {
         const { resolution } = get();
         const outputWindow = window.open(
