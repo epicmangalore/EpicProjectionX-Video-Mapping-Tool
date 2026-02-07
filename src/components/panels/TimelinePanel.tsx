@@ -114,7 +114,7 @@ export function TimelinePanel() {
             <div className="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-zinc-900 shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border border-zinc-700 px-1 rounded bg-zinc-800">DECK A</span>
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border border-zinc-700 px-1 rounded bg-zinc-800">TIMELINE</span>
                         <span className="text-sm font-mono text-electric-cyan tabular-nums w-24">{formatTime(currentTime)}</span>
                     </div>
 
