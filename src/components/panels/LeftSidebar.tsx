@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { Layers, Image, Plus, Type, Video, Monitor, Scan } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { MediaLibrary } from "./MediaLibrary";
