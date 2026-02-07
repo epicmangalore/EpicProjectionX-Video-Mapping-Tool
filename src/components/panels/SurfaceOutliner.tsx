@@ -22,7 +22,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 // Sortable Row Component
-function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVisibility, toggleLock, deleteSurface, totalCount }: any) {
+function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVisibility, toggleLock, deleteSurface, updateSurface, totalCount }: any) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(surface.name);
+
     const {
         attributes,
         listeners,
@@ -39,6 +42,23 @@ function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVis
         position: "relative" as "relative",
     };
 
+    const handleRename = () => {
+        if (editValue.trim() && editValue !== surface.name) {
+            updateSurface(surface.id, { name: editValue.trim() });
+        } else {
+            setEditValue(surface.name);
+        }
+        setIsEditing(false);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") handleRename();
+        if (e.key === "Escape") {
+            setEditValue(surface.name);
+            setIsEditing(false);
+        }
+    };
+
     // Traktor Zebra Striping: Darker alternating rows
     const bgClass = isSelected
         ? "bg-electric-cyan/20 text-electric-cyan"
@@ -52,6 +72,10 @@ function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVis
             style={style}
             {...attributes}
             onClick={() => selectSurface(surface.id)}
+            onDoubleClick={() => {
+                setIsEditing(true);
+                setEditValue(surface.name);
+            }}
             className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass} ${isDragging ? "opacity-50 ring-1 ring-electric-cyan" : ""}`}
         >
             {/* Drag Handle & Index */}
@@ -66,7 +90,18 @@ function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVis
 
             {/* Surface Name */}
             <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
-                {surface.name}
+                {isEditing ? (
+                    <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleRename}
+                        onKeyDown={handleKeyDown}
+                        className="w-full bg-zinc-800 border-none outline-none text-white px-1 py-0 h-5"
+                    />
+                ) : (
+                    surface.name
+                )}
             </div>
 
             {/* Controls (Right Aligned) */}
@@ -115,6 +150,7 @@ export function SurfaceOutliner() {
     const toggleVisibility = useProjectStore((state) => state.toggleVisibility);
     const toggleLock = useProjectStore((state) => state.toggleLock);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
+    const updateSurface = useProjectStore((state) => state.updateSurface);
     const reorderSurface = useProjectStore((state) => state.reorderSurface);
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -207,6 +243,7 @@ export function SurfaceOutliner() {
                                     toggleVisibility={toggleVisibility}
                                     toggleLock={toggleLock}
                                     deleteSurface={deleteSurface}
+                                    updateSurface={updateSurface}
                                     totalCount={sortedSurfaces.length}
                                 />
                             ))}

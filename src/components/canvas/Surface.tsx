@@ -15,6 +15,8 @@ import fragmentShader from "@/shaders/surface.frag.glsl";
 import { getPerspectiveTransform } from "@/lib/matrix";
 import { TransformControls } from "./TransformControls";
 import { useUIStore } from "@/store/ui-store";
+import { useOutputStore } from "@/store/output-store";
+import { ResizeHandles } from "./ResizeHandles";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -442,6 +444,8 @@ export function Surface({ surface }: SurfaceProps) {
         opacity: 0.3
     }), []);
 
+    const isOutput = useOutputStore((state) => state.isOutput);
+
     if (!surface.visible) return null;
 
     return (
@@ -477,19 +481,22 @@ export function Surface({ surface }: SurfaceProps) {
                 </lineSegments>
             </mesh>
 
-            {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && (
+            {isSelected && !isOutput && toolMode !== "pen" && toolMode !== "corner-pin" && (
                 <>
                     {/* Brighter border for selected surfaces */}
                     <mesh
-                        position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.02]}
+                        position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.03]}
                         rotation={[0, 0, surface.rotation]}
                         scale={[surface.scale.x, surface.scale.y, 1]}
                     >
                         <lineSegments>
                             <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                            <lineBasicMaterial color="#a78bfa" linewidth={3} />
+                            <lineBasicMaterial color="#a78bfa" linewidth={3} depthTest={false} transparent opacity={0.8} />
                         </lineSegments>
                     </mesh>
+
+                    {/* Resize Handles */}
+                    {toolMode === "select" && <ResizeHandles surface={surface} />}
 
                     {/* Transform Controller Gizmos */}
                     {toolMode === "transform" && (

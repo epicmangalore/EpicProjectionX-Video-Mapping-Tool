@@ -8,6 +8,7 @@ import { LeftSidebar } from "@/components/panels/LeftSidebar";
 import { ProjectMenu } from "@/components/ui/ProjectMenu";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import { useUIStore } from "@/store/ui-store";
+import { useProjectStore } from "@/store/project-store";
 import { useOutputStore } from "@/store/output-store";
 import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
 import { useAutoSave } from "@/hooks/useAutoSave";
@@ -32,12 +33,22 @@ export default function Home() {
     const [showMIDIPanel, setShowMIDIPanel] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
 
+    const deleteSurface = useProjectStore((state) => state.deleteSurface);
+    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
+    const deselectAll = useProjectStore((state) => state.deselectAll);
+
     // Initialize Global Hotkeys
     useHotkeys([
         { key: APP_HOTKEYS.SELECT_MODE, callback: () => setToolMode("select") },
         { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
         { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
         { key: APP_HOTKEYS.PEN_MODE, callback: () => setToolMode("pen") },
+        {
+            key: APP_HOTKEYS.DELETE, callback: () => {
+                selectedIds.forEach(id => deleteSurface(id));
+                deselectAll();
+            }
+        },
         { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
     ]);
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 interface HotkeyConfig {
-    key: string;
+    key: string | string[];
     ctrl?: boolean;
     shift?: boolean;
     alt?: boolean;
@@ -25,7 +25,8 @@ export function useHotkeys(hotkeys: HotkeyConfig[], enabled = true) {
             }
 
             for (const hotkey of hotkeys) {
-                const keyMatch = e.key.toLowerCase() === hotkey.key.toLowerCase();
+                const keys = Array.isArray(hotkey.key) ? hotkey.key : [hotkey.key];
+                const keyMatch = keys.some(k => e.key.toLowerCase() === k.toLowerCase());
                 const ctrlMatch = hotkey.ctrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
                 const shiftMatch = hotkey.shift ? e.shiftKey : !e.shiftKey;
                 const altMatch = hotkey.alt ? e.altKey : !e.altKey;
@@ -53,7 +54,7 @@ export const APP_HOTKEYS = {
     PEN_MODE: "p",
 
     // Actions
-    DELETE: "Delete",
+    DELETE: ["Delete", "Backspace"],
     DUPLICATE: { key: "d", ctrl: true },
     SAVE: { key: "s", ctrl: true },
     UNDO: { key: "z", ctrl: true },

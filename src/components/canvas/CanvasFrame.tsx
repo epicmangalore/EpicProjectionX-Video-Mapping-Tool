@@ -4,10 +4,15 @@ import { useMemo } from "react";
 import { Html } from "@react-three/drei";
 import { useProjectStore } from "@/store/project-store";
 
+import { useOutputStore } from "@/store/output-store";
+
 export function CanvasFrame() {
+    const isOutput = useOutputStore((state) => state.isOutput);
     const settings = useProjectStore((state) => state.projectSettings);
     const showFrame = settings.showCanvasFrame;
     const showSafeArea = settings.showSafeArea;
+
+    if (isOutput) return null;
 
     // Convert resolution to canvas units (divide by 100 for scaling)
     const width = settings.resolution.width / 100;

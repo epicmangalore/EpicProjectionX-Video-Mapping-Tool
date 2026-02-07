@@ -11,10 +11,13 @@ import { PenTool } from "./PenTool";
 import { CanvasFrame } from "./CanvasFrame";
 import { SpacebarPan } from "./SpacebarPan";
 
+import { useOutputStore } from "@/store/output-store";
+
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const projectSettings = useProjectStore((state) => state.projectSettings);
+    const isOutput = useOutputStore((state) => state.isOutput);
 
     return (
         <Canvas
@@ -51,7 +54,7 @@ export function ProjectionCanvas() {
             ))}
 
             {/* Render corner-pin or mesh-warp controls for selected surfaces */}
-            {surfaces
+            {!isOutput && surfaces
                 .filter((surface) => selectedIds.includes(surface.id))
                 .map((surface) => (
                     <group key={`controls-${surface.id}`}>
@@ -64,8 +67,8 @@ export function ProjectionCanvas() {
             <OrbitControls
                 makeDefault
                 enableRotate={false}
-                enablePan={true}
-                enableZoom={true}
+                enablePan={!isOutput}
+                enableZoom={!isOutput}
                 mouseButtons={{
                     LEFT: undefined, // Surface selection/dragging handles left click
                     MIDDLE: THREE.MOUSE.PAN,
