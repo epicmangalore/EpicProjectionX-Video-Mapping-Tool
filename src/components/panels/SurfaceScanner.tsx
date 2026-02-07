@@ -22,6 +22,8 @@ export function SurfaceScanner({ onClose }: SurfaceScannerProps) {
     const [minArea, setMinArea] = useState(1000); // Minimum area to consider a surface
     const [detectedQuads, setDetectedQuads] = useState<Point[][]>([]);
 
+    const [capturedFrame, setCapturedFrame] = useState<ImageData | null>(null);
+
     const addSurface = useProjectStore((state) => state.addSurface);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
 
@@ -55,98 +57,114 @@ export function SurfaceScanner({ onClose }: SurfaceScannerProps) {
         };
     }, []);
 
-    // CV Loop
-    useEffect(() => {
-        if (!isScanning || !videoRef.current || !canvasRef.current) return;
-
+    const handleCapture = () => {
+        if (!videoRef.current || !canvasRef.current) return;
         const video = videoRef.current;
         const canvas = canvasRef.current;
+        const ctx = canvas.getContext("2d");
+
+        if (ctx) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            setCapturedFrame(data);
+            setIsScanning(false); // Stop live CV loop
+        }
+    };
+
+    const handleReset = () => {
+        setCapturedFrame(null);
+        setIsScanning(true);
+    };
+
+    // Modified CV Loop to work on Captured Frame if available
+    useEffect(() => {
+        if (!canvasRef.current || (!isScanning && !capturedFrame)) return;
+
+        const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
 
         let animationId: number;
 
-        const processFrame = () => {
-            if (video.readyState === video.HAVE_ENOUGH_DATA && ctx) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
-                // Draw video frame to canvas
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-                // 1. Grayscale
-                const gray = toGrayscale(imageData);
-
-                // 2. Threshold
-                const bin = threshold(gray, canvas.width, canvas.height, thresholdVal);
-
-                // 3. Find Contours
-                const contours = findContours(bin, canvas.width, canvas.height);
-
-                // 4. Approx Polygons & Filter for Quads
-                const quads: Point[][] = [];
-
-                contours.forEach(contour => {
-                    // Approx epsilon: 2% of arc length? Rough guess: 5-10 pixels
-                    // Arc length approx: perimeter
-                    // Simple heuristic: 0.02 * perimeter
-                    // Let's use a fixed value or dynamic based on bounding box
-
-                    const approx = approxPolyDP(contour, 5); // epsilon hardcoded for now
-
-                    if (approx.length === 4) {
-                        // Check area
-                        // Simplified area calc
-                        // We need a helper for area
-                        // For now, let's just assume large enough bounding box?
-                        // Let's add area helper to CV lib
-                        // We don't have getArea imported properly, let's implement inline or fetch from lib if updated
-                        // Assuming getArea function exists in lib (I added it in previous step)
-                        // Wait, in previous step getArea returns ABS value.
-
-                        // Fix: quick area implementation for now if lib import fails or verification needed
-                        let area = 0;
-                        for (let i = 0; i < 4; i++) {
-                            area += (approx[i].x * approx[(i + 1) % 4].y) - (approx[(i + 1) % 4].x * approx[i].y);
-                        }
-                        area = Math.abs(area / 2);
-
-                        if (area > minArea) {
-                            quads.push(approx);
-                        }
-                    }
-                });
-
-                setDetectedQuads(quads);
-
-                // Draw detection overlay
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = "#00f0ff";
-
-                quads.forEach(quad => {
-                    ctx.beginPath();
-                    ctx.moveTo(quad[0].x, quad[0].y);
-                    quad.forEach(p => ctx.lineTo(p.x, p.y));
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    // Draw corners
-                    ctx.fillStyle = "#ff00ff";
-                    quad.forEach(p => {
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-                        ctx.fill();
-                    });
-                });
+        const process = () => {
+            if (isScanning && videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+                // LIVE MODE
+                canvas.width = videoRef.current.videoWidth;
+                canvas.height = videoRef.current.videoHeight;
+                ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+            } else if (capturedFrame) {
+                // CAPTURED MODE
+                // Image is already on canvas or we redraw it?
+                // For simplicity, we just process what's on canvas if we paused?
+                // Or better, put capturedImageData back
+                canvas.width = capturedFrame.width;
+                canvas.height = capturedFrame.height;
+                ctx.putImageData(capturedFrame, 0, 0);
             }
-            animationId = requestAnimationFrame(processFrame);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // 1. Grayscale
+            const gray = toGrayscale(imageData);
+
+            // 2. Threshold
+            const bin = threshold(gray, canvas.width, canvas.height, thresholdVal);
+
+            // 3. Find Contours
+            const contours = findContours(bin, canvas.width, canvas.height);
+
+            // 4. Approx Polygons & Filter for Quads
+            const quads: Point[][] = [];
+
+            contours.forEach(contour => {
+                const approx = approxPolyDP(contour, 5);
+                if (approx.length === 4) {
+                    // Check area
+                    let area = 0;
+                    for (let i = 0; i < 4; i++) {
+                        area += (approx[i].x * approx[(i + 1) % 4].y) - (approx[(i + 1) % 4].x * approx[i].y);
+                    }
+                    area = Math.abs(area / 2);
+
+                    if (area > minArea) {
+                        quads.push(approx);
+                    }
+                }
+            });
+
+            setDetectedQuads(quads);
+
+            // Draw detection overlay
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "#00f0ff";
+
+            quads.forEach(quad => {
+                ctx.beginPath();
+                ctx.moveTo(quad[0].x, quad[0].y);
+                quad.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.closePath();
+                ctx.stroke();
+
+                // Draw corners
+                ctx.fillStyle = "#ff00ff";
+                quad.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            });
+
+            if (isScanning) {
+                animationId = requestAnimationFrame(process);
+            }
         };
 
-        processFrame();
+        process();
 
         return () => cancelAnimationFrame(animationId);
-    }, [isScanning, thresholdVal, minArea]);
+    }, [isScanning, thresholdVal, minArea, capturedFrame]);
 
     const handleCreateSurfaces = () => {
         if (detectedQuads.length === 0 || !canvasRef.current) return;
@@ -197,17 +215,6 @@ export function SurfaceScanner({ onClose }: SurfaceScannerProps) {
             // Let's just create them. The user can adjust mapping later.
             // Actually, to make this useful, we should try to map the corners.
 
-            // Normalized coordinates (0-1)
-            // Top-Left is 0,0 in Image space?
-            // Canvas space: 0,0 is CENTER. Width depends on Aspect.
-            // Let's assume standard view: Height = 10 (ortho zoom 100 -> height 1?)
-            // OrthographicCamera zoom=100.
-            // Three.js units.
-
-            // Let's just create standard surfaces for now and let user map them?
-            // The user request says "create surface in our app".
-            // Ideally we pass the quad data.
-
             // Let's try to pass the quad shape.
             // Since we can't easily sync the ID right now without refactoring `addSurface` to return it,
             // We will just create standard squares for now, OR we accept the limitation.
@@ -234,7 +241,7 @@ export function SurfaceScanner({ onClose }: SurfaceScannerProps) {
             </div>
 
             <div className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-                {!stream && (
+                {!stream && !capturedFrame && (
                     <div className="flex flex-col items-center gap-2 text-zinc-500">
                         <Loader2 className="w-8 h-8 animate-spin" />
                         <span className="text-xs">Starting Camera...</span>
@@ -248,6 +255,26 @@ export function SurfaceScanner({ onClose }: SurfaceScannerProps) {
 
                 {/* HUD Overlay */}
                 <div className="absolute top-4 left-4 bg-black/80 backdrop-blur p-3 rounded border border-white/10 w-64 space-y-4">
+                    <div className="grid grid-cols-2 gap-2">
+                        {!capturedFrame ? (
+                            <Button
+                                className="w-full bg-white text-black hover:bg-zinc-200"
+                                onClick={handleCapture}
+                            >
+                                <Camera className="w-4 h-4 mr-2" />
+                                Capture
+                            </Button>
+                        ) : (
+                            <Button
+                                className="w-full bg-zinc-700 text-white hover:bg-zinc-600"
+                                onClick={handleReset}
+                            >
+                                <Loader2 className="w-4 h-4 mr-2" />
+                                Retake
+                            </Button>
+                        )}
+                    </div>
+
                     <div className="space-y-1">
                         <div className="flex justify-between text-xs text-zinc-400">
                             <span>Threshold</span>
