@@ -10,5 +10,8 @@ void main() {
   // Apply warping matrix to local vertex position
   vec4 warpedPosition = uWarpMatrix * vec4(position, 1.0);
   
-  gl_Position = projectionMatrix * modelViewMatrix * warpedPosition;
+  // Perspective divide is required for homography transformations
+  vec3 finalPosition = warpedPosition.xyz / warpedPosition.w;
+  
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
 }

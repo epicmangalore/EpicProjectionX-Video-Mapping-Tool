@@ -17,6 +17,7 @@ import { TransformControls } from "./TransformControls";
 import { useUIStore } from "@/store/ui-store";
 import { useOutputStore } from "@/store/output-store";
 import { ResizeHandles } from "./ResizeHandles";
+import { CornerPin } from "./CornerPin";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -430,12 +431,13 @@ export function Surface({ surface }: SurfaceProps) {
     if (!surface.visible) return null;
 
     return (
-        <>
+        <group
+            position={[surface.position.x, surface.position.y, surface.zIndex * 0.01]}
+            rotation={[0, 0, surface.rotation]}
+            scale={[surface.scale.x, surface.scale.y, 1]}
+        >
             <mesh
                 ref={meshRef}
-                position={[surface.position.x, surface.position.y, surface.zIndex * 0.01]}
-                rotation={[0, 0, surface.rotation]}
-                scale={[surface.scale.x, surface.scale.y, 1]}
                 onClick={handleClick}
                 onPointerDown={handlePointerDown}
                 onPointerOver={() => setHovered(true)}
@@ -453,41 +455,46 @@ export function Surface({ surface }: SurfaceProps) {
                 )}
             </mesh>
 
-            {/* Always show border outline */}
-            <mesh
-                position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}
-                rotation={[0, 0, surface.rotation]}
-                scale={[surface.scale.x, surface.scale.y, 1]}
-            >
-                <lineSegments>
-                    <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                    <lineBasicMaterial color="#7c3aed" linewidth={2} transparent opacity={0.6} />
-                </lineSegments>
-            </mesh>
-
-            {isSelected && !isOutput && toolMode !== "pen" && toolMode !== "corner-pin" && (
+            {/* Selection UI and Handles - rendered within the local space of the group */}
+            {!isOutput && (
                 <>
-                    {/* Brighter border for selected surfaces */}
-                    <mesh
-                        position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.03]}
-                        rotation={[0, 0, surface.rotation]}
-                        scale={[surface.scale.x, surface.scale.y, 1]}
-                    >
+                    {/* Standard outline (follows the unit plane) */}
+                    <mesh position={[0, 0, 0.01]}>
                         <lineSegments>
                             <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                            <lineBasicMaterial color="#a78bfa" linewidth={3} depthTest={false} transparent opacity={0.8} />
+                            <lineBasicMaterial color="#7c3aed" linewidth={2} transparent opacity={0.6} />
                         </lineSegments>
                     </mesh>
 
-                    {/* Resize Handles */}
-                    {toolMode === "select" && <ResizeHandles surface={surface} />}
+                    {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && (
+                        <>
+                            {/* Brighter border for highlighted selection */}
+                            <mesh position={[0, 0, 0.03]}>
+                                <lineSegments>
+                                    <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
+                                    <lineBasicMaterial color="#a78bfa" linewidth={3} depthTest={false} transparent opacity={0.8} />
+                                </lineSegments>
+                            </mesh>
 
-                    {/* Transform Controller Gizmos */}
-                    {toolMode === "transform" && (
-                        <TransformControls surface={surface} meshRef={meshRef} />
+                            {/* Resize Handles (Local Space) */}
+                            {toolMode === "select" && <ResizeHandles surface={surface} />}
+
+                            {/* Transform Controller Gizmos */}
+                            {toolMode === "transform" && (
+                                <TransformControls surface={surface} meshRef={meshRef} />
+                            )}
+                        </>
+                    )}
+
+                    {/* Corner Pin Mode */}
+                    {isSelected && toolMode === "corner-pin" && (
+                        <group position={[0, 0, 0.05]}>
+                            {/* In corner-pin mode, we show pins at the corners defined in the store */}
+                            <CornerPin surface={surface} />
+                        </group>
                     )}
                 </>
             )}
-        </>
+        </group>
     );
 }
