@@ -19,33 +19,44 @@ export function PenTool({ surface }: PenToolProps) {
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
 
+    const mappingMode = useUIStore((state) => state.mappingMode);
+
+    const activeCorners = mappingMode === "output" ? surface.corners : surface.sourceCorners;
+
     // Generate line segments for edge detection
     const edgeSegments = useMemo(() => {
-        if (!surface?.corners || surface.corners.length < 2) return [];
+        if (!activeCorners || activeCorners.length < 2) return [];
         const segments: Array<{ start: { x: number; y: number }; end: { x: number; y: number }; index: number }> = [];
 
-        for (let i = 0; i < surface.corners.length; i++) {
-            const nextIndex = (i + 1) % surface.corners.length;
+        for (let i = 0; i < activeCorners.length; i++) {
+            const nextIndex = (i + 1) % activeCorners.length;
             segments.push({
-                start: surface.corners[i],
-                end: surface.corners[nextIndex],
+                start: activeCorners[i],
+                end: activeCorners[nextIndex],
                 index: i,
             });
         }
 
         return segments;
-    }, [surface.corners]);
+    }, [activeCorners]);
 
     // Generate line geometry for rendering
     const linePoints = useMemo(() => {
-        if (!surface?.corners) return new Float32Array(0);
+        if (!activeCorners) return new Float32Array(0);
         const pts: number[] = [];
-        surface.corners.forEach(p => pts.push(p.x, p.y, 0));
-        if (surface.corners.length > 0) {
-            pts.push(surface.corners[0].x, surface.corners[0].y, 0);
+        activeCorners.forEach(p => {
+            const dx = mappingMode === "output" ? p.x : p.x - 0.5;
+            const dy = mappingMode === "output" ? p.y : p.y - 0.5;
+            pts.push(dx, dy, 0);
+        });
+        if (activeCorners.length > 0) {
+            const p = activeCorners[0];
+            const dx = mappingMode === "output" ? p.x : p.x - 0.5;
+            const dy = mappingMode === "output" ? p.y : p.y - 0.5;
+            pts.push(dx, dy, 0);
         }
         return new Float32Array(pts);
-    }, [surface.corners]);
+    }, [activeCorners, mappingMode]);
 
     if (toolMode !== "pen" || surface.locked) return null;
 
@@ -107,6 +118,7 @@ export function PenTool({ surface }: PenToolProps) {
 
         if (edgeIndex !== null) {
             // Insert corner after the clicked edge
+            // Store handles the addition to both corners and sourceCorners
             addCorner(surface.id, edgeIndex + 1, { x: localX, y: localY });
         }
     };
@@ -127,10 +139,18 @@ export function PenTool({ surface }: PenToolProps) {
             const targetX = vector.x - surface.position.x;
             const targetY = vector.y - surface.position.y;
 
-            const newCorners = [...surface.corners];
-            newCorners[cornerIndex] = { x: targetX, y: targetY };
-
-            updateSurface(surface.id, { corners: newCorners });
+            if (mappingMode === "output") {
+                const newCorners = [...surface.corners];
+                newCorners[cornerIndex] = { x: targetX, y: targetY };
+                updateSurface(surface.id, { corners: newCorners });
+            } else {
+                const newSource = [...surface.sourceCorners];
+                newSource[cornerIndex] = {
+                    x: Math.max(0, Math.min(1, targetX + 0.5)),
+                    y: Math.max(0, Math.min(1, targetY + 0.5))
+                };
+                updateSurface(surface.id, { sourceCorners: newSource });
+            }
         };
 
         const onPointerUp = () => {
@@ -152,39 +172,53 @@ export function PenTool({ surface }: PenToolProps) {
 
     const handleEdgeLeave = () => {
         setHoveredEdge(null);
-        gl.domElement.style.cursor = 'auto';
+        gl.domElement.style.cursor = 'crosshair';
     };
+
+    const handleColor = mappingMode === "output" ? "#22d3ee" : "#f472b6";
+    const baseColor = mappingMode === "output" ? "#7c3aed" : "#f97316";
 
     return (
         <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>
-            {/* Render existing corners */}
-            {surface.corners.map((corner, index) => (
-                <mesh
-                    key={`${surface.id}-corner-${index}`}
-                    position={[corner.x, corner.y, 0]}
-                    onPointerDown={(e) => handleCornerDrag(index, e)}
-                    onPointerOver={() => gl.domElement.style.cursor = 'move'}
-                    onPointerOut={() => gl.domElement.style.cursor = 'crosshair'}
-                >
-                    <circleGeometry args={[0.035, 32]} />
-                    <meshBasicMaterial
-                        color={draggingCorner === index ? "#22d3ee" : "#7c3aed"}
-                        transparent
-                        opacity={0.9}
-                    />
-                    <mesh scale={[1.2, 1.2, 1]}>
-                        <ringGeometry args={[0.035, 0.045, 32]} />
-                        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
+            {/* Render active corners ... */}
+            {activeCorners.map((corner, index) => {
+                const displayX = mappingMode === "output" ? corner.x : corner.x - 0.5;
+                const displayY = mappingMode === "output" ? corner.y : corner.y - 0.5;
+
+                return (
+                    <mesh
+                        key={`${surface.id}-corner-${index}`}
+                        position={[displayX, displayY, 0]}
+                        onPointerDown={(e) => handleCornerDrag(index, e)}
+                        onPointerOver={() => gl.domElement.style.cursor = 'move'}
+                        onPointerOut={() => gl.domElement.style.cursor = 'crosshair'}
+                    >
+                        <circleGeometry args={[0.035, 32]} />
+                        <meshBasicMaterial
+                            color={draggingCorner === index ? handleColor : baseColor}
+                            transparent
+                            opacity={0.9}
+                        />
+                        <mesh scale={[1.2, 1.2, 1]}>
+                            <ringGeometry args={[0.035, 0.045, 32]} />
+                            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
+                        </mesh>
                     </mesh>
-                </mesh>
-            ))}
+                );
+            })}
+
 
             {/* Render edge segments for clicking */}
             {edgeSegments.map((segment, idx) => {
-                const midX = (segment.start.x + segment.end.x) / 2;
-                const midY = (segment.start.y + segment.end.y) / 2;
-                const dx = segment.end.x - segment.start.x;
-                const dy = segment.end.y - segment.start.y;
+                const startX = mappingMode === "output" ? segment.start.x : segment.start.x - 0.5;
+                const startY = mappingMode === "output" ? segment.start.y : segment.start.y - 0.5;
+                const endX = mappingMode === "output" ? segment.end.x : segment.end.x - 0.5;
+                const endY = mappingMode === "output" ? segment.end.y : segment.end.y - 0.5;
+
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
+                const dx = endX - startX;
+                const dy = endY - startY;
                 const length = Math.sqrt(dx * dx + dy * dy);
                 const angle = Math.atan2(dy, dx);
 
@@ -212,17 +246,16 @@ export function PenTool({ surface }: PenToolProps) {
                 <bufferGeometry>
                     <bufferAttribute
                         attach="attributes-position"
-                        count={surface.corners.length + 1}
+                        count={activeCorners.length + 1}
                         array={linePoints}
                         itemSize={3}
                     />
                 </bufferGeometry>
                 <lineBasicMaterial
-                    color="#7c3aed"
+                    color={baseColor}
                     linewidth={2}
                     transparent
                     opacity={0.4}
-                    depthTest={false}
                 />
             </line>
         </group>

@@ -356,12 +356,9 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if (shaderMaterial) {
-            // If MeshWarp is active, don't apply the corner-pin WarpMatrix (or use identity)
-            if (surface.meshWarp) {
-                shaderMaterial.uniforms.uWarpMatrix.value.identity();
-            } else {
-                shaderMaterial.uniforms.uWarpMatrix.value.copy(warpMatrix);
-            }
+            // Always copy warpMatrix to shader.
+            // This allows for 'Source' (Input) mapping even on distorted MeshWarp grids.
+            shaderMaterial.uniforms.uWarpMatrix.value.copy(warpMatrix);
 
             shaderMaterial.uniforms.uOpacity.value = reactiveOpacity;
             shaderMaterial.uniforms.uBrightness.value = effects.brightness;
