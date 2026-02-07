@@ -16,14 +16,24 @@ export function LeftSidebar() {
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
 
     const handleCreateSurface = () => {
+        console.log("Create Surface clicked");
         const mediaId = generateId();
-        addMediaAsset({
-            id: mediaId,
-            name: "New Surface",
-            type: "color",
-            color: "#808080", // Neutral gray default
-        });
-        addSurface(mediaId);
+        console.log("Generated mediaId:", mediaId);
+
+        try {
+            addMediaAsset({
+                id: mediaId,
+                name: "New Surface",
+                type: "color",
+                color: "#808080", // Neutral gray default
+            });
+            console.log("Added media asset");
+
+            addSurface(mediaId);
+            console.log("Called addSurface");
+        } catch (error) {
+            console.error("Error creating surface:", error);
+        }
     };
 
     const handleCreateText = () => {
@@ -40,8 +50,8 @@ export function LeftSidebar() {
                 <button
                     onClick={() => setActiveTab("layers")}
                     className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === "layers"
-                            ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
-                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                        ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                         }`}
                 >
                     <Layers className="w-4 h-4" />
@@ -50,8 +60,8 @@ export function LeftSidebar() {
                 <button
                     onClick={() => setActiveTab("assets")}
                     className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-colors ${activeTab === "assets"
-                            ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
-                            : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+                        ? "text-white bg-zinc-800 border-b-2 border-electric-cyan"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
                         }`}
                 >
                     <Image className="w-4 h-4" />
