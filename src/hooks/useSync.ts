@@ -25,22 +25,46 @@ export function useSync() {
             };
         } else {
             // Broadcast state updates from Control window
+            // Broadcast state updates from Control window
             const unsubscribeProject = useProjectStore.subscribe((state) => {
+                // Only sync data, not functions
+                const projectData = {
+                    surfaces: state.surfaces,
+                    mediaAssets: state.mediaAssets,
+                    cues: state.cues,
+                    projectSettings: state.projectSettings,
+                    selectedSurfaceIds: state.selectedSurfaceIds,
+                    currentProjectId: state.currentProjectId
+                };
+
+                // Deep clone to ensure no references are passed (though postMessage does this, it helps stripping undefineds/functions if JSONified)
+                // But structureClone/postMessage is better for performance if data is clean.
+                // We just need to make sure we don't pass the 'actions' from the store.
+
                 channel.postMessage({
                     type: "STATE_UPDATE",
                     data: {
-                        project: state,
-                        effects: useEffectsStore.getState(),
+                        project: JSON.parse(JSON.stringify(projectData)), // Safe strip of any hidden non-serializables
+                        effects: JSON.parse(JSON.stringify(useEffectsStore.getState())),
                     }
                 });
             });
 
             const unsubscribeEffects = useEffectsStore.subscribe((state) => {
+                const projectData = {
+                    surfaces: useProjectStore.getState().surfaces,
+                    mediaAssets: useProjectStore.getState().mediaAssets,
+                    cues: useProjectStore.getState().cues,
+                    projectSettings: useProjectStore.getState().projectSettings,
+                    selectedSurfaceIds: useProjectStore.getState().selectedSurfaceIds,
+                    currentProjectId: useProjectStore.getState().currentProjectId
+                };
+
                 channel.postMessage({
                     type: "STATE_UPDATE",
                     data: {
-                        project: useProjectStore.getState(),
-                        effects: state,
+                        project: JSON.parse(JSON.stringify(projectData)),
+                        effects: JSON.parse(JSON.stringify(state)),
                     }
                 });
             });

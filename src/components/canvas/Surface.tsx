@@ -93,13 +93,7 @@ export function Surface({ surface }: SurfaceProps) {
 
     // Create texture from media
     const texture = useMemo(() => {
-        // console.log("Creating texture for surface", surface.id, "mediaId:", surface.mediaId);
-        if (!mediaAsset) {
-            // console.log("No media asset found for surface", surface.id);
-            return null;
-        }
-
-        // console.log("Media asset found:", mediaAsset);
+        if (!mediaAsset) return null;
 
         if (mediaAsset.type === "color") {
             const canvas = document.createElement("canvas");

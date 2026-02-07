@@ -15,6 +15,7 @@ export function ProjectionCanvas() {
 
     return (
         <Canvas
+            frameloop={projectSettings.paused ? "never" : "always"}
             gl={{
                 antialias: true,
                 alpha: true,

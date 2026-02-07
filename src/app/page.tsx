@@ -13,8 +13,9 @@ import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSync } from "@/hooks/useSync";
 import { MIDIMapper } from "@/components/panels/MIDIMapper";
+import { CanvasSettings } from "@/components/panels/CanvasSettings";
 import { useState } from "react";
-import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap } from "lucide-react";
+import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings } from "lucide-react";
 
 export default function Home() {
     const setToolMode = useUIStore((state) => state.setToolMode);
@@ -27,6 +28,7 @@ export default function Home() {
 
     // UI State for MIDI Panel
     const [showMIDIPanel, setShowMIDIPanel] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     // Initialize Global Hotkeys
     useHotkeys([
@@ -105,7 +107,7 @@ export default function Home() {
                     </div>
                 </div>
 
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center relative">
                     <button
                         onClick={() => setShowMIDIPanel(!showMIDIPanel)}
                         className={`p-1.5 rounded transition-all ${showMIDIPanel
@@ -115,6 +117,23 @@ export default function Home() {
                     >
                         <Zap className="w-4 h-4" />
                     </button>
+
+                    <button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={`p-1.5 rounded transition-all ${showSettings
+                            ? "bg-zinc-800 text-white"
+                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
+                        title="Canvas Settings"
+                    >
+                        <Settings className="w-4 h-4" />
+                    </button>
+
+                    {/* Settings Popover */}
+                    {showSettings && (
+                        <div className="absolute top-12 right-0 z-50 animate-in fade-in zoom-in-95 duration-200">
+                            <CanvasSettings />
+                        </div>
+                    )}
 
                     <button
                         onClick={openOutputWindow}

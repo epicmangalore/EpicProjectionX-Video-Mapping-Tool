@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { generateId } from "@/lib/utils";
 import { Image, Video, Palette, Type, Webcam } from "lucide-react";
@@ -42,15 +42,11 @@ export function MediaLibrary() {
         });
     };
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
-
+    const processFiles = async (files: FileList | File[]) => {
         for (const file of Array.from(files)) {
             const thumbnail = await generateThumbnail(file);
             const mediaId = generateId();
 
-            // For the main URL, we still use FileReader for now (or ObjectURL if preferred, but keeping consistent with existing logic)
             const reader = new FileReader();
             reader.onload = (event) => {
                 const url = event.target?.result as string;
@@ -59,14 +55,62 @@ export function MediaLibrary() {
                     id: mediaId,
                     name: file.name,
                     type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
-                    url, // The full data URL
+                    url,
                     size: file.size,
-                    thumbnail, // The generated thumbnail (image for images, frame for videos)
+                    thumbnail,
                 };
 
                 addMediaAsset(asset);
             };
             reader.readAsDataURL(file);
+        }
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            await processFiles(e.target.files);
+        }
+    };
+
+    // Drag and Drop Handlers
+    const [isDragging, setIsDragging] = useState(false);
+    const dragCounter = useRef(0);
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDragging(true);
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // console.log("Drag Over"); 
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        setIsDragging(false);
+        dragCounter.current = 0;
+
+        const files = e.dataTransfer.files;
+
+        if (files && files.length > 0) {
+            await processFiles(files);
         }
     };
 
@@ -88,7 +132,22 @@ export function MediaLibrary() {
     };
 
     return (
-        <aside className="w-full h-full flex flex-col bg-transparent">
+        <aside
+            className="w-full h-full flex flex-col bg-transparent relative"
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+        >
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-50 bg-electric-purple/20 border-2 border-electric-purple border-dashed m-2 rounded-lg flex items-center justify-center backdrop-blur-sm pointer-events-none">
+                    <div className="bg-zinc-900 p-4 rounded-xl shadow-xl flex flex-col items-center gap-2 animate-bounce">
+                        <Image className="w-8 h-8 text-electric-purple" />
+                        <p className="text-electric-purple font-bold">Drop Media Here</p>
+                    </div>
+                </div>
+            )}
+
             <div className="p-4 border-b border-white/10">
                 <h2 className="text-lg font-semibold text-electric-purple mb-3">Media Library</h2>
 

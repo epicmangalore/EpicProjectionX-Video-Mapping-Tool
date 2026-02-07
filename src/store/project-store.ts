@@ -93,6 +93,7 @@ export interface ProjectSettings {
     masterOpacity: number;
     masterBrightness: number;
     blackout: boolean;
+    paused: boolean;
     snapToGrid: boolean;
     snapToSurfaces: boolean;
     snapThreshold: number;
@@ -157,6 +158,7 @@ const defaultProjectSettings: ProjectSettings = {
     masterOpacity: 1,
     masterBrightness: 1,
     blackout: false,
+    paused: false, // Default to playing
     snapToGrid: true,
     snapToSurfaces: true,
     snapThreshold: 0.05,
@@ -173,7 +175,6 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     // Surface actions
     addSurface: (mediaId) => {
-        console.log("Adding surface with mediaId:", mediaId);
         get().saveHistory();
         const newSurface: Surface = {
             id: generateId(),

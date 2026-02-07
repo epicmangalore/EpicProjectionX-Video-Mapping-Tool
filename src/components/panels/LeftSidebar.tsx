@@ -16,31 +16,36 @@ export function LeftSidebar() {
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
 
     const handleCreateSurface = () => {
-        console.log("Create Surface clicked");
         const mediaId = generateId();
-        console.log("Generated mediaId:", mediaId);
-
-        try {
-            addMediaAsset({
-                id: mediaId,
-                name: "New Surface",
-                type: "color",
-                color: "#808080", // Neutral gray default
-            });
-            console.log("Added media asset");
-
-            addSurface(mediaId);
-            console.log("Called addSurface");
-        } catch (error) {
-            console.error("Error creating surface:", error);
-        }
+        addMediaAsset({
+            id: mediaId,
+            name: "New Surface",
+            type: "color",
+            color: "#808080", // Neutral gray default
+        });
+        addSurface(mediaId);
     };
 
     const handleCreateText = () => {
-        // Placeholder for text creation logic
-        // This likely needs a specific text asset type or similar mechanism
-        // For now, alerting or just logging, as the original logic might be different
-        console.log("Create Text clicked");
+        const mediaId = generateId();
+        addMediaAsset({
+            id: mediaId,
+            name: "Text Layer",
+            type: "text",
+            text: "Hello World",
+            color: "#ffffff",
+        });
+        addSurface(mediaId);
+    };
+
+    const handleWebcam = () => {
+        const mediaId = generateId();
+        addMediaAsset({
+            id: mediaId,
+            name: "Webcam Input",
+            type: "webcam",
+        });
+        addSurface(mediaId);
     };
 
     return (
@@ -84,15 +89,14 @@ export function LeftSidebar() {
                             </button>
                             <button
                                 onClick={handleCreateText}
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5 opacity-50 cursor-not-allowed"
-                                title="Coming Soon"
+                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
                             >
                                 <Type className="w-3 h-3" />
                                 Text
                             </button>
                             <button
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5 opacity-50 cursor-not-allowed"
-                                title="Coming Soon"
+                                onClick={handleWebcam}
+                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
                             >
                                 <Video className="w-3 h-3" />
                                 Webcam
