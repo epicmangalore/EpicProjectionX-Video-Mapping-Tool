@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Surface } from "@/store/project-store";
+import type { Surface, Vector2 } from "@/store/project-store";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 
@@ -22,37 +22,45 @@ export function MeshWarp({ surface }: MeshWarpProps) {
 
     const { gridSize, controlPoints } = surface.meshWarp;
 
+    const groupRef = useRef<THREE.Group>(null);
+
     const handlePointDrag = (row: number, col: number, event: any) => {
         event.stopPropagation();
         setDraggingPoint({ row, col });
 
         const onPointerMove = (e: PointerEvent) => {
+            if (!groupRef.current) return;
+
             const rect = gl.domElement.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-            const vector = new THREE.Vector3(x, y, 0.5);
-            vector.unproject(camera);
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera({ x, y }, camera);
 
-            const newControlPoints = controlPoints.map((rowPoints, r) =>
-                rowPoints.map((point, c) => {
-                    if (r === row && c === col) {
-                        const dx = vector.x - surface.position.x;
-                        const dy = vector.y - surface.position.y;
-                        const cos = Math.cos(-surface.rotation);
-                        const sin = Math.sin(-surface.rotation);
-                        return {
-                            x: (dx * cos - dy * sin) / surface.scale.x,
-                            y: (dx * sin + dy * cos) / surface.scale.y,
-                        };
-                    }
-                    return point;
-                })
-            );
+            const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(groupRef.current.getWorldQuaternion(new THREE.Quaternion()));
+            const planePoint = groupRef.current.getWorldPosition(new THREE.Vector3());
+            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePoint);
 
-            updateSurface(surface.id, {
-                meshWarp: { gridSize, controlPoints: newControlPoints },
-            });
+            const target = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, target);
+
+            if (target) {
+                const localPos = groupRef.current.worldToLocal(target);
+
+                const newControlPoints = controlPoints.map((rowPoints, r) =>
+                    rowPoints.map((point, c) => {
+                        if (r === row && c === col) {
+                            return { x: localPos.x, y: localPos.y } as Vector2;
+                        }
+                        return point;
+                    })
+                );
+
+                updateSurface(surface.id, {
+                    meshWarp: { gridSize, controlPoints: newControlPoints },
+                });
+            }
         };
 
         const onPointerUp = () => {
@@ -66,7 +74,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
     };
 
     return (
-        <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>
+        <group ref={groupRef} position={[0, 0, 0.1]}>
             {/* Draw grid lines */}
             {controlPoints.map((rowPoints, row) => {
                 if (row < gridSize) {

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import type { Surface } from "@/store/project-store";
+import type { Surface, Vector2 } from "@/store/project-store";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 
@@ -94,26 +94,45 @@ export function PenTool({ surface }: PenToolProps) {
         return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
     };
 
+    const groupRef = useRef<THREE.Group>(null);
+
     // Handle click on canvas to add corner
     const handleCanvasClick = (event: any) => {
         event.stopPropagation();
 
-        const rect = gl.domElement.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        if (!groupRef.current) return;
 
-        const vector = new THREE.Vector3(x, y, 0.5);
-        vector.unproject(camera);
+        // Convert click point to local space
+        // We use the groupRef which represents the surface's local space (unscaled if we put it before scale? No, Surface group handles scale)
+        // Wait, Surface structure is: Group(Pos, Rot, Scale) -> PenTool Group
+        // So PenTool is in Scaled Local Space.
+        // But corners are stored in "Unit" Local Space (before scale?)
+        // Let's check Surface.tsx:
+        // <group scale={[surface.scale.x, surface.scale.y, 1]}> ... <PenTool /> ... </group>
+        // Yes.
+        // So `worldToLocal` on the PenTool group will give us coordinates in the Scaled space ?
+        // Actually Three.js `worldToLocal` accounts for all parent transforms.
+        // So if we have Group(Scale) -> Child, `Child.worldToLocal` converts world to Child's local (which includes the effect of parent scale).
+        // BUT `surface.corners` are defined such that they are multiplied by scale to get final size?
+        // Let's see `handleCornerDrag` in original code:
+        // const targetX = (dx * cos ... ) / surface.scale.x;
+        // It divides by scale.
+        // This implies corners are stored in "Unscaled" space (e.g. -0.5 to 0.5 for a 1x1 unit).
+        // So if `groupRef` is inside the scaled group, `worldToLocal` gives us coords in that scaled space.
+        // e.g. if Scale=2, clicking at X=1 (World) -> Local=0.5.
+        // So we DON'T need to manually divide by scale if we use worldToLocal on the group?
+        // Let's test:
+        // World 0 -> Local 0
+        // World 1, Scale 2 -> Local 0.5.
+        // Yes, worldToLocal handles the scale division implicitly.
 
-        const localX = vector.x - surface.position.x;
-        const localY = vector.y - surface.position.y;
+        const localPoint = groupRef.current.worldToLocal(event.point.clone());
 
-        const edgeIndex = findNearestEdge({ x: localX, y: localY });
+        // Find nearest edge in this local space
+        const edgeIndex = findNearestEdge({ x: localPoint.x, y: localPoint.y });
 
         if (edgeIndex !== null) {
-            // Insert corner after the clicked edge
-            // Store handles the addition to both corners and sourceCorners
-            addCorner(surface.id, edgeIndex + 1, { x: localX, y: localY });
+            addCorner(surface.id, edgeIndex + 1, { x: localPoint.x, y: localPoint.y } as Vector2);
         }
     };
 
@@ -123,6 +142,14 @@ export function PenTool({ surface }: PenToolProps) {
         setDraggingCorner(cornerIndex);
 
         const onPointerMove = (e: PointerEvent) => {
+            if (!groupRef.current) return;
+
+            // We need to raycast again because 'e' is a raw DOM event, not R3F event
+            // Standard idiom: Project mouse to plane.
+            // But simpler: just use the logic we had but corrected?
+            // "Poor man's raycast" using unproject works if we do the math right.
+            // OR we can rely on the fact that we are dragging on a 2D plane.
+
             const rect = gl.domElement.getBoundingClientRect();
             const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
             const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -130,16 +157,36 @@ export function PenTool({ surface }: PenToolProps) {
             const vector = new THREE.Vector3(x, y, 0.5);
             vector.unproject(camera);
 
-            const dx = vector.x - surface.position.x;
-            const dy = vector.y - surface.position.y;
-            const cos = Math.cos(-surface.rotation);
-            const sin = Math.sin(-surface.rotation);
-            const targetX = (dx * cos - dy * sin) / surface.scale.x;
-            const targetY = (dx * sin + dy * cos) / surface.scale.y;
+            // Now convert this world vector to local space
+            const localPoint = groupRef.current.worldToLocal(vector);
 
-            const newCorners = [...surface.corners];
-            newCorners[cornerIndex] = { x: targetX, y: targetY };
-            updateSurface(surface.id, { corners: newCorners });
+            // Correction: unproject puts it at z=0.5 NDC -> ?? World Z.
+            // This is NOT accurate intersection with the surface plane.
+            // It only works if the camera is orthographic or we are lucky.
+            // Better: Raycast against the group's plane.
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera({ x, y }, camera);
+
+            // Intersect with an infinite plane defined by the group's transform?
+            // Or just intersect a virtual plane mesh.
+            // We can intersect the groupRef itself? No, it's a group.
+            // We can intersect the edgeSegments meshes? No, we might drag outside them.
+
+            // Plan B: Plane intersection math.
+            const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(groupRef.current.getWorldQuaternion(new THREE.Quaternion()));
+            const planePoint = groupRef.current.getWorldPosition(new THREE.Vector3());
+            const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, planePoint);
+
+            const target = new THREE.Vector3();
+            raycaster.ray.intersectPlane(plane, target);
+
+            if (target) {
+                const localPos = groupRef.current.worldToLocal(target);
+                const newCorners = [...surface.corners];
+                newCorners[cornerIndex] = { x: localPos.x, y: localPos.y } as Vector2;
+                updateSurface(surface.id, { corners: newCorners });
+            }
         };
 
         const onPointerUp = () => {
@@ -167,8 +214,10 @@ export function PenTool({ surface }: PenToolProps) {
     const handleColor = "#22d3ee";
     const baseColor = "#7c3aed";
 
+    // IMPORTANT: Remove position from here, as parent handles it.
+    // Keep local Z offset for visibility.
     return (
-        <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>
+        <group ref={groupRef} position={[0, 0, 0.1]}>
             {/* Render active corners ... */}
             {activeCorners.map((corner, index) => {
                 const displayX = corner.x;
