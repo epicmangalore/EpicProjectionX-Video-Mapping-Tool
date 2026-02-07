@@ -278,15 +278,7 @@ export function Surface({ surface }: SurfaceProps) {
         updateLevels();
         const levels = audioLevels as any;
 
-        // Magic Mode Auto-Reactivity
-        if (simpleMode) {
-            // Auto scale bounce to bass/kick
-            const bass = levels.bass || 0;
-            audioReactiveScale.current = THREE.MathUtils.lerp(audioReactiveScale.current, 1.0 + bass * 0.2, 0.2);
 
-            // Subtle auto-glow
-            reactiveOpacity = THREE.MathUtils.clamp(surface.opacity + bass * 0.2, 0, 1);
-        }
 
         if (surface.audioMappings.length > 0) {
             surface.audioMappings.forEach(mapping => {
@@ -301,8 +293,9 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         // Bouncy UI Logic
-        const targetBounce = (isSelected || hovered) && simpleMode ? 1.1 : 1.0;
-        bounceRef.current = THREE.MathUtils.lerp(bounceRef.current, targetBounce, 0.15);
+        // Bouncy UI Logic - Removed for Pro Version
+        const targetBounce = 1.0;
+        bounceRef.current = 1.0;
 
         meshRef.current.position.set(
             surface.position.x,
