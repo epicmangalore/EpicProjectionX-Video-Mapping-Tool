@@ -116,15 +116,22 @@ interface ProjectStore {
     projectSettings: ProjectSettings;
     selectedSurfaceIds: string[];
     currentProjectId: number | null;
+    clipboard: Surface | null;
 
     // Surface actions
     addSurface: (mediaId?: string) => void;
     updateSurface: (id: string, updates: Partial<Surface>) => void;
     deleteSurface: (id: string) => void;
     duplicateSurface: (id: string) => void;
+    copySurface: (id: string) => void;
+    pasteSurface: () => void;
     toggleVisibility: (id: string) => void;
     toggleLock: (id: string) => void;
     reorderSurface: (id: string, newIndex: number) => void;
+    bringToFront: (id: string) => void;
+    sendToBack: (id: string) => void;
+    flipHorizontal: (id: string) => void;
+    flipVertical: (id: string) => void;
 
     // Selection actions
     selectSurface: (id: string, multi?: boolean) => void;
@@ -184,6 +191,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     projectSettings: defaultProjectSettings,
     selectedSurfaceIds: [],
     currentProjectId: null,
+    clipboard: null,
 
     // Surface actions
     addSurface: (mediaId) => {
@@ -264,7 +272,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
         if (!surface) return;
 
         const newSurface: Surface = {
-            ...surface,
+            ...JSON.parse(JSON.stringify(surface)),
             id: generateId(),
             name: `${surface.name} (Copy)`,
             position: {
@@ -272,6 +280,35 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 y: surface.position.y + 0.1,
             },
             zIndex: get().surfaces.length,
+        };
+
+        set((state) => ({
+            surfaces: [...state.surfaces, newSurface],
+            selectedSurfaceIds: [newSurface.id],
+        }));
+    },
+
+    copySurface: (id) => {
+        const surface = get().surfaces.find(s => s.id === id);
+        if (surface) {
+            set({ clipboard: JSON.parse(JSON.stringify(surface)) });
+        }
+    },
+
+    pasteSurface: () => {
+        const { clipboard, surfaces } = get();
+        if (!clipboard) return;
+
+        get().saveHistory();
+        const newSurface: Surface = {
+            ...JSON.parse(JSON.stringify(clipboard)),
+            id: generateId(),
+            name: `${clipboard.name} (Pasted)`,
+            position: {
+                x: clipboard.position.x + 0.05,
+                y: clipboard.position.y + 0.05,
+            },
+            zIndex: surfaces.length,
         };
 
         set((state) => ({
@@ -313,6 +350,34 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
             return { surfaces: updatedSurfaces };
         });
+    },
+
+    bringToFront: (id) => {
+        const { surfaces, reorderSurface } = get();
+        reorderSurface(id, surfaces.length - 1);
+    },
+
+    sendToBack: (id) => {
+        const { reorderSurface } = get();
+        reorderSurface(id, 0);
+    },
+
+    flipHorizontal: (id) => {
+        get().saveHistory();
+        set((state) => ({
+            surfaces: state.surfaces.map(s =>
+                s.id === id ? { ...s, scale: { ...s.scale, x: s.scale.x * -1 } } : s
+            )
+        }));
+    },
+
+    flipVertical: (id) => {
+        get().saveHistory();
+        set((state) => ({
+            surfaces: state.surfaces.map(s =>
+                s.id === id ? { ...s, scale: { ...s.scale, y: s.scale.y * -1 } } : s
+            )
+        }));
     },
 
     // Selection actions

@@ -1,7 +1,8 @@
 "use client";
 
 import { useProjectStore } from "@/store/project-store";
-import { Eye, EyeOff, Lock, Unlock, Layers, Search, ChevronUp, ChevronDown, Trash2, GripVertical } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, Layers, Search, ChevronUp, ChevronDown, Trash2, GripVertical, Copy, ClipboardPaste, ArrowUpToLine, ArrowDownToLine, FlipHorizontal, FlipVertical } from "lucide-react";
+import { ContextMenu } from "@/components/ui/ContextMenu";
 import { useState } from "react";
 import {
     DndContext,
@@ -22,7 +23,22 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 // Sortable Row Component
-function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVisibility, toggleLock, deleteSurface, updateSurface, totalCount }: any) {
+function SortableLayerRow({
+    surface,
+    index,
+    isSelected,
+    selectSurface,
+    toggleVisibility,
+    toggleLock,
+    deleteSurface,
+    updateSurface,
+    totalCount,
+    copySurface,
+    bringToFront,
+    sendToBack,
+    flipHorizontal,
+    flipVertical
+}: any) {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(surface.name);
 
@@ -66,80 +82,97 @@ function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVis
 
     const textClass = isSelected ? "text-electric-cyan" : "text-zinc-300";
 
+    const menuItems: any[] = [
+        { label: "Copy", icon: <Copy className="w-3.5 h-3.5" />, shortcut: "⌘C", onClick: () => copySurface(surface.id) },
+        "separator",
+        { label: "Bring to Front", icon: <ArrowUpToLine className="w-3.5 h-3.5" />, onClick: () => bringToFront(surface.id) },
+        { label: "Send to Back", icon: <ArrowDownToLine className="w-3.5 h-3.5" />, onClick: () => sendToBack(surface.id) },
+        "separator",
+        { label: "Hide", icon: surface.visible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />, onClick: () => toggleVisibility(surface.id) },
+        { label: "Lock", icon: surface.locked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />, onClick: () => toggleLock(surface.id) },
+        "separator",
+        { label: "Flip Horizontal", icon: <FlipHorizontal className="w-3.5 h-3.5" />, onClick: () => flipHorizontal(surface.id) },
+        { label: "Flip Vertical", icon: <FlipVertical className="w-3.5 h-3.5" />, onClick: () => flipVertical(surface.id) },
+        "separator",
+        { label: "Delete", icon: <Trash2 className="w-3.5 h-3.5" />, danger: true, shortcut: "⌫", onClick: () => deleteSurface(surface.id) },
+    ];
+
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            onClick={() => selectSurface(surface.id)}
-            onDoubleClick={() => {
-                setIsEditing(true);
-                setEditValue(surface.name);
-            }}
-            className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass} ${isDragging ? "opacity-50 ring-1 ring-electric-cyan" : ""}`}
-        >
-            {/* Drag Handle & Index */}
-            <div className="w-6 flex items-center justify-center relative group/handle" {...listeners}>
-                <div className="group-hover/handle:hidden text-[9px] font-mono opacity-50">
-                    {totalCount - index}
-                </div>
-                <div className="hidden group-hover/handle:flex text-zinc-500 hover:text-white cursor-grab active:cursor-grabbing">
-                    <GripVertical className="w-3 h-3" />
-                </div>
-            </div>
-
-            {/* Surface Name */}
-            <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
-                {isEditing ? (
-                    <input
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onBlur={handleRename}
-                        onKeyDown={handleKeyDown}
-                        className="w-full bg-zinc-800 border-none outline-none text-white px-1 py-0 h-5"
-                    />
-                ) : (
-                    surface.name
-                )}
-            </div>
-
-            {/* Controls (Right Aligned) */}
-            <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                {/* Visibility Toggle */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleVisibility(surface.id);
-                    }}
-                    className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
-                >
-                    {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                </button>
-
-                {/* Lock Toggle */}
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        toggleLock(surface.id);
-                    }}
-                    className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
-                >
-                    {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                </button>
-            </div>
-
-            {/* Simple Delete (Hover only) */}
-            <button
-                onClick={(e) => {
-                    e.stopPropagation();
-                    deleteSurface(surface.id);
+        <ContextMenu items={menuItems}>
+            <div
+                ref={setNodeRef}
+                style={style}
+                {...attributes}
+                onClick={() => selectSurface(surface.id)}
+                onDoubleClick={() => {
+                    setIsEditing(true);
+                    setEditValue(surface.name);
                 }}
-                className="w-4 h-full flex items-center justify-center text-zinc-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all ml-1"
+                className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass} ${isDragging ? "opacity-50 ring-1 ring-electric-cyan" : ""}`}
             >
-                <Trash2 className="w-2.5 h-2.5" />
-            </button>
-        </div>
+                {/* Drag Handle & Index */}
+                <div className="w-6 flex items-center justify-center relative group/handle" {...listeners}>
+                    <div className="group-hover/handle:hidden text-[9px] font-mono opacity-50">
+                        {totalCount - index}
+                    </div>
+                    <div className="hidden group-hover/handle:flex text-zinc-500 hover:text-white cursor-grab active:cursor-grabbing">
+                        <GripVertical className="w-3 h-3" />
+                    </div>
+                </div>
+
+                {/* Surface Name */}
+                <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
+                    {isEditing ? (
+                        <input
+                            autoFocus
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onBlur={handleRename}
+                            onKeyDown={handleKeyDown}
+                            className="w-full bg-zinc-800 border-none outline-none text-white px-1 py-0 h-5"
+                        />
+                    ) : (
+                        surface.name
+                    )}
+                </div>
+
+                {/* Controls (Right Aligned) */}
+                <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                    {/* Visibility Toggle */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleVisibility(surface.id);
+                        }}
+                        className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
+                    >
+                        {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    </button>
+
+                    {/* Lock Toggle */}
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLock(surface.id);
+                        }}
+                        className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
+                    >
+                        {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                    </button>
+                </div>
+
+                {/* Simple Delete (Hover only) */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        deleteSurface(surface.id);
+                    }}
+                    className="w-4 h-full flex items-center justify-center text-zinc-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all ml-1"
+                >
+                    <Trash2 className="w-2.5 h-2.5" />
+                </button>
+            </div>
+        </ContextMenu>
     );
 }
 
@@ -152,6 +185,13 @@ export function SurfaceOutliner() {
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const reorderSurface = useProjectStore((state) => state.reorderSurface);
+    const copySurface = useProjectStore((state) => state.copySurface);
+    const pasteSurface = useProjectStore((state) => state.pasteSurface);
+    const bringToFront = useProjectStore((state) => state.bringToFront);
+    const sendToBack = useProjectStore((state) => state.sendToBack);
+    const flipHorizontal = useProjectStore((state) => state.flipHorizontal);
+    const flipVertical = useProjectStore((state) => state.flipVertical);
+    const hasClipboard = useProjectStore((state) => !!state.clipboard);
 
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -217,39 +257,66 @@ export function SurfaceOutliner() {
             </div>
 
             {/* Surface List */}
-            <div className="flex-1 overflow-y-auto bg-zinc-950">
-                {sortedSurfaces.length === 0 ? (
-                    <div className="p-4 text-center text-[10px] text-zinc-600 uppercase tracking-widest mt-10">
-                        {searchQuery ? "No Matches" : "Empty"}
+            <div
+                className="flex-1 overflow-y-auto bg-zinc-950"
+                onContextMenu={(e) => {
+                    if (e.target === e.currentTarget && hasClipboard) {
+                        // Show paste menu if clicking empty area
+                        // This would requires another ContextMenu wrap or direct handler
+                    }
+                }}
+            >
+                <ContextMenu
+                    items={[
+                        {
+                            label: "Paste Layer",
+                            icon: <ClipboardPaste className="w-3.5 h-3.5" />,
+                            shortcut: "⌘V",
+                            disabled: !hasClipboard,
+                            onClick: pasteSurface
+                        }
+                    ]}
+                >
+                    <div className="min-h-full">
+                        {sortedSurfaces.length === 0 ? (
+                            <div className="p-4 text-center text-[10px] text-zinc-600 uppercase tracking-widest mt-10">
+                                {searchQuery ? "No Matches" : "Empty"}
+                            </div>
+                        ) : (
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={sortedSurfaces.map(s => s.id)}
+                                    strategy={verticalListSortingStrategy}
+                                    disabled={searchQuery !== ""} // Disable drag when filtering
+                                >
+                                    {sortedSurfaces.map((surface, index) => (
+                                        <SortableLayerRow
+                                            key={surface.id}
+                                            surface={surface}
+                                            index={index}
+                                            isSelected={selectedIds.includes(surface.id)}
+                                            selectSurface={selectSurface}
+                                            toggleVisibility={toggleVisibility}
+                                            toggleLock={toggleLock}
+                                            deleteSurface={deleteSurface}
+                                            updateSurface={updateSurface}
+                                            copySurface={copySurface}
+                                            bringToFront={bringToFront}
+                                            sendToBack={sendToBack}
+                                            flipHorizontal={flipHorizontal}
+                                            flipVertical={flipVertical}
+                                            totalCount={sortedSurfaces.length}
+                                        />
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
+                        )}
                     </div>
-                ) : (
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                    >
-                        <SortableContext
-                            items={sortedSurfaces.map(s => s.id)}
-                            strategy={verticalListSortingStrategy}
-                            disabled={searchQuery !== ""} // Disable drag when filtering
-                        >
-                            {sortedSurfaces.map((surface, index) => (
-                                <SortableLayerRow
-                                    key={surface.id}
-                                    surface={surface}
-                                    index={index}
-                                    isSelected={selectedIds.includes(surface.id)}
-                                    selectSurface={selectSurface}
-                                    toggleVisibility={toggleVisibility}
-                                    toggleLock={toggleLock}
-                                    deleteSurface={deleteSurface}
-                                    updateSurface={updateSurface}
-                                    totalCount={sortedSurfaces.length}
-                                />
-                            ))}
-                        </SortableContext>
-                    </DndContext>
-                )}
+                </ContextMenu>
             </div>
 
             {/* Footer Stats */}
