@@ -57,7 +57,7 @@ export function getPerspectiveTransform(
         // Map UV [0,1] to unit plane [-0.5, 0.5]
         src = sourceCorners.map(uv => ({
             x: uv.x - 0.5,
-            y: (1 - uv.y) - 0.5 // UV Y is flipped compared to geometry Y
+            y: uv.y - 0.5
         }));
     }
 

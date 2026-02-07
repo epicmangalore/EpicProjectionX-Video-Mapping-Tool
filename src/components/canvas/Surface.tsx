@@ -317,7 +317,7 @@ export function Surface({ surface }: SurfaceProps) {
 
             const point = controlPoints[yIdx][xIdx];
             if (point) {
-                positions.setXY(i, point.x, -point.y); // Flip Y because 3D coordinates
+                positions.setXY(i, point.x, point.y);
             }
         }
         positions.needsUpdate = true;
