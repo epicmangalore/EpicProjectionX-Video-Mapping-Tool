@@ -74,16 +74,18 @@ export function SurfaceProperties() {
                         className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
                     >
                         <option value="">None</option>
-                        {mediaAssets.map((asset) => (
-                            <option key={asset.id} value={asset.id}>
-                                {asset.type === "image" && "🖼️ "}
-                                {asset.type === "video" && "🎬 "}
-                                {asset.type === "color" && "🎨 "}
-                                {asset.type === "text" && "📝 "}
-                                {asset.type === "webcam" && "📷 "}
-                                {asset.name}
-                            </option>
-                        ))}
+                        {mediaAssets
+                            .filter((asset) => asset.type !== "shader")
+                            .map((asset) => (
+                                <option key={asset.id} value={asset.id}>
+                                    {asset.type === "image" && "🖼️ "}
+                                    {asset.type === "video" && "🎬 "}
+                                    {asset.type === "color" && "🎨 "}
+                                    {asset.type === "text" && "📝 "}
+                                    {asset.type === "webcam" && "📷 "}
+                                    {asset.name}
+                                </option>
+                            ))}
                     </select>
                 </div>
 

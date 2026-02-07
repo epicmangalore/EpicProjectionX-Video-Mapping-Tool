@@ -55,8 +55,8 @@ export function CanvasSettings() {
                             key={preset.label}
                             onClick={() => updateProjectSettings({ resolution: { width: preset.width, height: preset.height } })}
                             className={`px-2 py-1.5 text-[10px] rounded border transition-colors ${projectSettings.resolution.width === preset.width && projectSettings.resolution.height === preset.height
-                                    ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
-                                    : "bg-zinc-900 border-white/5 hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                                ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
+                                : "bg-zinc-900 border-white/5 hover:bg-zinc-800 text-zinc-400 hover:text-white"
                                 }`}
                         >
                             {preset.label}
@@ -95,8 +95,8 @@ export function CanvasSettings() {
             <button
                 onClick={() => updateProjectSettings({ paused: !projectSettings.paused })}
                 className={`w-full py-2 rounded mb-4 flex items-center justify-center gap-2 text-xs font-semibold transition-all border ${projectSettings.paused
-                        ? "bg-yellow-500/20 border-yellow-500 text-yellow-500"
-                        : "bg-zinc-900 border-white/10 hover:bg-zinc-800 text-zinc-300"
+                    ? "bg-yellow-500/20 border-yellow-500 text-yellow-500"
+                    : "bg-zinc-900 border-white/10 hover:bg-zinc-800 text-zinc-300"
                     }`}
             >
                 {projectSettings.paused ? (
@@ -129,6 +129,32 @@ export function CanvasSettings() {
                         style={{ backgroundColor: projectSettings.backgroundColor }}
                     />
                 </div>
+            </div>
+
+            {/* Canvas Frame Toggle */}
+            <div className="mb-4 pt-4 border-t border-white/5">
+                <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Display Options</label>
+
+                <label className="flex items-center justify-between py-2 px-2 rounded hover:bg-zinc-900/50 cursor-pointer group">
+                    <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">Show Canvas Frame</span>
+                    <input
+                        type="checkbox"
+                        checked={projectSettings.showCanvasFrame}
+                        onChange={(e) => updateProjectSettings({ showCanvasFrame: e.target.checked })}
+                        className="w-4 h-4 accent-electric-cyan cursor-pointer"
+                    />
+                </label>
+
+                <label className="flex items-center justify-between py-2 px-2 rounded hover:bg-zinc-900/50 cursor-pointer group">
+                    <span className="text-xs text-zinc-300 group-hover:text-white transition-colors">Show Safe Area</span>
+                    <input
+                        type="checkbox"
+                        checked={projectSettings.showSafeArea}
+                        onChange={(e) => updateProjectSettings({ showSafeArea: e.target.checked })}
+                        className="w-4 h-4 accent-electric-cyan cursor-pointer"
+                        disabled={!projectSettings.showCanvasFrame}
+                    />
+                </label>
             </div>
         </div>
     );

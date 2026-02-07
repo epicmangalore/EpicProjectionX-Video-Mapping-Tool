@@ -101,6 +101,8 @@ export interface ProjectSettings {
     snapToGrid: boolean;
     snapToSurfaces: boolean;
     snapThreshold: number;
+    showCanvasFrame: boolean;
+    showSafeArea: boolean;
 }
 
 interface ProjectStore {
@@ -167,6 +169,8 @@ const defaultProjectSettings: ProjectSettings = {
     snapToGrid: true,
     snapToSurfaces: true,
     snapThreshold: 0.05,
+    showCanvasFrame: true,
+    showSafeArea: false,
 };
 
 export const useProjectStore = create<ProjectStore>((set, get) => ({

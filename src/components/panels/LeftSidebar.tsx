@@ -19,7 +19,7 @@ export function LeftSidebar() {
         const mediaId = generateId();
         addMediaAsset({
             id: mediaId,
-            name: "New Surface",
+            name: "Gray Fill",
             type: "color",
             color: "#808080", // Neutral gray default
         });

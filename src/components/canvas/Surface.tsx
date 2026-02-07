@@ -186,8 +186,8 @@ export function Surface({ surface }: SurfaceProps) {
         shape.closePath();
 
         const geometry = new THREE.ShapeGeometry(shape);
-        // Calculate UVs for the shape (simple planar mapping 0-1)
-        // Find bounding box
+
+        // Find bounding box of original corners
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         surface.corners.forEach(p => {
             minX = Math.min(minX, p.x);
@@ -196,15 +196,27 @@ export function Surface({ surface }: SurfaceProps) {
             maxY = Math.max(maxY, p.y);
         });
 
-        const width = maxX - minX;
-        const height = maxY - minY;
+        const width = maxX - minX || 1;
+        const height = maxY - minY || 1;
 
+        // Map UVs based on position within bounding box
+        // This ensures texture coordinates match the corner positions
         const uvAttribute = geometry.attributes.uv;
+        const posAttribute = geometry.attributes.position;
+
         for (let i = 0; i < uvAttribute.count; i++) {
-            const x = geometry.attributes.position.getX(i);
-            const y = geometry.attributes.position.getY(i);
-            uvAttribute.setXY(i, (x - minX) / width, (y + maxY) / height);
+            const x = posAttribute.getX(i);
+            const y = posAttribute.getY(i);
+
+            // Map to 0-1 range based on bounding box
+            // Note: Y is flipped in geometry, so we need to account for that
+            const u = (x - minX) / width;
+            const v = 1 - ((y + maxY) / height); // Flip V coordinate
+
+            uvAttribute.setXY(i, u, v);
         }
+
+        uvAttribute.needsUpdate = true;
 
         return geometry;
     }, [surface.corners, isQuad, surface.meshWarp]);
@@ -400,7 +412,7 @@ export function Surface({ surface }: SurfaceProps) {
                     <primitive object={fallbackMaterial} attach="material" />
                 )}
             </mesh>
-            {isSelected && (
+            {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && (
                 <>
                     <mesh position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}>
                         <lineSegments scale={[surface.scale.x, surface.scale.y, 1]}>

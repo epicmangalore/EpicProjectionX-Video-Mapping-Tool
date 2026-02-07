@@ -8,6 +8,7 @@ import { Surface } from "./Surface";
 import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
+import { CanvasFrame } from "./CanvasFrame";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -39,6 +40,9 @@ export function ProjectionCanvas() {
 
             {/* Ambient light for visibility */}
             <ambientLight intensity={1} />
+
+            {/* Canvas frame indicator */}
+            <CanvasFrame />
 
             {/* Render all surfaces */}
             {surfaces.map((surface) => (
