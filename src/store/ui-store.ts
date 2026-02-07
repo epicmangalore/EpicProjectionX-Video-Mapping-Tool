@@ -11,8 +11,10 @@ interface UIStore {
     leftPanelOpen: boolean;
     rightPanelOpen: boolean;
     bottomPanelOpen: boolean;
+    mappingMode: "output" | "input";
     // Actions
     setToolMode: (mode: ToolMode) => void;
+    setMappingMode: (mode: "output" | "input") => void;
     toggleGrid: () => void;
     toggleRulers: () => void;
     togglePerformanceMonitor: () => void;
@@ -30,9 +32,11 @@ export const useUIStore = create<UIStore>((set) => ({
     leftPanelOpen: true,
     rightPanelOpen: true,
     bottomPanelOpen: true,
+    mappingMode: "output",
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
+    setMappingMode: (mode) => set({ mappingMode: mode }),
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleRulers: () => set((state) => ({ showRulers: !state.showRulers })),
     togglePerformanceMonitor: () =>

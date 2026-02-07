@@ -13,22 +13,25 @@ interface CornerPinProps {
 
 export function CornerPin({ surface }: CornerPinProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
-    const surfaces = useProjectStore((state) => state.surfaces);
     const settings = useProjectStore((state) => state.projectSettings);
     const toolMode = useUIStore((state) => state.toolMode);
+    const mappingMode = useUIStore((state) => state.mappingMode);
+
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
 
+    const activeCorners = mappingMode === "output" ? surface.corners : surface.sourceCorners;
+
     const linePoints = useMemo(() => {
-        if (!surface?.corners) return new Float32Array(0);
+        if (!activeCorners) return new Float32Array(0);
         const pts: number[] = [];
-        surface.corners.forEach(p => pts.push(p.x, p.y, 0));
+        activeCorners.forEach(p => pts.push(p.x, p.y, 0));
         // Always close the loop for lines
-        if (surface.corners.length > 0) {
-            pts.push(surface.corners[0].x, surface.corners[0].y, 0);
+        if (activeCorners.length > 0) {
+            pts.push(activeCorners[0].x, activeCorners[0].y, 0);
         }
         return new Float32Array(pts);
-    }, [surface.corners]);
+    }, [activeCorners]);
 
     if (toolMode !== "corner-pin" || surface.locked) return null;
 
@@ -65,10 +68,20 @@ export function CornerPin({ surface }: CornerPinProps) {
                 targetY = Math.round(targetY / gridSize) * gridSize;
             }
 
-            const newCorners = [...surface.corners];
-            newCorners[cornerIndex] = { x: targetX, y: targetY };
-
-            updateSurface(surface.id, { corners: newCorners });
+            if (mappingMode === "output") {
+                const newCorners = [...surface.corners];
+                newCorners[cornerIndex] = { x: targetX, y: targetY };
+                updateSurface(surface.id, { corners: newCorners });
+            } else {
+                // For input (UV), we map -0.5..0.5 back to 0..1
+                // But UV Y is usually flipped in mapping logic
+                const newSourceCorners = [...surface.sourceCorners];
+                newSourceCorners[cornerIndex] = {
+                    x: Math.max(0, Math.min(1, targetX + 0.5)),
+                    y: Math.max(0, Math.min(1, targetY + 0.5))
+                };
+                updateSurface(surface.id, { sourceCorners: newSourceCorners });
+            }
         };
 
         const onPointerUp = () => {
@@ -81,42 +94,52 @@ export function CornerPin({ surface }: CornerPinProps) {
         window.addEventListener("pointerup", onPointerUp);
     };
 
+    const handleColor = mappingMode === "output" ? "#22d3ee" : "#f472b6"; // Cyan vs Pink
+    const baseColor = mappingMode === "output" ? "#7c3aed" : "#f97316"; // Purple vs Orange
+
     return (
         <group position={[0, 0, 0.1]}>
-            {surface.corners.map((corner, index) => (
-                <mesh
-                    key={`${surface.id}-corner-${index}`}
-                    position={[corner.x, corner.y, 0]}
-                    onPointerDown={(e) => handleCornerDrag(index, e)}
-                    onPointerOver={() => gl.domElement.style.cursor = 'move'}
-                    onPointerOut={() => gl.domElement.style.cursor = 'auto'}
-                    scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]} // Keep handles same size
-                >
-                    <circleGeometry args={[0.035, 32]} />
-                    <meshBasicMaterial
-                        color={draggingCorner === index ? "#22d3ee" : (index < 4 ? "#7c3aed" : "#ec4899")}
-                        transparent
-                        opacity={0.9}
-                        depthTest={false}
-                    />
-                    <mesh scale={[1.2, 1.2, 1]}>
-                        <ringGeometry args={[0.035, 0.045, 32]} />
-                        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthTest={false} />
+            {activeCorners.map((corner, index) => {
+                // For input mode, we preview the Source Corners in the same local space
+                // by mapping 0..1 to -0.5..0.5
+                const displayX = mappingMode === "output" ? corner.x : corner.x - 0.5;
+                const displayY = mappingMode === "output" ? corner.y : corner.y - 0.5;
+
+                return (
+                    <mesh
+                        key={`${surface.id}-corner-${index}`}
+                        position={[displayX, displayY, 0]}
+                        onPointerDown={(e) => handleCornerDrag(index, e)}
+                        onPointerOver={() => gl.domElement.style.cursor = 'move'}
+                        onPointerOut={() => gl.domElement.style.cursor = 'auto'}
+                        scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
+                    >
+                        <circleGeometry args={[0.035, 32]} />
+                        <meshBasicMaterial
+                            color={draggingCorner === index ? handleColor : (index < 4 ? baseColor : "#ec4899")}
+                            transparent
+                            opacity={0.9}
+                            depthTest={false}
+                        />
+                        <mesh scale={[1.2, 1.2, 1]}>
+                            <ringGeometry args={[0.035, 0.045, 32]} />
+                            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthTest={false} />
+                        </mesh>
                     </mesh>
-                </mesh>
-            ))}
+                );
+            })}
 
             <line>
                 <bufferGeometry>
                     <bufferAttribute
                         attach="attributes-position"
-                        count={surface.corners.length + 1}
+                        count={activeCorners.length + 1}
                         array={linePoints}
                         itemSize={3}
                     />
                 </bufferGeometry>
                 <lineBasicMaterial
-                    color="#7c3aed"
+                    color={baseColor}
                     linewidth={2}
                     transparent
                     opacity={0.4}

@@ -40,20 +40,29 @@ export function multiplyMatrices(a: Matrix4, b: Matrix4): Matrix4 {
  * Maps a unit square to four arbitrary corner points
  */
 export function getPerspectiveTransform(
-    corners: [Vector2, Vector2, Vector2, Vector2]
+    corners: [Vector2, Vector2, Vector2, Vector2],
+    sourceCorners?: [Vector2, Vector2, Vector2, Vector2]
 ): Matrix4 {
-    const [tl, tr, br, bl] = corners;
+    const [tl, tr, bl, br] = corners;
 
-    // Source points (matching Three.js PlaneGeometry TL, TR, BR, BL)
-    const src = [
-        { x: -0.5, y: 0.5 },  // top-left (0)
-        { x: 0.5, y: 0.5 },   // top-right (1)
-        { x: -0.5, y: -0.5 }, // bottom-left (2)
-        { x: 0.5, y: -0.5 },  // bottom-right (3)
+    // Source points. Default to unit square [-0.5, 0.5]
+    let src = [
+        { x: -0.5, y: 0.5 },  // TL
+        { x: 0.5, y: 0.5 },   // TR
+        { x: -0.5, y: -0.5 }, // BL
+        { x: 0.5, y: -0.5 },  // BR
     ];
 
+    if (sourceCorners) {
+        // Map UV [0,1] to unit plane [-0.5, 0.5]
+        src = sourceCorners.map(uv => ({
+            x: uv.x - 0.5,
+            y: (1 - uv.y) - 0.5 // UV Y is flipped compared to geometry Y
+        }));
+    }
+
     // Destination points
-    const dst = [tl, tr, br, bl];
+    const dst = [tl, tr, bl, br];
 
     // Solve for the perspective transform matrix
     // This uses the Direct Linear Transform (DLT) algorithm

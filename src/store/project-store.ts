@@ -16,7 +16,8 @@ export interface Surface {
     zIndex: number;
     mediaId: string | null;
     blendMode: BlendMode;
-    corners: Vector2[]; // Support N-point polygons
+    corners: Vector2[]; // Output (Target) coordinates
+    sourceCorners: Vector2[]; // Input (Source) UV coordinates [0-1 range]
     meshWarp: MeshWarpData | null;
     effects: Effect[];
     visible: boolean;
@@ -217,6 +218,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 { x: -0.5, y: -0.5 }, // BL
                 { x: 0.5, y: -0.5 },  // BR
             ],
+            sourceCorners: [
+                { x: 0, y: 1 }, // TL
+                { x: 1, y: 1 }, // TR
+                { x: 0, y: 0 }, // BL
+                { x: 1, y: 0 }, // BR
+            ],
             meshWarp: null,
             effects: [],
             visible: true,
@@ -389,7 +396,19 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 if (s.id !== surfaceId) return s;
                 const newCorners = [...s.corners];
                 newCorners.splice(index, 0, point);
-                return { ...s, corners: newCorners };
+
+                // Add source corner at same index
+                // Default to midpoint of neighbors if possible
+                const newSourceCorners = [...s.sourceCorners];
+                let sourcePoint = { x: 0.5, y: 0.5 };
+                if (newSourceCorners.length >= 2) {
+                    const prev = newSourceCorners[(index - 1 + newSourceCorners.length) % newSourceCorners.length];
+                    const next = newSourceCorners[index % newSourceCorners.length];
+                    sourcePoint = { x: (prev.x + next.x) / 2, y: (prev.y + next.y) / 2 };
+                }
+                newSourceCorners.splice(index, 0, sourcePoint);
+
+                return { ...s, corners: newCorners, sourceCorners: newSourceCorners };
             }),
         }));
     },
@@ -401,7 +420,11 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 if (s.id !== surfaceId || s.corners.length <= 3) return s;
                 const newCorners = [...s.corners];
                 newCorners.splice(index, 1);
-                return { ...s, corners: newCorners };
+
+                const newSourceCorners = [...s.sourceCorners];
+                newSourceCorners.splice(index, 1);
+
+                return { ...s, corners: newCorners, sourceCorners: newSourceCorners };
             }),
         }));
     },
@@ -418,6 +441,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                         { x: 0.5, y: 0.5 },   // TR
                         { x: -0.5, y: -0.5 }, // BL
                         { x: 0.5, y: -0.5 },  // BR
+                    ],
+                    sourceCorners: [
+                        { x: 0, y: 1 }, // TL
+                        { x: 1, y: 1 }, // TR
+                        { x: 0, y: 0 }, // BL
+                        { x: 1, y: 0 }, // BR
                     ],
                 };
             }),

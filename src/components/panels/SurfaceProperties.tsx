@@ -1,6 +1,7 @@
 "use client";
 
 import { useProjectStore } from "@/store/project-store";
+import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
@@ -416,8 +417,27 @@ export function SurfaceProperties() {
                         </div>
                     </div>
 
+                    {/* Mapping Mode Toggle */}
+                    <div className="flex bg-zinc-950/50 p-1 rounded-md border border-white/5 mb-3">
+                        {[
+                            { id: "output", label: "Output Mapping" },
+                            { id: "input", label: "Input Mapping" }
+                        ].map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => useUIStore.getState().setMappingMode(mode.id as any)}
+                                className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded transition-all ${useUIStore.getState().mappingMode === mode.id
+                                    ? "bg-zinc-800 text-electric-cyan shadow-lg"
+                                    : "text-zinc-500 hover:text-zinc-300"
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
+                    </div>
+
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                        {selectedSurface.corners.map((corner, idx) => (
+                        {(useUIStore.getState().mappingMode === "output" ? selectedSurface.corners : selectedSurface.sourceCorners).map((corner, idx) => (
                             <div key={idx} className="flex items-center gap-2 group">
                                 <span className="text-[10px] text-muted-foreground w-4 font-mono">{idx}</span>
                                 <div className="grid grid-cols-2 gap-2 flex-1">
@@ -427,9 +447,17 @@ export function SurfaceProperties() {
                                             type="number"
                                             value={corner.x.toFixed(3)}
                                             onChange={(e) => {
-                                                const newCorners = [...selectedSurface.corners];
-                                                newCorners[idx] = { ...newCorners[idx], x: parseFloat(e.target.value) || 0 };
-                                                updateSurface(selectedSurface.id, { corners: newCorners });
+                                                const mappingMode = useUIStore.getState().mappingMode;
+                                                const val = parseFloat(e.target.value) || 0;
+                                                if (mappingMode === "output") {
+                                                    const newCorners = [...selectedSurface.corners];
+                                                    newCorners[idx] = { ...newCorners[idx], x: val };
+                                                    updateSurface(selectedSurface.id, { corners: newCorners });
+                                                } else {
+                                                    const newSource = [...selectedSurface.sourceCorners];
+                                                    newSource[idx] = { ...newSource[idx], x: val };
+                                                    updateSurface(selectedSurface.id, { sourceCorners: newSource });
+                                                }
                                             }}
                                             step="0.001"
                                             className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"
@@ -441,9 +469,17 @@ export function SurfaceProperties() {
                                             type="number"
                                             value={corner.y.toFixed(3)}
                                             onChange={(e) => {
-                                                const newCorners = [...selectedSurface.corners];
-                                                newCorners[idx] = { ...newCorners[idx], y: parseFloat(e.target.value) || 0 };
-                                                updateSurface(selectedSurface.id, { corners: newCorners });
+                                                const mappingMode = useUIStore.getState().mappingMode;
+                                                const val = parseFloat(e.target.value) || 0;
+                                                if (mappingMode === "output") {
+                                                    const newCorners = [...selectedSurface.corners];
+                                                    newCorners[idx] = { ...newCorners[idx], y: val };
+                                                    updateSurface(selectedSurface.id, { corners: newCorners });
+                                                } else {
+                                                    const newSource = [...selectedSurface.sourceCorners];
+                                                    newSource[idx] = { ...newSource[idx], y: val };
+                                                    updateSurface(selectedSurface.id, { sourceCorners: newSource });
+                                                }
                                             }}
                                             step="0.001"
                                             className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"

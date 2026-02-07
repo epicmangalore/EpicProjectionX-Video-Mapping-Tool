@@ -173,9 +173,12 @@ export function Surface({ surface }: SurfaceProps) {
     // Calculate warping matrix for corner-pin (only for quads)
     const warpMatrix = useMemo(() => {
         if (!isQuad) return new THREE.Matrix4();
-        const matrix = getPerspectiveTransform(surface.corners as [Vector2, Vector2, Vector2, Vector2]);
+        const matrix = getPerspectiveTransform(
+            surface.corners as [Vector2, Vector2, Vector2, Vector2],
+            surface.sourceCorners as [Vector2, Vector2, Vector2, Vector2]
+        );
         return new THREE.Matrix4().fromArray(matrix);
-    }, [surface.corners, isQuad]);
+    }, [surface.corners, surface.sourceCorners, isQuad]);
 
     // Create custom geometry for polygons
     const polygonGeometry = useMemo(() => {
@@ -211,9 +214,30 @@ export function Surface({ surface }: SurfaceProps) {
             const x = posAttribute.getX(i);
             const y = posAttribute.getY(i);
 
-            // Map to 0-1 range based on bounding box
-            const u = (x - minX) / width;
-            const v = (y - minY) / height; // Use natural Y mapping
+            // For N-gons, we need to interpolate the UVs based on sourceCorners.
+            // A simple way is to use the same min/max bounding box logic but mapped to the sourceCorners bounds.
+            // However, MapClub allows arbitrary UVs for each vertex.
+            // So we should find which "triangle" or barycentric coord this point belongs to.
+            // Simplified: Use the original bounding box mapping but allow stretching.
+
+            // Map to 0-1 range based on Target bounding box
+            const tx = (x - minX) / width;
+            const ty = (y - minY) / height;
+
+            // Find source bounding box
+            let sMinX = Infinity, sMinY = Infinity, sMaxX = -Infinity, sMaxY = -Infinity;
+            surface.sourceCorners.forEach(p => {
+                sMinX = Math.min(sMinX, p.x);
+                sMinY = Math.min(sMinY, p.y);
+                sMaxX = Math.max(sMaxX, p.x);
+                sMaxY = Math.max(sMaxY, p.y);
+            });
+
+            const sWidth = sMaxX - sMinX || 1;
+            const sHeight = sMaxY - sMinY || 1;
+
+            const u = sMinX + tx * sWidth;
+            const v = sMinY + ty * sHeight;
 
             uvAttribute.setXY(i, u, v);
         }
