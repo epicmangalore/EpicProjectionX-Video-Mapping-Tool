@@ -71,6 +71,8 @@ export interface MediaAsset {
     duration?: number; // for videos
     color?: string; // for color fills
     text?: string; // for text overlays
+    width?: number; // media width in pixels
+    height?: number; // media height in pixels
     fontSize?: number;
     fontFamily?: string;
     fontWeight?: string;
@@ -185,12 +187,26 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     // Surface actions
     addSurface: (mediaId) => {
         get().saveHistory();
+
+        let initialScale = { x: 1, y: 1 };
+        if (mediaId) {
+            const media = get().mediaAssets.find(m => m.id === mediaId);
+            if (media && media.width && media.height) {
+                const aspect = media.width / media.height;
+                if (aspect >= 1) {
+                    initialScale = { x: aspect, y: 1 };
+                } else {
+                    initialScale = { x: 1, y: 1 / aspect };
+                }
+            }
+        }
+
         const newSurface: Surface = {
             id: generateId(),
             name: `Surface ${get().surfaces.length + 1}`,
             position: { x: 0, y: 0 },
             rotation: 0,
-            scale: { x: 1, y: 1 },
+            scale: initialScale,
             opacity: 1,
             zIndex: get().surfaces.length,
             mediaId: mediaId || null,

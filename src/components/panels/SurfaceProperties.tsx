@@ -107,6 +107,37 @@ export function SurfaceProperties() {
                     </button>
                 </div>
 
+                {/* Fit to Media */}
+                <button
+                    onClick={() => {
+                        const media = mediaAssets.find(m => m.id === selectedSurface.mediaId);
+                        if (media && media.width && media.height) {
+                            const aspect = media.width / media.height;
+                            let nextScaleX = 1;
+                            let nextScaleY = 1;
+
+                            if (aspect >= 1) {
+                                // Landscape or square
+                                nextScaleX = aspect;
+                                nextScaleY = 1;
+                            } else {
+                                // Portrait
+                                nextScaleX = 1;
+                                nextScaleY = 1 / aspect;
+                            }
+
+                            updateSurface(selectedSurface.id, {
+                                scale: { x: nextScaleX, y: nextScaleY }
+                            });
+                        }
+                    }}
+                    disabled={!selectedSurface.mediaId}
+                    className="w-full px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 disabled:opacity-30"
+                >
+                    <Settings2 className="w-3 h-3" />
+                    Fit to Media
+                </button>
+
                 {/* Transform Deck */}
                 <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
                     <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">

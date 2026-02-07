@@ -51,16 +51,41 @@ export function MediaLibrary() {
             reader.onload = (event) => {
                 const url = event.target?.result as string;
 
-                const asset = {
-                    id: mediaId,
-                    name: file.name,
-                    type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
-                    url,
-                    size: file.size,
-                    thumbnail,
-                };
-
-                addMediaAsset(asset);
+                if (file.type.startsWith("image/")) {
+                    const img = new window.Image();
+                    img.onload = () => {
+                        const asset = {
+                            id: mediaId,
+                            name: file.name,
+                            type: "image" as const,
+                            url,
+                            size: file.size,
+                            thumbnail,
+                            width: img.naturalWidth,
+                            height: img.naturalHeight,
+                        };
+                        addMediaAsset(asset);
+                    };
+                    img.src = url;
+                } else if (file.type.startsWith("video/")) {
+                    const video = document.createElement("video");
+                    video.onloadedmetadata = () => {
+                        const asset = {
+                            id: mediaId,
+                            name: file.name,
+                            type: "video" as const,
+                            url,
+                            size: file.size,
+                            thumbnail,
+                            width: video.videoWidth,
+                            height: video.videoHeight,
+                            duration: video.duration,
+                        };
+                        addMediaAsset(asset);
+                        video.remove();
+                    };
+                    video.src = url;
+                }
             };
             reader.readAsDataURL(file);
         }
