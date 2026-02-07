@@ -21,7 +21,7 @@ export function SurfaceOutliner() {
         .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <aside className="w-64 glass border-r border-white/10 flex flex-col pointer-events-auto">
+        <aside className="w-full h-full flex flex-col pointer-events-auto bg-transparent">
             <div className="p-3 border-b border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <Layers className="w-4 h-4 text-electric-cyan" />

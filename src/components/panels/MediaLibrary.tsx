@@ -11,29 +11,63 @@ export function MediaLibrary() {
     const addSurface = useProjectStore((state) => state.addSurface);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const generateThumbnail = (file: File): Promise<string> => {
+        return new Promise((resolve) => {
+            if (file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target?.result as string);
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith("video/")) {
+                const video = document.createElement("video");
+                video.preload = "metadata";
+                video.onloadedmetadata = () => {
+                    video.currentTime = 1; // Seek to 1 second
+                };
+                video.onseeked = () => {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 320;
+                    canvas.height = 180;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(video, 0, 0, 320, 180);
+                    resolve(canvas.toDataURL("image/jpeg"));
+                    video.remove(); // Cleanup
+                };
+                video.onerror = () => {
+                    resolve(""); // Fallback or empty
+                };
+                video.src = URL.createObjectURL(file);
+            } else {
+                resolve("");
+            }
+        });
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files) return;
 
-        Array.from(files).forEach((file) => {
+        for (const file of Array.from(files)) {
+            const thumbnail = await generateThumbnail(file);
+            const mediaId = generateId();
+
+            // For the main URL, we still use FileReader for now (or ObjectURL if preferred, but keeping consistent with existing logic)
             const reader = new FileReader();
             reader.onload = (event) => {
                 const url = event.target?.result as string;
-                const mediaId = generateId();
 
                 const asset = {
                     id: mediaId,
                     name: file.name,
                     type: file.type.startsWith("image/") ? ("image" as const) : ("video" as const),
-                    url,
+                    url, // The full data URL
                     size: file.size,
-                    thumbnail: url,
+                    thumbnail, // The generated thumbnail (image for images, frame for videos)
                 };
 
                 addMediaAsset(asset);
             };
             reader.readAsDataURL(file);
-        });
+        }
     };
 
     const handleAddColor = () => {
@@ -54,7 +88,7 @@ export function MediaLibrary() {
     };
 
     return (
-        <aside className="w-80 glass border-r border-white/10 flex flex-col">
+        <aside className="w-full h-full flex flex-col bg-transparent">
             <div className="p-4 border-b border-white/10">
                 <h2 className="text-lg font-semibold text-electric-purple mb-3">Media Library</h2>
 
@@ -62,14 +96,14 @@ export function MediaLibrary() {
                 <div className="grid grid-cols-2 gap-2">
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2"
+                        className="px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 hover:bg-white/5 active:scale-95 transition-all"
                     >
                         <Image className="w-4 h-4" />
                         Import
                     </button>
                     <button
                         onClick={handleAddColor}
-                        className="px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2"
+                        className="px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 hover:bg-white/5 active:scale-95 transition-all"
                     >
                         <Palette className="w-4 h-4" />
                         Color
@@ -87,7 +121,7 @@ export function MediaLibrary() {
             </div>
 
             {/* Asset grid */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-4 content-start">
                 {mediaAssets.length === 0 ? (
                     <div className="text-center py-8">
                         <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-electric-purple/20 flex items-center justify-center">
@@ -102,7 +136,7 @@ export function MediaLibrary() {
                             <button
                                 key={asset.id}
                                 onClick={() => handleAssetClick(asset.id)}
-                                className="aspect-square rounded-lg glass glass-hover overflow-hidden group relative"
+                                className="aspect-square rounded-lg glass glass-hover overflow-hidden group relative bg-neutral-900 border border-white/5 hover:border-electric-purple/50 transition-all"
                             >
                                 {asset.type === "color" && asset.color && (
                                     <div
@@ -114,26 +148,33 @@ export function MediaLibrary() {
                                     <img
                                         src={asset.thumbnail}
                                         alt={asset.name}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                     />
                                 )}
-                                {asset.type === "video" && asset.thumbnail && (
-                                    <div className="relative w-full h-full">
-                                        <img
-                                            src={asset.thumbnail}
-                                            alt={asset.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                            <Video className="w-6 h-6 text-white" />
+                                {asset.type === "video" && (
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                        {asset.thumbnail ? (
+                                            <img
+                                                src={asset.thumbnail}
+                                                alt={asset.name}
+                                                className="w-full h-full object-contain"
+                                                onError={(e) => {
+                                                    e.currentTarget.style.display = 'none';
+                                                }}
+                                            />
+                                        ) : null}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                                            <Video className="w-8 h-8 text-white/80 drop-shadow-md" />
                                         </div>
                                     </div>
                                 )}
 
                                 {/* Hover overlay */}
-                                <div className="absolute inset-0 bg-electric-purple/0 group-hover:bg-electric-purple/20 transition-colors flex items-end">
-                                    <div className="w-full p-2 bg-gradient-to-t from-black/60 to-transparent">
-                                        <p className="text-xs text-white truncate">{asset.name}</p>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-100 transition-opacity flex items-end">
+                                    <div className="w-full p-2">
+                                        <p className="text-[10px] text-white/90 truncate font-medium leading-tight text-center">
+                                            {asset.name}
+                                        </p>
                                     </div>
                                 </div>
                             </button>

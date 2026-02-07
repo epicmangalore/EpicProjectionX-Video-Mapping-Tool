@@ -92,7 +92,7 @@ export function TimelinePanel() {
     };
 
     return (
-        <div className="h-48 glass border-t border-white/10 flex flex-col">
+        <div className="h-48 bg-zinc-900 border-t border-white/5 flex flex-col">
             {/* Header with controls */}
             <div className="h-12 px-4 border-b border-white/10 flex items-center gap-4">
                 {/* Playback controls */}
@@ -140,8 +140,8 @@ export function TimelinePanel() {
                 <button
                     onClick={() => setLoop(!loop)}
                     className={`px-3 py-1 text-xs rounded transition-colors ${loop
-                            ? "bg-electric-purple text-white"
-                            : "glass glass-hover"
+                        ? "bg-electric-purple text-white"
+                        : "glass glass-hover"
                         }`}
                 >
                     Loop

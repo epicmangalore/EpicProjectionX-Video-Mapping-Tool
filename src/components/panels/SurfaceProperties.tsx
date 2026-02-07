@@ -21,17 +21,17 @@ export function SurfaceProperties() {
 
     if (!selectedSurface) {
         return (
-            <aside className="w-80 glass border-l border-white/10 flex flex-col">
-                <div className="p-4 border-b border-white/10">
-                    <h2 className="text-lg font-semibold text-electric-cyan">Properties</h2>
+            <aside className="w-80 h-full bg-zinc-900 border-l border-white/5 flex flex-col">
+                <div className="px-4 py-3 border-b border-white/5 bg-zinc-900">
+                    <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Properties</h2>
                 </div>
                 <div className="flex-1 p-4 flex items-center justify-center">
                     <div className="text-center">
-                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-electric-cyan/20 flex items-center justify-center">
-                            <Eye className="w-6 h-6 text-electric-cyan" />
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-800 flex items-center justify-center">
+                            <Eye className="w-6 h-6 text-zinc-600" />
                         </div>
-                        <p className="text-sm text-muted-foreground">No surface selected</p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="text-sm text-zinc-500">No surface selected</p>
+                        <p className="text-xs text-zinc-600 mt-1">
                             Click a surface to edit properties
                         </p>
                     </div>
@@ -41,9 +41,9 @@ export function SurfaceProperties() {
     }
 
     return (
-        <aside className="w-80 glass border-l border-white/10 flex flex-col">
-            <div className="p-4 border-b border-white/10">
-                <h2 className="text-lg font-semibold text-electric-cyan">Properties</h2>
+        <aside className="w-80 h-full bg-zinc-900 border-l border-white/5 flex flex-col font-sans">
+            <div className="px-4 py-3 border-b border-white/5 bg-zinc-900">
+                <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Properties</h2>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4">

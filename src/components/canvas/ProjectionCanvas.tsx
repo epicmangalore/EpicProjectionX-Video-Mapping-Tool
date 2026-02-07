@@ -1,7 +1,8 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { OrthographicCamera } from "@react-three/drei";
+import { OrthographicCamera, OrbitControls } from "@react-three/drei";
+import * as THREE from "three";
 import { useProjectStore } from "@/store/project-store";
 import { Surface } from "./Surface";
 import { CornerPin } from "./CornerPin";
@@ -51,6 +52,18 @@ export function ProjectionCanvas() {
                         <MeshWarp surface={surface} />
                     </group>
                 ))}
+            {/* Orbit Controls for Pan/Zoom */}
+            <OrbitControls
+                makeDefault
+                enableRotate={false}
+                enablePan={true}
+                enableZoom={true}
+                mouseButtons={{
+                    LEFT: undefined, // Create/Select logic handles left click
+                    MIDDLE: THREE.MOUSE.PAN,
+                    RIGHT: THREE.MOUSE.PAN
+                }}
+            />
         </Canvas>
     );
 }

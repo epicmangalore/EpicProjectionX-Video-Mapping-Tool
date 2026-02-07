@@ -41,7 +41,7 @@ export function CueList() {
     };
 
     return (
-        <div className="w-64 glass border-l border-white/10 flex flex-col">
+        <div className="w-full h-full glass flex flex-col">
             {/* Header */}
             <div className="p-4 border-b border-white/10">
                 <div className="flex items-center justify-between mb-3">
@@ -76,8 +76,8 @@ export function CueList() {
                         <div
                             key={cue.id}
                             className={`p-3 rounded-md transition-colors ${activeCueId === cue.id
-                                    ? "bg-electric-purple/20 border border-electric-purple"
-                                    : "glass glass-hover border border-white/10"
+                                ? "bg-electric-purple/20 border border-electric-purple"
+                                : "glass glass-hover border border-white/10"
                                 }`}
                         >
                             {/* Cue Header */}
