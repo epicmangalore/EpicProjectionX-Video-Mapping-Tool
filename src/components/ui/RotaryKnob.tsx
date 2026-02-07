@@ -149,17 +149,6 @@ export function RotaryKnob({
                         strokeLinecap="round"
                     />
 
-                    {/* Value Arc (The "LED" ring) */}
-                    <path
-                        d={describeArc(center, center, radius, startAngle, -135 * (Math.PI / 180) + (percentage * 270 * (Math.PI / 180)))}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={strokeWidth}
-                        strokeLinecap="round"
-                        className="drop-shadow-[0_0_8px_rgba(0,240,255,0.5)] transition-all duration-75"
-                        style={{ filter: `drop-shadow(0 0 5px ${color})` }}
-                    />
-
                     {/* Knob Body */}
                     <circle cx={center} cy={center} r={radius * 0.7} fill="#27272a" className="group-hover:fill-zinc-700 transition-colors" />
 

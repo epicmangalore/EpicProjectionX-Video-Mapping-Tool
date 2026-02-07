@@ -464,12 +464,30 @@ export function Surface({ surface }: SurfaceProps) {
                     <primitive object={fallbackMaterial} attach="material" />
                 )}
             </mesh>
+
+            {/* Always show border outline */}
+            <mesh
+                position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}
+                rotation={[0, 0, surface.rotation]}
+                scale={[surface.scale.x, surface.scale.y, 1]}
+            >
+                <lineSegments>
+                    <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
+                    <lineBasicMaterial color="#7c3aed" linewidth={2} transparent opacity={0.6} />
+                </lineSegments>
+            </mesh>
+
             {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && (
                 <>
-                    <mesh position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.01]}>
-                        <lineSegments scale={[surface.scale.x, surface.scale.y, 1]}>
+                    {/* Brighter border for selected surfaces */}
+                    <mesh
+                        position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.02]}
+                        rotation={[0, 0, surface.rotation]}
+                        scale={[surface.scale.x, surface.scale.y, 1]}
+                    >
+                        <lineSegments>
                             <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                            <lineBasicMaterial color="#7c3aed" linewidth={2} />
+                            <lineBasicMaterial color="#a78bfa" linewidth={3} />
                         </lineSegments>
                     </mesh>
 
