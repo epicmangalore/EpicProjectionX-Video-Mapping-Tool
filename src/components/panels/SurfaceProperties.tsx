@@ -5,7 +5,7 @@ import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2 } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
@@ -196,44 +196,69 @@ export function SurfaceProperties() {
                         <div className="w-2 h-2 rounded-full bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.5)]"></div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 justify-items-center">
-                        {/* Scale X */}
-                        <RotaryKnob
-                            label="Scale X"
-                            value={selectedSurface.scale.x}
-                            min={0.1}
-                            max={5}
-                            step={0.1}
-                            color="#00f0ff"
-                            onChange={(val) => updateSurface(selectedSurface.id, {
-                                scale: { ...selectedSurface.scale, x: val }
-                            })}
-                        />
+                    <div className="grid grid-cols-3 gap-0 justify-items-center items-end">
+                        {/* Scale Group with Lock */}
+                        <div className="col-span-2 flex items-center gap-1 pr-4 border-r border-white/5 mr-4 h-full pb-1">
+                            <RotaryKnob
+                                label="Scale X"
+                                value={selectedSurface.scale.x}
+                                min={0.1}
+                                max={5}
+                                step={0.1}
+                                color="#00f0ff"
+                                onChange={(val) => {
+                                    const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, x: val } };
+                                    if (selectedSurface.aspectRatioLocked) {
+                                        const ratio = selectedSurface.scale.y / selectedSurface.scale.x;
+                                        updates.scale!.y = val * ratio;
+                                    }
+                                    updateSurface(selectedSurface.id, updates);
+                                }}
+                            />
 
-                        {/* Scale Y */}
-                        <RotaryKnob
-                            label="Scale Y"
-                            value={selectedSurface.scale.y}
-                            min={0.1}
-                            max={5}
-                            step={0.1}
-                            color="#00f0ff"
-                            onChange={(val) => updateSurface(selectedSurface.id, {
-                                scale: { ...selectedSurface.scale, y: val }
-                            })}
-                        />
+                            {/* Aspect Lock */}
+                            <button
+                                onClick={() => updateSurface(selectedSurface.id, { aspectRatioLocked: !selectedSurface.aspectRatioLocked })}
+                                className={`p-1.5 rounded-full transition-all mb-5 ${selectedSurface.aspectRatioLocked
+                                    ? "bg-electric-cyan text-black"
+                                    : "text-zinc-600 hover:text-zinc-400"
+                                    }`}
+                                title="Lock Aspect Ratio"
+                            >
+                                <Link2 className="w-3 h-3" />
+                            </button>
+
+                            <RotaryKnob
+                                label="Scale Y"
+                                value={selectedSurface.scale.y}
+                                min={0.1}
+                                max={5}
+                                step={0.1}
+                                color="#00f0ff"
+                                onChange={(val) => {
+                                    const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, y: val } };
+                                    if (selectedSurface.aspectRatioLocked) {
+                                        const ratio = selectedSurface.scale.x / selectedSurface.scale.y;
+                                        updates.scale!.x = val * ratio;
+                                    }
+                                    updateSurface(selectedSurface.id, updates);
+                                }}
+                            />
+                        </div>
 
                         {/* Rotation */}
-                        <RotaryKnob
-                            label="Rotate"
-                            value={selectedSurface.rotation}
-                            min={-Math.PI}
-                            max={Math.PI}
-                            step={0.05}
-                            color="#ff9900"
-                            formatValue={(v) => `${Math.round(v * (180 / Math.PI))}°`}
-                            onChange={(val) => updateSurface(selectedSurface.id, { rotation: val })}
-                        />
+                        <div className="pb-1">
+                            <RotaryKnob
+                                label="Rotate"
+                                value={selectedSurface.rotation}
+                                min={-Math.PI}
+                                max={Math.PI}
+                                step={0.05}
+                                color="#ff9900"
+                                formatValue={(v) => `${Math.round(v * (180 / Math.PI))}°`}
+                                onChange={(val) => updateSurface(selectedSurface.id, { rotation: val })}
+                            />
+                        </div>
                     </div>
 
                     <div className="mt-4 space-y-3 border-t border-white/5 pt-4">

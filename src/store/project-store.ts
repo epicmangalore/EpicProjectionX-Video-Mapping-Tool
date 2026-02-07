@@ -22,6 +22,7 @@ export interface Surface {
     effects: Effect[];
     visible: boolean;
     locked: boolean;
+    aspectRatioLocked?: boolean;
     audioMappings: AudioMapping[];
 }
 
@@ -236,6 +237,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             effects: [],
             visible: true,
             locked: false,
+            aspectRatioLocked: false,
             audioMappings: [],
         };
         set((state) => ({
