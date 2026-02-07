@@ -25,16 +25,22 @@ export function useHotkeys(hotkeys: HotkeyConfig[], enabled = true) {
             }
 
             for (const hotkey of hotkeys) {
+                // Normalize key to lower case for comparison
                 const keys = Array.isArray(hotkey.key) ? hotkey.key : [hotkey.key];
                 const keyMatch = keys.some(k => e.key.toLowerCase() === k.toLowerCase());
-                const ctrlMatch = hotkey.ctrl ? e.ctrlKey || e.metaKey : !e.ctrlKey && !e.metaKey;
+
+                // On Mac, Command key triggers metaKey. We treat 'ctrl' config as 'Cmd' on Mac.
+                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                const ctrlPressed = isMac ? e.metaKey : e.ctrlKey;
+
+                const ctrlMatch = hotkey.ctrl ? ctrlPressed : !ctrlPressed;
                 const shiftMatch = hotkey.shift ? e.shiftKey : !e.shiftKey;
                 const altMatch = hotkey.alt ? e.altKey : !e.altKey;
 
                 if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
                     e.preventDefault();
                     hotkey.callback();
-                    break;
+                    return; // Stop processing after first match
                 }
             }
         };
@@ -52,13 +58,24 @@ export const APP_HOTKEYS = {
     CORNER_PIN_MODE: "c",
     MESH_WARP_MODE: "m",
     PEN_MODE: "p",
+    HAND_MODE: "h",
 
     // Actions
     DELETE: ["Delete", "Backspace"],
-    DUPLICATE: { key: "d", ctrl: true },
-    SAVE: { key: "s", ctrl: true },
-    UNDO: { key: "z", ctrl: true },
-    REDO: { key: "z", ctrl: true, shift: true },
+    DUPLICATE: { key: "d", ctrl: true }, // Cmd+D
+    SAVE: { key: "s", ctrl: true }, // Cmd+S
+    UNDO: { key: "z", ctrl: true }, // Cmd+Z
+    REDO: { key: "z", ctrl: true, shift: true }, // Cmd+Shift+Z
+    COPY: { key: "c", ctrl: true }, // Cmd+C
+    PASTE: { key: "v", ctrl: true }, // Cmd+V
+    CUT: { key: "x", ctrl: true }, // Cmd+X
+    SELECT_ALL: { key: "a", ctrl: true }, // Cmd+A
+    GROUP: { key: "g", ctrl: true }, // Cmd+G
+    UNGROUP: { key: "g", ctrl: true, shift: true }, // Cmd+Shift+G
+    BRING_FORWARD: { key: "]", ctrl: true }, // Cmd+]
+    SEND_BACKWARD: { key: "[", ctrl: true }, // Cmd+[
+
+    // Selection
     DESELECT_ALL: "Escape",
 
     // Playback
@@ -67,7 +84,7 @@ export const APP_HOTKEYS = {
 
     // View
     FULLSCREEN: "f11",
-    TOGGLE_UI: "h",
+    Recursive_Expand: { key: "Enter", alt: true }, // Alt+Enter to expand/collapse recursive
 
     // Cues (1-9)
     CUE_1: "1",

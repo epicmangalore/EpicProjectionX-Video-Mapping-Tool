@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type ToolMode = "select" | "corner-pin" | "mesh-warp" | "transform" | "pen";
+export type ToolMode = "select" | "corner-pin" | "mesh-warp" | "transform" | "pen" | "hand";
 
 interface UIStore {
     // UI state

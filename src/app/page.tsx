@@ -37,19 +37,73 @@ export default function Home() {
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const deselectAll = useProjectStore((state) => state.deselectAll);
 
+    const undo = useProjectStore((state) => state.undo);
+    const redo = useProjectStore((state) => state.redo);
+    const copySurface = useProjectStore((state) => state.copySurface);
+    const pasteSurface = useProjectStore((state) => state.pasteSurface);
+    const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
+    const bringToFront = useProjectStore((state) => state.bringToFront);
+    const sendToBack = useProjectStore((state) => state.sendToBack);
+    // const groupSurfaces = useProjectStore((state) => state.groupSurfaces); // TODO: Implement grouping
+    // const ungroupSurfaces = useProjectStore((state) => state.ungroupSurfaces); // TODO: Implement ungrouping
+
     // Initialize Global Hotkeys
     useHotkeys([
+        // Tools
         { key: APP_HOTKEYS.SELECT_MODE, callback: () => setToolMode("select") },
         { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
         { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
         { key: APP_HOTKEYS.PEN_MODE, callback: () => setToolMode("pen") },
+        { key: APP_HOTKEYS.HAND_MODE, callback: () => setToolMode("hand") }, // Placeholder if not impl yet
+
+        // Clipboard & Edit
         {
             key: APP_HOTKEYS.DELETE, callback: () => {
                 selectedIds.forEach(id => deleteSurface(id));
                 deselectAll();
             }
         },
+        {
+            key: APP_HOTKEYS.DUPLICATE.key,
+            ctrl: APP_HOTKEYS.DUPLICATE.ctrl,
+            callback: () => selectedIds.forEach(id => duplicateSurface(id))
+        },
+        {
+            key: APP_HOTKEYS.COPY.key,
+            ctrl: APP_HOTKEYS.COPY.ctrl,
+            callback: () => {
+                if (selectedIds.length > 0) copySurface(selectedIds[0]); // Currently only single copy support
+            }
+        },
+        {
+            key: APP_HOTKEYS.PASTE.key,
+            ctrl: APP_HOTKEYS.PASTE.ctrl,
+            callback: () => pasteSurface()
+        },
+        {
+            key: APP_HOTKEYS.CUT.key,
+            ctrl: APP_HOTKEYS.CUT.ctrl,
+            callback: () => {
+                if (selectedIds.length > 0) {
+                    copySurface(selectedIds[0]);
+                    deleteSurface(selectedIds[0]);
+                }
+            }
+        },
+        { key: APP_HOTKEYS.SELECT_ALL.key, ctrl: APP_HOTKEYS.SELECT_ALL.ctrl, callback: () => useProjectStore.getState().selectAll() },
+
+        // Undo / Redo
+        { key: APP_HOTKEYS.UNDO.key, ctrl: APP_HOTKEYS.UNDO.ctrl, shift: false, callback: () => undo() },
+        { key: APP_HOTKEYS.REDO.key, ctrl: APP_HOTKEYS.REDO.ctrl, shift: true, callback: () => redo() },
+
+        // Arrangement
+        { key: APP_HOTKEYS.BRING_FORWARD.key, ctrl: APP_HOTKEYS.BRING_FORWARD.ctrl, callback: () => selectedIds.forEach(id => bringToFront(id)) },
+        { key: APP_HOTKEYS.SEND_BACKWARD.key, ctrl: APP_HOTKEYS.SEND_BACKWARD.ctrl, callback: () => selectedIds.forEach(id => sendToBack(id)) },
+
+        // Selection
         { key: APP_HOTKEYS.DESELECT_ALL, callback: () => deselectAll() },
+
+        // Misc
         { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
     ]);
 

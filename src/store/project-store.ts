@@ -137,6 +137,7 @@ interface ProjectStore {
     // Selection actions
     selectSurface: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
+    selectAll: () => void;
 
     // Media actions
     addMediaAsset: (asset: MediaAsset) => void;
@@ -399,6 +400,12 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     deselectAll: () => {
         set({ selectedSurfaceIds: [] });
+    },
+
+    selectAll: () => {
+        set((state) => ({
+            selectedSurfaceIds: state.surfaces.map(s => s.id)
+        }));
     },
 
     // Media actions
