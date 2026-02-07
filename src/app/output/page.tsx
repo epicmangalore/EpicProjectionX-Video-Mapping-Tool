@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
 import { useSync } from "@/hooks/useSync";
