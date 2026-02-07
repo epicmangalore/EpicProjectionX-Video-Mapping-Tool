@@ -80,9 +80,9 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
     updateLevels: () => {
         const { analyser, dataArray } = get();
-        if (analyser && dataArray) {
-            (analyser as any).getByteFrequencyData(dataArray);
-        }
+        if (!analyser || !dataArray) return;
+
+        analyser.getByteFrequencyData(dataArray as any);
 
         // Simple frequency bands analysis
         const bufferLength = analyser.frequencyBinCount;
