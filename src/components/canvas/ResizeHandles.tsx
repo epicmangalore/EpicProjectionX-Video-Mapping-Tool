@@ -72,8 +72,11 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
             nextScaleX = Math.max(0.01, nextScaleX);
             nextScaleY = Math.max(0.01, nextScaleY);
 
-            // Shift key: Proportionate scaling
-            if (shiftPressed) {
+            // Shift key or Aspect Lock: Proportionate scaling
+            // Aspect lock acts as a permanent Shift key for corner handles
+            const shouldLockAspect = shiftPressed || (surface.aspectRatioLocked && (pos === "tl" || pos === "tr" || pos === "bl" || pos === "br"));
+
+            if (shouldLockAspect) {
                 if (pos === "tl" || pos === "tr" || pos === "bl" || pos === "br") {
                     const absDX = Math.abs(nextScaleX - startData.current.scale.x);
                     const absDY = Math.abs(nextScaleY - startData.current.scale.y);
