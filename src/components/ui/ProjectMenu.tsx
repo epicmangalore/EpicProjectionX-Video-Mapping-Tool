@@ -33,9 +33,14 @@ export function ProjectMenu() {
         setIsOpen(false);
     };
 
+    const updateProjectSettings = useProjectStore((state) => state.updateProjectSettings);
+
+
     const handleSaveAs = async () => {
         const name = prompt("Enter project name:", projectName);
         if (name) {
+            // Update the name in the store first so it's saved in the project data
+            updateProjectSettings({ name });
             const id = await projectManager.saveProject(name);
             setCurrentProjectId(id);
             setIsOpen(false);
