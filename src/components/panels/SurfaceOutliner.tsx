@@ -21,78 +21,75 @@ export function SurfaceOutliner() {
         .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     return (
-        <aside className="w-full h-full flex flex-col pointer-events-auto bg-transparent">
-            <div className="p-3 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-electric-cyan" />
-                    <h2 className="text-sm font-semibold text-white">Outliner</h2>
-                </div>
-                <span className="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-white/50">
-                    {surfaces.length}
-                </span>
-            </div>
-
+        <aside className="w-full h-full flex flex-col pointer-events-auto bg-zinc-950 font-sans text-xs">
             {/* Search Bar */}
-            <div className="p-2 border-b border-white/5">
+            <div className="p-1 border-b border-white/5 bg-zinc-900">
                 <div className="relative">
-                    <Search className="absolute left-2 top-1.5 w-3 h-3 text-white/30" />
+                    <Search className="absolute left-2 top-1.5 w-3 h-3 text-zinc-500" />
                     <input
                         type="text"
-                        placeholder="Search surfaces..."
+                        placeholder="SEARCH"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-black/20 border border-white/5 rounded px-7 py-1 text-[11px] focus:outline-none focus:border-electric-cyan/50"
+                        className="w-full bg-zinc-950 border border-white/5 rounded px-7 py-1 text-[10px] font-bold text-zinc-300 focus:outline-none focus:border-electric-cyan placeholder:text-zinc-600 uppercase tracking-wide"
                     />
                 </div>
             </div>
 
+            {/* Table Header */}
+            <div className="flex items-center px-1 py-1 bg-zinc-900 border-b border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+                <div className="w-6 text-center">#</div>
+                <div className="flex-1 px-2">Layer Name</div>
+                <div className="w-16 flex justify-end gap-1 px-1">
+                    <span className="w-6 text-center">Vis</span>
+                    <span className="w-6 text-center">Lock</span>
+                </div>
+            </div>
+
             {/* Surface List */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-zinc-950">
                 {sortedSurfaces.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-white/30 italic">
-                        {searchQuery ? "No matches found" : "No layers yet"}
+                    <div className="p-4 text-center text-[10px] text-zinc-600 uppercase tracking-widest mt-10">
+                        {searchQuery ? "No Matches" : "Empty"}
                     </div>
                 ) : (
-                    <div className="divide-y divide-white/5">
+                    <div>
                         {sortedSurfaces.map((surface, index) => {
                             const isSelected = selectedIds.includes(surface.id);
+                            // Traktor Zebra Striping: Darker alternating rows
+                            const bgClass = isSelected
+                                ? "bg-electric-cyan/20 text-electric-cyan"
+                                : index % 2 === 0 ? "bg-zinc-900/30" : "bg-transparent";
+
+                            const textClass = isSelected ? "text-electric-cyan" : "text-zinc-300";
 
                             return (
                                 <div
                                     key={surface.id}
                                     onClick={() => selectSurface(surface.id)}
-                                    className={`group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${isSelected ? "bg-electric-cyan/20 border-l-2 border-electric-cyan" : "hover:bg-white/5 border-l-2 border-transparent"
-                                        }`}
+                                    className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass}`}
                                 >
-                                    {/* Visibility Toggle */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            toggleVisibility(surface.id);
-                                        }}
-                                        className={`transition-colors ${surface.visible ? "text-white/50 hover:text-white" : "text-electric-cyan"}`}
-                                        title={surface.visible ? "Hide Layer" : "Show Layer"}
-                                    >
-                                        {surface.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                                    </button>
+                                    {/* Index / ID */}
+                                    <div className="w-6 text-center text-[9px] font-mono opacity-50">
+                                        {sortedSurfaces.length - index}
+                                    </div>
 
                                     {/* Surface Name */}
-                                    <span className={`flex-1 text-xs truncate ${!surface.visible ? "opacity-30" : "opacity-90"}`}>
+                                    <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
                                         {surface.name}
-                                    </span>
+                                    </div>
 
-                                    {/* Quick Actions */}
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        {/* Reorder Up */}
+                                    {/* Controls (Right Aligned) */}
+                                    <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                                        {/* Visibility Toggle */}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                if (index > 0) reorderSurface(surface.id, sortedSurfaces.length - index);
+                                                toggleVisibility(surface.id);
                                             }}
-                                            className="text-white/30 hover:text-white"
-                                            title="Bring Forward"
+                                            className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
                                         >
-                                            <ChevronUp className="w-3 h-3" />
+                                            {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                         </button>
 
                                         {/* Lock Toggle */}
@@ -101,24 +98,22 @@ export function SurfaceOutliner() {
                                                 e.stopPropagation();
                                                 toggleLock(surface.id);
                                             }}
-                                            className={`transition-colors ${surface.locked ? "text-yellow-400" : "text-white/30 hover:text-white"}`}
-                                            title={surface.locked ? "Unlock" : "Lock"}
+                                            className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
                                         >
                                             {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                                         </button>
-
-                                        {/* Delete */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                deleteSurface(surface.id);
-                                            }}
-                                            className="text-white/30 hover:text-red-400"
-                                            title="Delete"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
                                     </div>
+
+                                    {/* Simple Delete (Hover only) - Traktor doesn't have inline delete usually but useful here */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            deleteSurface(surface.id);
+                                        }}
+                                        className="w-4 h-full flex items-center justify-center text-zinc-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all ml-1"
+                                    >
+                                        <Trash2 className="w-2.5 h-2.5" />
+                                    </button>
                                 </div>
                             );
                         })}
@@ -126,10 +121,10 @@ export function SurfaceOutliner() {
                 )}
             </div>
 
-            <div className="p-2 border-t border-white/10 bg-black/20">
-                <p className="text-[10px] text-white/30 uppercase tracking-wider font-bold">
-                    Layer Stack
-                </p>
+            {/* Footer Stats */}
+            <div className="p-1 px-2 bg-zinc-900 border-t border-white/5 flex justify-between text-[9px] font-mono text-zinc-500 uppercase">
+                <span>Total</span>
+                <span>{surfaces.length} Items</span>
             </div>
         </aside>
     );

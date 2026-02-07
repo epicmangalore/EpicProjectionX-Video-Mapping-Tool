@@ -6,6 +6,7 @@ import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
 import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw } from "lucide-react";
 import { MasterControls } from "./MasterControls";
+import { RotaryKnob } from "@/components/ui/RotaryKnob";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -78,179 +79,122 @@ export function SurfaceProperties() {
                     </button>
                 </div>
 
-                {/* Transform */}
-                <div>
-                    <h3 className="text-sm font-semibold mb-3">Transform</h3>
+                {/* Transform Deck */}
+                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Transformation</h3>
+                        <div className="w-2 h-2 rounded-full bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.5)]"></div>
+                    </div>
 
-                    <div className="space-y-3">
-                        {/* Position */}
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Position</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-xs text-muted-foreground">X</label>
-                                    <input
-                                        type="number"
-                                        value={selectedSurface.position.x.toFixed(2)}
-                                        onChange={(e) =>
-                                            updateSurface(selectedSurface.id, {
-                                                position: {
-                                                    ...selectedSurface.position,
-                                                    x: parseFloat(e.target.value) || 0,
-                                                },
-                                            })
-                                        }
-                                        step="0.1"
-                                        className="w-full px-2 py-1 bg-dark-800 border border-white/10 rounded text-xs font-mono focus:outline-none focus:border-electric-cyan"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-muted-foreground">Y</label>
-                                    <input
-                                        type="number"
-                                        value={selectedSurface.position.y.toFixed(2)}
-                                        onChange={(e) =>
-                                            updateSurface(selectedSurface.id, {
-                                                position: {
-                                                    ...selectedSurface.position,
-                                                    y: parseFloat(e.target.value) || 0,
-                                                },
-                                            })
-                                        }
-                                        step="0.1"
-                                        className="w-full px-2 py-1 bg-dark-800 border border-white/10 rounded text-xs font-mono focus:outline-none focus:border-electric-cyan"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-3 gap-4 justify-items-center">
+                        {/* Scale X */}
+                        <RotaryKnob
+                            label="Scale X"
+                            value={selectedSurface.scale.x}
+                            min={0.1}
+                            max={5}
+                            step={0.1}
+                            color="#00f0ff"
+                            onChange={(val) => updateSurface(selectedSurface.id, {
+                                scale: { ...selectedSurface.scale, x: val }
+                            })}
+                        />
 
-                        {/* Scale */}
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Scale</label>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-xs text-muted-foreground">W</label>
-                                    <input
-                                        type="number"
-                                        value={selectedSurface.scale.x.toFixed(2)}
-                                        onChange={(e) =>
-                                            updateSurface(selectedSurface.id, {
-                                                scale: {
-                                                    ...selectedSurface.scale,
-                                                    x: parseFloat(e.target.value) || 1,
-                                                },
-                                            })
-                                        }
-                                        step="0.1"
-                                        min="0.1"
-                                        className="w-full px-2 py-1 bg-dark-800 border border-white/10 rounded text-xs font-mono focus:outline-none focus:border-electric-cyan"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs text-muted-foreground">H</label>
-                                    <input
-                                        type="number"
-                                        value={selectedSurface.scale.y.toFixed(2)}
-                                        onChange={(e) =>
-                                            updateSurface(selectedSurface.id, {
-                                                scale: {
-                                                    ...selectedSurface.scale,
-                                                    y: parseFloat(e.target.value) || 1,
-                                                },
-                                            })
-                                        }
-                                        step="0.1"
-                                        min="0.1"
-                                        className="w-full px-2 py-1 bg-dark-800 border border-white/10 rounded text-xs font-mono focus:outline-none focus:border-electric-cyan"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                        {/* Scale Y */}
+                        <RotaryKnob
+                            label="Scale Y"
+                            value={selectedSurface.scale.y}
+                            min={0.1}
+                            max={5}
+                            step={0.1}
+                            color="#00f0ff"
+                            onChange={(val) => updateSurface(selectedSurface.id, {
+                                scale: { ...selectedSurface.scale, y: val }
+                            })}
+                        />
 
                         {/* Rotation */}
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">
-                                Rotation: {Math.round((selectedSurface.rotation * 180) / Math.PI)}°
-                            </label>
-                            <input
-                                type="range"
-                                value={selectedSurface.rotation}
-                                onChange={(e) =>
-                                    updateSurface(selectedSurface.id, {
-                                        rotation: parseFloat(e.target.value),
-                                    })
-                                }
-                                min={-Math.PI}
-                                max={Math.PI}
-                                step="0.01"
-                                className="w-full"
-                            />
-                        </div>
+                        <RotaryKnob
+                            label="Rotate"
+                            value={selectedSurface.rotation}
+                            min={-Math.PI}
+                            max={Math.PI}
+                            step={0.05}
+                            color="#ff9900"
+                            formatValue={(v) => `${Math.round(v * (180 / Math.PI))}°`}
+                            onChange={(val) => updateSurface(selectedSurface.id, { rotation: val })}
+                        />
                     </div>
-                </div>
 
-                {/* Appearance */}
-                <div>
-                    <h3 className="text-sm font-semibold mb-3">Appearance</h3>
-
-                    <div className="space-y-3">
-                        {/* Opacity */}
+                    <div className="mt-4 grid grid-cols-2 gap-2">
                         <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">
-                                Opacity: {Math.round(selectedSurface.opacity * 100)}%
-                            </label>
-                            <input
-                                type="range"
-                                value={selectedSurface.opacity}
-                                onChange={(e) =>
-                                    updateSurface(selectedSurface.id, {
-                                        opacity: parseFloat(e.target.value),
-                                    })
-                                }
-                                min="0"
-                                max="1"
-                                step="0.01"
-                                className="w-full"
-                            />
-                        </div>
-
-                        {/* Blend Mode */}
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Blend Mode</label>
-                            <select
-                                value={selectedSurface.blendMode}
-                                onChange={(e) =>
-                                    updateSurface(selectedSurface.id, {
-                                        blendMode: e.target.value as any,
-                                    })
-                                }
-                                className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
-                            >
-                                <option value="normal">Normal</option>
-                                <option value="multiply">Multiply</option>
-                                <option value="screen">Screen</option>
-                                <option value="overlay">Overlay</option>
-                                <option value="additive">Additive</option>
-                            </select>
-                        </div>
-
-                        {/* Z-Index */}
-                        <div>
-                            <label className="text-xs text-muted-foreground mb-1 block">Layer Order</label>
+                            <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Pos X</label>
                             <input
                                 type="number"
-                                value={selectedSurface.zIndex}
-                                onChange={(e) =>
-                                    updateSurface(selectedSurface.id, {
-                                        zIndex: parseInt(e.target.value) || 0,
-                                    })
-                                }
-                                className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm font-mono focus:outline-none focus:border-electric-cyan"
+                                value={selectedSurface.position.x.toFixed(2)}
+                                onChange={(e) => updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, x: parseFloat(e.target.value) || 0 } })}
+                                className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs font-mono text-electric-cyan focus:outline-none focus:border-electric-cyan"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Pos Y</label>
+                            <input
+                                type="number"
+                                value={selectedSurface.position.y.toFixed(2)}
+                                onChange={(e) => updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, y: parseFloat(e.target.value) || 0 } })}
+                                className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs font-mono text-electric-cyan focus:outline-none focus:border-electric-cyan"
                             />
                         </div>
                     </div>
                 </div>
 
+                {/* Appearance Deck */}
+                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Appearance</h3>
+                        <div className="w-2 h-2 rounded-full bg-electric-purple shadow-[0_0_5px_rgba(180,0,255,0.5)]"></div>
+                    </div>
+
+                    <div className="flex gap-4 justify-center">
+                        <RotaryKnob
+                            label="Opacity"
+                            value={selectedSurface.opacity}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            color="#b400ff"
+                            formatValue={(v) => `${Math.round(v * 100)}%`}
+                            onChange={(val) => updateSurface(selectedSurface.id, { opacity: val })}
+                        />
+
+                        <div className="flex-1 flex flex-col justify-end gap-2">
+                            <div>
+                                <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Blend Mode</label>
+                                <select
+                                    value={selectedSurface.blendMode}
+                                    onChange={(e) => updateSurface(selectedSurface.id, { blendMode: e.target.value as any })}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:border-electric-purple"
+                                >
+                                    <option value="normal">Normal</option>
+                                    <option value="multiply">Multiply</option>
+                                    <option value="screen">Screen</option>
+                                    <option value="overlay">Overlay</option>
+                                    <option value="additive">Additive</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Layer Order</label>
+                                <input
+                                    type="number"
+                                    value={selectedSurface.zIndex}
+                                    onChange={(e) => updateSurface(selectedSurface.id, { zIndex: parseInt(e.target.value) || 0 })}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-electric-purple"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {/* Blend Mode */}
                 {/* Polygon Mapping */}
                 <div className="border-t border-white/5 pt-4">
                     <div className="flex items-center justify-between mb-3">

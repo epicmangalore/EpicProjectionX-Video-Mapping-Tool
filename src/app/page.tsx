@@ -14,14 +14,12 @@ import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSync } from "@/hooks/useSync";
 import { MIDIMapper } from "@/components/panels/MIDIMapper";
 import { useState } from "react";
-import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Wand2 } from "lucide-react";
+import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap } from "lucide-react";
 
 export default function Home() {
     const setToolMode = useUIStore((state) => state.setToolMode);
     const toolMode = useUIStore((state) => state.toolMode);
     const openOutputWindow = useOutputStore((state) => state.openOutputWindow);
-    const simpleMode = useUIStore((state) => state.simpleMode);
-    const toggleSimpleMode = useUIStore((state) => state.toggleSimpleMode);
 
     // Activate Auto-Save and Sync
     useAutoSave();
@@ -109,16 +107,6 @@ export default function Home() {
 
                 <div className="flex gap-2 items-center">
                     <button
-                        onClick={toggleSimpleMode}
-                        className={`p-1.5 rounded transition-all ${simpleMode
-                            ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg shadow-pink-500/40"
-                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
-                        title="Magic Mode"
-                    >
-                        <Wand2 className={`w-4 h-4 ${simpleMode ? "animate-pulse" : ""}`} />
-                    </button>
-
-                    <button
                         onClick={() => setShowMIDIPanel(!showMIDIPanel)}
                         className={`p-1.5 rounded transition-all ${showMIDIPanel
                             ? "bg-electric-cyan text-black"
@@ -128,21 +116,19 @@ export default function Home() {
                         <Zap className="w-4 h-4" />
                     </button>
 
-                    {!simpleMode && (
-                        <button
-                            onClick={openOutputWindow}
-                            className="ml-2 px-3 py-1.5 text-xs font-bold bg-zinc-100 text-zinc-900 hover:bg-white rounded transition-all shadow-sm active:scale-95 border border-white/5"
-                        >
-                            LAUNCH OUTPUT
-                        </button>
-                    )}
+                    <button
+                        onClick={openOutputWindow}
+                        className="ml-2 px-3 py-1.5 text-xs font-bold bg-zinc-100 text-zinc-900 hover:bg-white rounded transition-all shadow-sm active:scale-95 border border-white/5"
+                    >
+                        LAUNCH OUTPUT
+                    </button>
                 </div>
             </header>
 
             {/* Application Body */}
             <div className="flex-1 flex overflow-hidden relative">
-                {/* Unified Left Sidebar (Hidden in Simple Mode) */}
-                {!simpleMode && <LeftSidebar />}
+                {/* Unified Left Sidebar */}
+                <LeftSidebar />
 
                 {/* Main Workspace */}
                 <div className="flex-1 flex flex-col relative">
@@ -154,38 +140,34 @@ export default function Home() {
                         </div>
 
                         {/* Performance Monitor Overlay */}
-                        {!simpleMode && <PerformanceMonitor />}
+                        <PerformanceMonitor />
 
                         {/* MIDI Panel Overlay */}
-                        {showMIDIPanel && !simpleMode && (
+                        {showMIDIPanel && (
                             <div className="absolute top-4 right-4 bottom-4 w-64 z-50 animate-in slide-in-from-right-4 duration-300">
                                 <MIDIMapper />
                             </div>
                         )}
                     </div>
 
-                    {/* Bottom Panel: Timeline & Cues (Hidden in Simple Mode) */}
-                    {!simpleMode && (
-                        <div className="h-64 border-t border-white/5 bg-zinc-900 relative z-30 flex">
-                            {/* Cues Panel (Fixed Width) */}
-                            <div className="w-64 border-r border-white/5">
-                                <CueList />
-                            </div>
-
-                            {/* Timeline Panel (Flexible) */}
-                            <div className="flex-1">
-                                <TimelinePanel />
-                            </div>
+                    {/* Bottom Panel: Timeline & Cues */}
+                    <div className="h-64 border-t border-white/5 bg-zinc-900 relative z-30 flex">
+                        {/* Cues Panel (Fixed Width) */}
+                        <div className="w-64 border-r border-white/5">
+                            <CueList />
                         </div>
-                    )}
+
+                        {/* Timeline Panel (Flexible) */}
+                        <div className="flex-1">
+                            <TimelinePanel />
+                        </div>
+                    </div>
                 </div>
 
-                {/* Right Side: Properties (Hidden in Simple Mode) */}
-                {!simpleMode && (
-                    <div className="w-80 border-l border-white/5 bg-zinc-900 flex flex-col">
-                        <SurfaceProperties />
-                    </div>
-                )}
+                {/* Right Side: Properties */}
+                <div className="w-80 border-l border-white/5 bg-zinc-900 flex flex-col">
+                    <SurfaceProperties />
+                </div>
             </div>
         </main>
     );

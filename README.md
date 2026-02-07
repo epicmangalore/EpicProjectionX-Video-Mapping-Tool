@@ -1,6 +1,6 @@
 # 🎥 ProjectionX - Professional & Playful Projection Mapping Studio
 
-ProjectionX is a cutting-edge Progressive Web App (PWA) designed for creating stunning projection mapping shows. It seamlessly blends professional-grade mapping tools (edge blending, N-point polygons, mesh warping) with a uniquely accessible "Magic Mode" for kids and beginners. Built with Next.js, React Three Fiber, and GLSL shaders.
+ProjectionX is a cutting-edge Progressive Web App (PWA) designed for creating stunning projection mapping shows. It seamlessly blends professional-grade mapping tools (edge blending, N-point polygons, mesh warping) with an intuitive interface. Built with Next.js, React Three Fiber, and GLSL shaders.
 
 ![ProjectionX Showcase](https://your-screenshot-url-here.png) <!-- Ideally update this later -->
 
@@ -14,12 +14,6 @@ ProjectionX is a cutting-edge Progressive Web App (PWA) designed for creating st
 -   **Corner Pinning**: Precise 4-point Keystone correction to align your projection with physical objects.
 -   **Edge Blending**: Seamlessly stitch multiple projectors together with adjustable gradients and gamma.
 -   **Snapping System**: Surfaces snap to each other and the grid for pixel-perfect alignment.
-
-### ✨ Magic Mode (For Kids!)
--   **Simplified UI**: One toggle hides all complexity.
--   **Bouncy Interactions**: Surfaces pop and bounce playfully when touched.
--   **Auto-Audio Reactivity**: Everything pulses to the beat of the music automatically.
--   **Magic Tray**: Easy access to stickers and fun shapes (now integrated logically into the media flow).
 
 ### 🎛️ Performance & Control
 -   **Live Output Window**: Launch a dedicated, borderless window for your projector.

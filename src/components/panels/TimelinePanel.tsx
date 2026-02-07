@@ -92,140 +92,120 @@ export function TimelinePanel() {
     };
 
     return (
-        <div className="h-48 bg-zinc-900 border-t border-white/5 flex flex-col">
-            {/* Header with controls */}
-            <div className="h-12 px-4 border-b border-white/10 flex items-center gap-4">
-                {/* Playback controls */}
-                <div className="flex gap-1">
-                    <button
-                        onClick={stop}
-                        className="p-2 glass glass-hover rounded"
-                        title="Stop"
-                    >
-                        <Square className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => seek(Math.max(0, currentTime - 1))}
-                        className="p-2 glass glass-hover rounded"
-                        title="Back 1s"
-                    >
-                        <SkipBack className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={isPlaying ? pause : play}
-                        className="p-2 bg-electric-purple hover:bg-electric-purple/80 rounded transition-colors"
-                        title={isPlaying ? "Pause" : "Play"}
-                    >
-                        {isPlaying ? (
-                            <Pause className="w-4 h-4" />
-                        ) : (
-                            <Play className="w-4 h-4" />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => seek(Math.min(duration, currentTime + 1))}
-                        className="p-2 glass glass-hover rounded"
-                        title="Forward 1s"
-                    >
-                        <SkipForward className="w-4 h-4" />
-                    </button>
+        <div className="h-48 bg-zinc-950 border-t border-white/5 flex flex-col font-sans">
+            {/* Deck Header */}
+            <div className="h-10 px-2 border-b border-white/5 flex items-center justify-between bg-zinc-900">
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border border-zinc-700 px-1 rounded">DECK A</span>
+                    <span className="text-xs font-mono text-electric-cyan">{formatTime(currentTime)}</span>
                 </div>
 
-                {/* Time display */}
-                <div className="text-sm font-mono">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                </div>
-
-                {/* Loop toggle */}
-                <button
-                    onClick={() => setLoop(!loop)}
-                    className={`px-3 py-1 text-xs rounded transition-colors ${loop
-                        ? "bg-electric-purple text-white"
-                        : "glass glass-hover"
-                        }`}
-                >
-                    Loop
-                </button>
-
-                <div className="flex-1" />
-
-                {/* Add keyframe */}
-                <button
-                    onClick={handleAddKeyframe}
-                    disabled={selectedSurfaceIds.length === 0}
-                    className="px-3 py-1 text-xs glass glass-hover rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Add keyframe at current time"
-                >
-                    <Plus className="w-3 h-3" />
-                    Keyframe
-                </button>
-
-                {/* Keyframe count */}
-                <div className="text-xs text-muted-foreground">
-                    {keyframes.length} keyframes
+                <div className="flex items-center gap-4">
+                    <div className="text-[9px] text-zinc-600 font-bold uppercase">MASTER BPM 120.00</div>
+                    <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.8)] animate-pulse"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-800"></div>
+                        <div className="w-1.5 h-1.5 rounded-full bg-zinc-800"></div>
+                    </div>
                 </div>
             </div>
 
-            {/* Timeline scrubber */}
-            <div className="flex-1 p-4">
-                <div
-                    ref={timelineRef}
-                    className="relative h-full bg-dark-800 rounded-md cursor-pointer"
-                    onMouseDown={handleScrubberMouseDown}
-                >
-                    {/* Time markers */}
-                    <div className="absolute inset-0 flex">
-                        {Array.from({ length: Math.floor(duration) + 1 }).map((_, i) => (
-                            <div
-                                key={i}
-                                className="flex-1 border-l border-white/10 relative"
-                            >
-                                <span className="absolute top-1 left-1 text-xs text-muted-foreground">
-                                    {i}s
-                                </span>
-                            </div>
-                        ))}
+            {/* Transport Controls & Scrubber Container */}
+            <div className="flex-1 flex">
+
+                {/* Transport Side Panel */}
+                <div className="w-24 border-r border-white/5 p-2 flex flex-col gap-2 bg-zinc-950">
+                    <button
+                        onClick={isPlaying ? pause : play}
+                        className={`flex-1 flex flex-col items-center justify-center border border-white/10 rounded overflow-hidden transition-all active:scale-95 ${isPlaying
+                                ? "bg-electric-cyan/20 border-electric-cyan shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+                                : "bg-zinc-900 border-zinc-800 hover:border-zinc-600"
+                            }`}
+                    >
+                        <Play className={`w-5 h-5 mb-1 ${isPlaying ? "text-electric-cyan fill-electric-cyan" : "text-zinc-400"}`} />
+                        <span className={`text-[9px] font-bold uppercase ${isPlaying ? "text-electric-cyan" : "text-zinc-500"}`}>
+                            {isPlaying ? "PLAYING" : "PLAY"}
+                        </span>
+                    </button>
+
+                    <button
+                        onClick={stop}
+                        className="h-10 flex flex-col items-center justify-center bg-zinc-900 border border-zinc-800 hover:border-electric-orange/50 hover:text-electric-orange text-zinc-400 rounded transition-all active:scale-95"
+                    >
+                        <Square className="w-3 h-3 mb-0.5" />
+                        <span className="text-[8px] font-bold uppercase">CUE</span>
+                    </button>
+
+                    <button
+                        onClick={() => setLoop(!loop)}
+                        className={`h-8 flex items-center justify-center gap-1 border rounded transition-all ${loop
+                                ? "bg-electric-purple/20 border-electric-purple text-electric-purple shadow-[0_0_10px_rgba(180,0,255,0.3)]"
+                                : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:border-zinc-600"
+                            }`}
+                    >
+                        <span className="text-[9px] font-bold uppercase">LOOP</span>
+                    </button>
+                </div>
+
+                {/* Timeline Track */}
+                <div className="flex-1 flex flex-col relative bg-zinc-900/50">
+                    {/* Toolbar */}
+                    <div className="h-8 border-b border-white/5 flex items-center px-2 gap-2">
+                        <button
+                            onClick={handleAddKeyframe}
+                            disabled={selectedSurfaceIds.length === 0}
+                            className="flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-800 border border-white/5 hover:bg-zinc-700 text-[9px] font-bold text-zinc-300 uppercase transition-colors disabled:opacity-30"
+                        >
+                            <Plus className="w-3 h-3" />
+                            <span>Keyframe</span>
+                        </button>
+
+                        <div className="w-px h-4 bg-white/10 mx-1"></div>
+
+                        <button onClick={() => seek(Math.max(0, currentTime - 1))} className="p-1 hover:text-white text-zinc-500"><SkipBack className="w-3 h-3" /></button>
+                        <button onClick={() => seek(Math.min(duration, currentTime + 1))} className="p-1 hover:text-white text-zinc-500"><SkipForward className="w-3 h-3" /></button>
                     </div>
 
-                    {/* Keyframes */}
-                    {keyframes.map((kf) => (
+                    {/* Scrubber Area */}
+                    <div
+                        className="flex-1 relative cursor-pointer overflow-hidden group"
+                        ref={timelineRef}
+                        onMouseDown={handleScrubberMouseDown}
+                    >
+                        {/* Grid Background */}
                         <div
-                            key={kf.id}
-                            className="absolute top-0 bottom-0 w-1 bg-electric-cyan hover:bg-electric-cyan/80 cursor-pointer group"
-                            style={{ left: `${(kf.time / duration) * 100}%` }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                seek(kf.time);
+                            className="absolute inset-0 opacity-10"
+                            style={{
+                                backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
+                                backgroundSize: '40px 100%'
                             }}
+                        ></div>
+
+                        {/* Playhead Line - Always visible */}
+                        <div
+                            className="absolute top-0 bottom-0 w-0.5 bg-electric-cyan z-20 pointer-events-none shadow-[0_0_10px_rgba(0,240,255,0.8)]"
+                            style={{ left: `${(currentTime / duration) * 100}%` }}
                         >
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-3 bg-electric-cyan rounded-full" />
-
-                            {/* Keyframe tooltip */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-dark-900 rounded text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                {formatTime(kf.time)}
-                                <br />
-                                {kf.property}
+                            <div className="absolute top-0 -translate-x-1/2 -translate-y-1/2 text-[9px] font-mono text-electric-cyan bg-zinc-950 px-1 border border-electric-cyan/30 rounded">
+                                ▼
                             </div>
+                        </div>
 
-                            {/* Delete button */}
-                            <button
+                        {/* Keyframes */}
+                        {keyframes.map((kf) => (
+                            <div
+                                key={kf.id}
+                                className="absolute top-2 bottom-0 w-px bg-yellow-500/50 z-10 hover:bg-yellow-400 hover:w-0.5 transition-all group/kf"
+                                style={{ left: `${(kf.time / duration) * 100}%` }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    deleteKeyframe(kf.id);
+                                    seek(kf.time);
                                 }}
-                                className="absolute top-full left-1/2 -translate-x-1/2 mt-1 p-1 bg-red-500 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                                <Trash2 className="w-2 h-2" />
-                            </button>
-                        </div>
-                    ))}
-
-                    {/* Playhead */}
-                    <div
-                        className="absolute top-0 bottom-0 w-0.5 bg-electric-purple pointer-events-none"
-                        style={{ left: `${(currentTime / duration) * 100}%` }}
-                    >
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-electric-purple" />
+                                <div className="absolute top-0 -translate-x-1/2 w-2 h-2 rotate-45 bg-yellow-500 border border-black shadow-sm group-hover/kf:scale-125 transition-transform" />
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>

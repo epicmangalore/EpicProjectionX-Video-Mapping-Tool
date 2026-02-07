@@ -11,8 +11,6 @@ interface UIStore {
     leftPanelOpen: boolean;
     rightPanelOpen: boolean;
     bottomPanelOpen: boolean;
-    simpleMode: boolean;
-
     // Actions
     setToolMode: (mode: ToolMode) => void;
     toggleGrid: () => void;
@@ -21,7 +19,6 @@ interface UIStore {
     toggleLeftPanel: () => void;
     toggleRightPanel: () => void;
     toggleBottomPanel: () => void;
-    toggleSimpleMode: () => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -33,7 +30,6 @@ export const useUIStore = create<UIStore>((set) => ({
     leftPanelOpen: true,
     rightPanelOpen: true,
     bottomPanelOpen: true,
-    simpleMode: false,
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
@@ -47,5 +43,4 @@ export const useUIStore = create<UIStore>((set) => ({
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
     toggleBottomPanel: () =>
         set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
-    toggleSimpleMode: () => set((state) => ({ simpleMode: !state.simpleMode })),
 }));
