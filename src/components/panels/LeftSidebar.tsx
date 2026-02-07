@@ -96,20 +96,6 @@ export function LeftSidebar() {
                                 <Type className="w-3 h-3" />
                                 Text
                             </button>
-                            <button
-                                onClick={handleWebcam}
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
-                            >
-                                <Video className="w-3 h-3" />
-                                Webcam
-                            </button>
-                            <button
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5 opacity-50 cursor-not-allowed"
-                                title="Coming Soon"
-                            >
-                                <Monitor className="w-3 h-3" />
-                                Output
-                            </button>
                         </div>
 
                         {/* Outliner Component */}

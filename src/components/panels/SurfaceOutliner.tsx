@@ -136,30 +136,6 @@ function SortableLayerRow({
                     )}
                 </div>
 
-                {/* Controls (Right Aligned) */}
-                <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                    {/* Visibility Toggle */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleVisibility(surface.id);
-                        }}
-                        className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
-                    >
-                        {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                    </button>
-
-                    {/* Lock Toggle */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLock(surface.id);
-                        }}
-                        className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
-                    >
-                        {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                    </button>
-                </div>
 
                 {/* Simple Delete (Hover only) */}
                 <button
@@ -250,10 +226,6 @@ export function SurfaceOutliner() {
             <div className="flex items-center px-1 py-1 bg-zinc-900 border-b border-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
                 <div className="w-6 text-center">#</div>
                 <div className="flex-1 px-2">Layer Name</div>
-                <div className="w-16 flex justify-end gap-1 px-1">
-                    <span className="w-6 text-center">Vis</span>
-                    <span className="w-6 text-center">Lock</span>
-                </div>
             </div>
 
             {/* Surface List */}

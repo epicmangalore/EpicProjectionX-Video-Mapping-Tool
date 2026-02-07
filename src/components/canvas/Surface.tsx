@@ -70,15 +70,18 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if (mediaAsset.type === "webcam") {
-            let stream: MediaStream | null = null;
             const startWebcam = async () => {
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const stream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
                     const video = document.createElement("video");
                     video.srcObject = stream;
                     video.autoplay = true;
                     video.playsInline = true;
                     video.muted = true;
+                    await video.play().catch(e => console.warn("Video play failed", e));
+
                     setVideoElement(video);
                     videoRef.current = video;
                     streamRef.current = stream;
@@ -88,7 +91,10 @@ export function Surface({ surface }: SurfaceProps) {
             };
             startWebcam();
             return () => {
-                if (stream) stream.getTracks().forEach(t => t.stop());
+                if (streamRef.current) {
+                    streamRef.current.getTracks().forEach(t => t.stop());
+                    streamRef.current = null;
+                }
                 setVideoElement(null);
             };
         }

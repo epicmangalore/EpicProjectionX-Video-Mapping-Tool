@@ -10,6 +10,7 @@ import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
 import { useRef } from "react";
+import { generateId } from "@/lib/utils";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -82,24 +83,45 @@ export function SurfaceProperties() {
                     <div className="flex gap-2">
                         <select
                             value={selectedSurface.mediaId || ""}
-                            onChange={(e) => updateSurface(selectedSurface.id, {
-                                mediaId: e.target.value || null
-                            })}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "webcam-builtin") {
+                                    // Check if a webcam asset already exists
+                                    let webcamAsset = mediaAssets.find(a => a.type === "webcam");
+                                    if (!webcamAsset) {
+                                        const newId = generateId();
+                                        addMediaAsset({
+                                            id: newId,
+                                            name: "Webcam Input",
+                                            type: "webcam",
+                                        });
+                                        updateSurface(selectedSurface.id, { mediaId: newId });
+                                    } else {
+                                        updateSurface(selectedSurface.id, { mediaId: webcamAsset.id });
+                                    }
+                                } else {
+                                    updateSurface(selectedSurface.id, {
+                                        mediaId: val || null
+                                    });
+                                }
+                            }}
                             className="flex-1 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
                         >
                             <option value="">None</option>
-                            {mediaAssets
-                                .filter((asset) => asset.type !== "shader")
-                                .map((asset) => (
-                                    <option key={asset.id} value={asset.id}>
-                                        {asset.type === "image" && "🖼️ "}
-                                        {asset.type === "video" && "🎬 "}
-                                        {asset.type === "color" && "🎨 "}
-                                        {asset.type === "text" && "📝 "}
-                                        {asset.type === "webcam" && "📷 "}
-                                        {asset.name}
-                                    </option>
-                                ))}
+                            <option value="webcam-builtin">📷 Webcam</option>
+                            <optgroup label="Assets">
+                                {mediaAssets
+                                    .filter((asset) => asset.type !== "shader" && asset.type !== "webcam")
+                                    .map((asset) => (
+                                        <option key={asset.id} value={asset.id}>
+                                            {asset.type === "image" && "🖼️ "}
+                                            {asset.type === "video" && "🎬 "}
+                                            {asset.type === "color" && "🎨 "}
+                                            {asset.type === "text" && "📝 "}
+                                            {asset.name}
+                                        </option>
+                                    ))}
+                            </optgroup>
                         </select>
                         <button
                             onClick={() => fileInputRef.current?.click()}
