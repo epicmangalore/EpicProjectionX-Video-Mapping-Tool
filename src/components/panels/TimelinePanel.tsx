@@ -39,10 +39,25 @@ export function TimelinePanel() {
     const timelineRef = useRef<HTMLDivElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [containerWidth, setContainerWidth] = useState(1000); // Default fallback
 
     // Initialize timeline on mount
     useEffect(() => {
         initTimeline(updateSurface);
+    }, []);
+
+    // Track container width for dynamic ruler
+    useEffect(() => {
+        if (!timelineRef.current) return;
+
+        const observer = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setContainerWidth(entry.contentRect.width);
+            }
+        });
+
+        observer.observe(timelineRef.current);
+        return () => observer.disconnect();
     }, []);
 
     // Update GSAP timeline when keyframes or duration changes
@@ -58,6 +73,11 @@ export function TimelinePanel() {
         const ms = Math.floor((seconds % 1) * 1000);
 
         const hStr = hrs > 0 ? `${hrs.toString().padStart(2, "0")}:` : "";
+
+        // Simplified format for ruler labels to avoid clutter
+        if (ms === 0) {
+            return `${hStr}${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+        }
         return `${hStr}${mins.toString().padStart(2, "0")}:${secs
             .toString()
             .padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
@@ -98,13 +118,25 @@ export function TimelinePanel() {
         };
     }, [isDragging]);
 
-    // Dynamic ruler markers based on duration
+    // Dynamic ruler markers based on visual density
     const getRulerSteps = () => {
-        if (duration <= 60) return 1; // 1s steps
-        if (duration <= 300) return 5; // 5s steps
-        if (duration <= 1800) return 60; // 1m steps
-        if (duration <= 3600) return 300; // 5m steps
-        return 900; // 15m steps
+        if (!containerWidth || duration <= 0) return 1;
+
+        const pixelsPerSecond = containerWidth / duration;
+        const minLabelWidth = 60; // Approx px needed for a timestamp label (HH:MM:SS)
+
+        // Find the smallest step that gives enough space
+        // Possible steps: 0.1, 0.5, 1, 2, 5, 10, 15, 30, 60, 300, 900, 3600...
+        const steps = [
+            0.1, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600
+        ];
+
+        for (const s of steps) {
+            const labelWidth = s * pixelsPerSecond;
+            if (labelWidth >= minLabelWidth) return s;
+        }
+
+        return 3600; // Fallback for extremely cramped views
     };
     const step = getRulerSteps();
 
