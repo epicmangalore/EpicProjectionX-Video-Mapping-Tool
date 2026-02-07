@@ -63,7 +63,7 @@ export function SurfaceProperties() {
                 <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Properties</h2>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
                 {/* Surface Name */}
                 <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Name</label>
