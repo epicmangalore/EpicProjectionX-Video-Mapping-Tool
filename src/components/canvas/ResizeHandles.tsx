@@ -74,7 +74,8 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
 
             // Shift key or Aspect Lock: Proportionate scaling
             // Aspect lock acts as a permanent Shift key for corner handles
-            const shouldLockAspect = shiftPressed || (surface.aspectRatioLocked && (pos === "tl" || pos === "tr" || pos === "bl" || pos === "br"));
+            // AND forces proportionate scaling for side handles
+            const shouldLockAspect = (shiftPressed && (pos === "tl" || pos === "tr" || pos === "bl" || pos === "br")) || surface.aspectRatioLocked;
 
             if (shouldLockAspect) {
                 if (pos === "tl" || pos === "tr" || pos === "bl" || pos === "br") {
@@ -86,6 +87,12 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
                     } else {
                         nextScaleX = nextScaleY * startData.current.aspect;
                     }
+                } else if (pos === "l" || pos === "r") {
+                    // Side handle X axis: adjust Y to match aspect
+                    nextScaleY = nextScaleX / startData.current.aspect;
+                } else if (pos === "t" || pos === "b") {
+                    // Side handle Y axis: adjust X to match aspect
+                    nextScaleX = nextScaleY * startData.current.aspect;
                 }
             }
 
