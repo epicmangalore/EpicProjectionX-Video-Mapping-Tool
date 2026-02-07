@@ -53,7 +53,7 @@ export function CanvasFrame() {
     return (
         <group position={[0, 0, -0.1]}>
             {/* Main frame outline */}
-            <line>
+            <line key={`frame-${width}-${height}`}>
                 <bufferGeometry>
                     <bufferAttribute
                         attach="attributes-position"
@@ -73,7 +73,7 @@ export function CanvasFrame() {
 
             {/* Safe area outline (optional) */}
             {showSafeArea && (
-                <line>
+                <line key={`safe-${width}-${height}`}>
                     <bufferGeometry>
                         <bufferAttribute
                             attach="attributes-position"
