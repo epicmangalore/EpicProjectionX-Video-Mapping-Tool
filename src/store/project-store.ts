@@ -196,10 +196,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             mediaId: mediaId || null,
             blendMode: "normal",
             corners: [
-                { x: -0.5, y: -0.5 }, // TL
-                { x: 0.5, y: -0.5 },  // TR
-                { x: 0.5, y: 0.5 },   // BR
-                { x: -0.5, y: 0.5 },  // BL
+                { x: -0.5, y: 0.5 },  // TL
+                { x: 0.5, y: 0.5 },   // TR
+                { x: 0.5, y: -0.5 },  // BR
+                { x: -0.5, y: -0.5 }, // BL
             ],
             meshWarp: null,
             effects: [],
@@ -392,10 +392,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 return {
                     ...s,
                     corners: [
-                        { x: -0.5, y: -0.5 },
-                        { x: 0.5, y: -0.5 },
-                        { x: 0.5, y: 0.5 },
                         { x: -0.5, y: 0.5 },
+                        { x: 0.5, y: 0.5 },
+                        { x: 0.5, y: -0.5 },
+                        { x: -0.5, y: -0.5 },
                     ],
                 };
             }),

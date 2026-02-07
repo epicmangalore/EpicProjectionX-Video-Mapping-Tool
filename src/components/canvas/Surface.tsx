@@ -319,8 +319,6 @@ export function Surface({ surface }: SurfaceProps) {
         updateLevels();
         const levels = audioLevels as any;
 
-
-
         if (surface.audioMappings.length > 0) {
             surface.audioMappings.forEach(mapping => {
                 if (!mapping.enabled) return;
@@ -332,23 +330,6 @@ export function Surface({ surface }: SurfaceProps) {
                 if (mapping.property === "chromatic") reactiveChromatic = value;
             });
         }
-
-        // Bouncy UI Logic
-        // Bouncy UI Logic - Removed for Pro Version
-        const targetBounce = 1.0;
-        bounceRef.current = 1.0;
-
-        meshRef.current.position.set(
-            surface.position.x,
-            surface.position.y,
-            surface.zIndex * 0.01
-        );
-        meshRef.current.rotation.z = surface.rotation;
-
-        // Combine base scale, bounce, and audio pulse
-        const finalScaleX = surface.scale.x * bounceRef.current * audioReactiveScale.current;
-        const finalScaleY = surface.scale.y * bounceRef.current * audioReactiveScale.current;
-        meshRef.current.scale.set(finalScaleX, finalScaleY, 1);
 
         if (shaderMaterial) {
             // If MeshWarp is active, don't apply the corner-pin WarpMatrix (or use identity)
@@ -452,6 +433,9 @@ export function Surface({ surface }: SurfaceProps) {
         <>
             <mesh
                 ref={meshRef}
+                position={[surface.position.x, surface.position.y, surface.zIndex * 0.01]}
+                rotation={[0, 0, surface.rotation]}
+                scale={[surface.scale.x, surface.scale.y, 1]}
                 onClick={handleClick}
                 onPointerDown={handlePointerDown}
                 onPointerOver={() => setHovered(true)}

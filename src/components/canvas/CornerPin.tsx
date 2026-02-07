@@ -36,43 +36,33 @@ export function CornerPin({ surface }: CornerPinProps) {
         event.stopPropagation();
         setDraggingCorner(cornerIndex);
 
+        const rect = gl.domElement.getBoundingClientRect();
+
         const onPointerMove = (e: PointerEvent) => {
-            const rect = gl.domElement.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            const mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            const my = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-            const vector = new THREE.Vector3(x, y, 0.5);
-            vector.unproject(camera);
+            const currentMouse = new THREE.Vector3(mx, my, 0.5).unproject(camera);
 
-            let targetX = vector.x - surface.position.x;
-            let targetY = vector.y - surface.position.y;
+            // Convert world mouse to local space relative to surface position
+            const dx = currentMouse.x - surface.position.x;
+            const dy = currentMouse.y - surface.position.y;
 
-            // Apply Snapping
+            // Rotate back by -rotation to get un-rotated local coords
+            const cos = Math.cos(-surface.rotation);
+            const sin = Math.sin(-surface.rotation);
+            let rdx = dx * cos - dy * sin;
+            let rdy = dx * sin + dy * cos;
+
+            // Divide by scale to get -0.5 to 0.5 normalized coords
+            let targetX = rdx / surface.scale.x;
+            let targetY = rdy / surface.scale.y;
+
+            // Apply Snapping (in normalized local space)
             if (settings.snapToGrid) {
-                const gridSize = 0.5;
-                const snappedX = Math.round(targetX / gridSize) * gridSize;
-                const snappedY = Math.round(targetY / gridSize) * gridSize;
-
-                if (Math.abs(targetX - snappedX) < settings.snapThreshold) targetX = snappedX;
-                if (Math.abs(targetY - snappedY) < settings.snapThreshold) targetY = snappedY;
-            }
-
-            if (settings.snapToSurfaces) {
-                surfaces.forEach(s => {
-                    if (s.id === surface.id || !s.visible) return;
-                    s.corners.forEach(p => {
-                        const worldX = p.x + s.position.x;
-                        const worldY = p.y + s.position.y;
-                        const localX = worldX - surface.position.x;
-                        const localY = worldY - surface.position.y;
-
-                        if (Math.abs(targetX - localX) < settings.snapThreshold &&
-                            Math.abs(targetY - localY) < settings.snapThreshold) {
-                            targetX = localX;
-                            targetY = localY;
-                        }
-                    });
-                });
+                const gridSize = 0.05; // Finer snapping for pin mode
+                targetX = Math.round(targetX / gridSize) * gridSize;
+                targetY = Math.round(targetY / gridSize) * gridSize;
             }
 
             const newCorners = [...surface.corners];
@@ -92,7 +82,11 @@ export function CornerPin({ surface }: CornerPinProps) {
     };
 
     return (
-        <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>
+        <group
+            position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}
+            rotation={[0, 0, surface.rotation]}
+            scale={[surface.scale.x, surface.scale.y, 1]}
+        >
             {surface.corners.map((corner, index) => (
                 <mesh
                     key={`${surface.id}-corner-${index}`}
@@ -100,16 +94,18 @@ export function CornerPin({ surface }: CornerPinProps) {
                     onPointerDown={(e) => handleCornerDrag(index, e)}
                     onPointerOver={() => gl.domElement.style.cursor = 'move'}
                     onPointerOut={() => gl.domElement.style.cursor = 'auto'}
+                    scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]} // Keep handles same size
                 >
                     <circleGeometry args={[0.035, 32]} />
                     <meshBasicMaterial
                         color={draggingCorner === index ? "#22d3ee" : (index < 4 ? "#7c3aed" : "#ec4899")}
                         transparent
                         opacity={0.9}
+                        depthTest={false}
                     />
                     <mesh scale={[1.2, 1.2, 1]}>
                         <ringGeometry args={[0.035, 0.045, 32]} />
-                        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
+                        <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthTest={false} />
                     </mesh>
                 </mesh>
             ))}

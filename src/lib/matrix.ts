@@ -44,12 +44,12 @@ export function getPerspectiveTransform(
 ): Matrix4 {
     const [tl, tr, br, bl] = corners;
 
-    // Source points (matching centered geometry TL, TR, BR, BL)
+    // Source points (matching Three.js PlaneGeometry TL, TR, BR, BL)
     const src = [
-        { x: -0.5, y: -0.5 }, // top-left
-        { x: 0.5, y: -0.5 },  // top-right
-        { x: 0.5, y: 0.5 },   // bottom-right
-        { x: -0.5, y: 0.5 },  // bottom-left
+        { x: -0.5, y: 0.5 },  // top-left
+        { x: 0.5, y: 0.5 },   // top-right
+        { x: 0.5, y: -0.5 },  // bottom-right
+        { x: -0.5, y: -0.5 }, // bottom-left
     ];
 
     // Destination points
