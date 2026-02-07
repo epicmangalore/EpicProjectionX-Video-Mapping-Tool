@@ -201,8 +201,8 @@ export default function Home() {
                                             id: mediaId,
                                             name: "⭐ Magic Star",
                                             type: "image",
-                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_star_sticker_1770437101472.png",
-                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_star_sticker_1770437101472.png"
+                                            url: "/magic-mode/magic_star_sticker_1770437101472.png",
+                                            thumbnail: "/magic-mode/magic_star_sticker_1770437101472.png"
                                         });
                                         addSurface(mediaId);
                                     }}
@@ -218,8 +218,8 @@ export default function Home() {
                                             id: mediaId,
                                             name: "❤️ Magic Heart",
                                             type: "image",
-                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_heart_sticker_1770437115482.png",
-                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_heart_sticker_1770437115482.png"
+                                            url: "/magic-mode/magic_heart_sticker_1770437115482.png",
+                                            thumbnail: "/magic-mode/magic_heart_sticker_1770437115482.png"
                                         });
                                         addSurface(mediaId);
                                     }}
@@ -235,8 +235,8 @@ export default function Home() {
                                             id: mediaId,
                                             name: "👻 Magic Ghost",
                                             type: "image",
-                                            url: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_ghost_sticker_1770437129767.png",
-                                            thumbnail: "/Users/nihalgraphics/.gemini/antigravity/brain/01c72b89-a98b-4283-ac64-fe0dcf9ddb9b/magic_ghost_sticker_1770437129767.png"
+                                            url: "/magic-mode/magic_ghost_sticker_1770437129767.png",
+                                            thumbnail: "/magic-mode/magic_ghost_sticker_1770437129767.png"
                                         });
                                         addSurface(mediaId);
                                     }}
