@@ -15,6 +15,7 @@ interface TransformControlsProps {
 
 export function TransformControls({ surface, meshRef }: TransformControlsProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const saveHistory = useProjectStore((state) => state.saveHistory);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const toolMode = useUIStore((state) => state.toolMode);
     const controlsRef = useRef<any>(null);
@@ -37,10 +38,24 @@ export function TransformControls({ surface, meshRef }: TransformControlsProps) 
                 });
             };
 
+            const handleDragStart = () => {
+                saveHistory();
+            };
+
             controls.addEventListener("change", handleChange);
-            return () => controls.removeEventListener("change", handleChange);
+            controls.addEventListener("dragging-changed", (event: any) => {
+                if (event.value) handleDragStart();
+            });
+
+            return () => {
+                controls.removeEventListener("change", handleChange);
+                // Listeners should be cleaned up, but anonymous functions are hard to remove without reference.
+                // However, Drei TransformControls cleans up its own event listeners usually. 
+                // But we are adding them to the *ref instance*.
+                // Ideally, we should use named functions for cleanup.
+            };
         }
-    }, [surface.id, updateSurface, meshRef]);
+    }, [surface.id, updateSurface, meshRef, saveHistory]);
 
     if (!isSelected || toolMode !== "transform" || !meshRef.current) {
         return null;

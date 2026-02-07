@@ -13,6 +13,7 @@ interface MeshWarpProps {
 
 export function MeshWarp({ surface }: MeshWarpProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const saveHistory = useProjectStore((state) => state.saveHistory);
     const toolMode = useUIStore((state) => state.toolMode);
     const [draggingPoint, setDraggingPoint] = useState<{ row: number; col: number } | null>(null);
     const { camera, gl } = useThree();
@@ -26,6 +27,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
 
     const handlePointDrag = (row: number, col: number, event: any) => {
         event.stopPropagation();
+        saveHistory();
         setDraggingPoint({ row, col });
 
         const onPointerMove = (e: PointerEvent) => {
@@ -36,7 +38,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
             const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
             const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera({ x, y }, camera);
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
 
             const planeNormal = new THREE.Vector3(0, 0, 1).applyQuaternion(groupRef.current.getWorldQuaternion(new THREE.Quaternion()));
             const planePoint = groupRef.current.getWorldPosition(new THREE.Vector3());

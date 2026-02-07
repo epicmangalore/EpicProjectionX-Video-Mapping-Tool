@@ -14,6 +14,7 @@ type HandlePosition = "tl" | "t" | "tr" | "r" | "br" | "b" | "bl" | "l";
 export function ResizeHandles({ surface }: ResizeHandlesProps) {
     const { camera, gl } = useThree();
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const saveHistory = useProjectStore((state) => state.saveHistory);
     const [dragging, setDragging] = useState<HandlePosition | null>(null);
     const startData = useRef<{
         pos: Vector2;
@@ -24,6 +25,7 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
 
     const handleDown = (e: any, pos: HandlePosition) => {
         e.stopPropagation();
+        saveHistory();
         setDragging(pos);
 
         const rect = gl.domElement.getBoundingClientRect();

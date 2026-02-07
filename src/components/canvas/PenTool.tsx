@@ -14,6 +14,7 @@ interface PenToolProps {
 export function PenTool({ surface }: PenToolProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const addCorner = useProjectStore((state) => state.addCorner);
+    const saveHistory = useProjectStore((state) => state.saveHistory);
     const toolMode = useUIStore((state) => state.toolMode);
     const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
@@ -139,6 +140,7 @@ export function PenTool({ surface }: PenToolProps) {
     // Handle corner dragging
     const handleCornerDrag = (cornerIndex: number, event: any) => {
         event.stopPropagation();
+        saveHistory();
         setDraggingCorner(cornerIndex);
 
         const onPointerMove = (e: PointerEvent) => {
