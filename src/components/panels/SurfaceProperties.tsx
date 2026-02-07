@@ -261,31 +261,30 @@ export function SurfaceProperties() {
                         </div>
                     </div>
 
+    const alignSurfaces = useProjectStore((state) => state.alignSurfaces);
+
+                    // ... (inside the component)
+
+                    // ...
                     <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
                         {/* Horizontal Alignment */}
                         <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
                             <button
-                                onClick={() => {
-                                    const canvasW = useProjectStore.getState().projectSettings.resolution.width / 100;
-                                    updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, x: -(canvasW / 2) + (selectedSurface.scale.x / 2) } });
-                                }}
+                                onClick={() => alignSurfaces("left")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Left"
                             >
                                 <AlignStartHorizontal className="w-3.5 h-3.5" />
                             </button>
                             <button
-                                onClick={() => updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, x: 0 } })}
+                                onClick={() => alignSurfaces("center")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Center"
                             >
                                 <AlignCenterHorizontal className="w-3.5 h-3.5" />
                             </button>
                             <button
-                                onClick={() => {
-                                    const canvasW = useProjectStore.getState().projectSettings.resolution.width / 100;
-                                    updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, x: (canvasW / 2) - (selectedSurface.scale.x / 2) } });
-                                }}
+                                onClick={() => alignSurfaces("right")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Right"
                             >
@@ -296,27 +295,21 @@ export function SurfaceProperties() {
                         {/* Vertical Alignment */}
                         <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
                             <button
-                                onClick={() => {
-                                    const canvasH = useProjectStore.getState().projectSettings.resolution.height / 100;
-                                    updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, y: (canvasH / 2) - (selectedSurface.scale.y / 2) } });
-                                }}
+                                onClick={() => alignSurfaces("top")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Top"
                             >
                                 <AlignStartVertical className="w-3.5 h-3.5" />
                             </button>
                             <button
-                                onClick={() => updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, y: 0 } })}
+                                onClick={() => alignSurfaces("middle")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Middle"
                             >
                                 <AlignCenterVertical className="w-3.5 h-3.5" />
                             </button>
                             <button
-                                onClick={() => {
-                                    const canvasH = useProjectStore.getState().projectSettings.resolution.height / 100;
-                                    updateSurface(selectedSurface.id, { position: { ...selectedSurface.position, y: -(canvasH / 2) + (selectedSurface.scale.y / 2) } });
-                                }}
+                                onClick={() => alignSurfaces("bottom")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Bottom"
                             >

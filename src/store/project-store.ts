@@ -138,6 +138,7 @@ interface ProjectStore {
     selectSurface: (id: string, multi?: boolean) => void;
     deselectAll: () => void;
     selectAll: () => void;
+    alignSurfaces: (alignment: "left" | "center" | "right" | "top" | "middle" | "bottom") => void;
 
     // Media actions
     addMediaAsset: (asset: MediaAsset) => void;
@@ -485,6 +486,75 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 return { ...s, corners: newCorners, sourceCorners: newSourceCorners };
             }),
         }));
+    },
+
+    alignSurfaces: (alignment: "left" | "center" | "right" | "top" | "middle" | "bottom") => {
+        const { surfaces, selectedSurfaceIds, projectSettings, saveHistory } = get();
+        if (selectedSurfaceIds.length === 0) return;
+
+        saveHistory();
+
+        const selectedSurfaces = surfaces.filter(s => selectedSurfaceIds.includes(s.id));
+        const canvasW = projectSettings.resolution.width / 100;
+        const canvasH = projectSettings.resolution.height / 100;
+
+        // If single selection, align to canvas
+        if (selectedSurfaces.length === 1) {
+            const surface = selectedSurfaces[0];
+            let newX = surface.position.x;
+            let newY = surface.position.y;
+
+            switch (alignment) {
+                case "left": newX = -(canvasW / 2) + (surface.scale.x / 2); break;
+                case "center": newX = 0; break;
+                case "right": newX = (canvasW / 2) - (surface.scale.x / 2); break;
+                case "top": newY = (canvasH / 2) - (surface.scale.y / 2); break;
+                case "middle": newY = 0; break;
+                case "bottom": newY = -(canvasH / 2) + (surface.scale.y / 2); break;
+            }
+
+            set({
+                surfaces: surfaces.map(s => s.id === surface.id ? { ...s, position: { x: newX, y: newY } } : s)
+            });
+            return;
+        }
+
+        // If multiple selection, align to selection bounds
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        selectedSurfaces.forEach(s => {
+            // Simple bounding box based on center position and scale (ignoring rotation for alignment context usually)
+            // Or should we use the edges? Design tools usually align edges.
+            const halfW = s.scale.x / 2;
+            const halfH = s.scale.y / 2;
+            minX = Math.min(minX, s.position.x - halfW);
+            maxX = Math.max(maxX, s.position.x + halfW);
+            minY = Math.min(minY, s.position.y - halfH);
+            maxY = Math.max(maxY, s.position.y + halfH);
+        });
+
+        const updates = selectedSurfaces.map(s => {
+            let newX = s.position.x;
+            let newY = s.position.y;
+            const halfW = s.scale.x / 2;
+            const halfH = s.scale.y / 2;
+
+            switch (alignment) {
+                case "left": newX = minX + halfW; break;
+                case "center": newX = (minX + maxX) / 2; break;
+                case "right": newX = maxX - halfW; break;
+                case "top": newY = maxY - halfH; break; // Y is up in Three.js? Yes.
+                case "middle": newY = (minY + maxY) / 2; break;
+                case "bottom": newY = minY + halfH; break;
+            }
+            return { id: s.id, position: { x: newX, y: newY } };
+        });
+
+        set({
+            surfaces: surfaces.map(s => {
+                const update = updates.find(u => u.id === s.id);
+                return update ? { ...s, position: update.position } : s;
+            })
+        });
     },
 
     removeCorner: (surfaceId, index) => {
