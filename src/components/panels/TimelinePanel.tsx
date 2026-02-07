@@ -13,7 +13,7 @@ import {
     Trash2,
 } from "lucide-react";
 
-import { TimelineTrack } from "./timeline/TimelineTrack";
+import { TimelineTrackSidebar, TimelineTrackContent } from "./timeline/TimelineTrack";
 
 export function TimelinePanel() {
     const currentTime = useTimelineStore((state) => state.currentTime);
@@ -32,6 +32,7 @@ export function TimelinePanel() {
     const seek = useTimelineStore((state) => state.seek);
     const setLoop = useTimelineStore((state) => state.setLoop);
     const setSnapToGrid = useTimelineStore((state) => state.setSnapToGrid);
+    const setDuration = useTimelineStore((state) => state.setDuration);
     const initTimeline = useTimelineStore((state) => state.initTimeline);
     const updateTimeline = useTimelineStore((state) => state.updateTimeline);
 
@@ -44,17 +45,20 @@ export function TimelinePanel() {
         initTimeline(updateSurface);
     }, []);
 
-    // Update GSAP timeline when keyframes change
+    // Update GSAP timeline when keyframes or duration changes
     useEffect(() => {
         updateTimeline(updateSurface);
-    }, [keyframes, updateTimeline, updateSurface]);
+    }, [keyframes, duration, updateTimeline, updateSurface]);
 
-    // Format time as MM:SS.mmm
+    // Format time as HH:MM:SS.mmm
     const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
         const secs = Math.floor(seconds % 60);
         const ms = Math.floor((seconds % 1) * 1000);
-        return `${mins.toString().padStart(2, "0")}:${secs
+
+        const hStr = hrs > 0 ? `${hrs.toString().padStart(2, "0")}:` : "";
+        return `${hStr}${mins.toString().padStart(2, "0")}:${secs
             .toString()
             .padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
     };
@@ -69,7 +73,6 @@ export function TimelinePanel() {
         if (!timelineRef.current) return;
 
         const rect = timelineRef.current.getBoundingClientRect();
-        const scrollLeft = scrollRef.current?.scrollLeft || 0;
         const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
         const newTime = (x / rect.width) * duration;
         seek(newTime);
@@ -95,14 +98,24 @@ export function TimelinePanel() {
         };
     }, [isDragging]);
 
+    // Dynamic ruler markers based on duration
+    const getRulerSteps = () => {
+        if (duration <= 60) return 1; // 1s steps
+        if (duration <= 300) return 5; // 5s steps
+        if (duration <= 1800) return 60; // 1m steps
+        if (duration <= 3600) return 300; // 5m steps
+        return 900; // 15m steps
+    };
+    const step = getRulerSteps();
+
     return (
-        <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden">
+        <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300">
             {/* Deck Header */}
             <div className="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-zinc-900 shrink-0">
                 <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border border-zinc-700 px-1 rounded bg-zinc-800">DECK A</span>
-                        <span className="text-sm font-mono text-electric-cyan tabular-nums w-20">{formatTime(currentTime)}</span>
+                        <span className="text-sm font-mono text-electric-cyan tabular-nums w-24">{formatTime(currentTime)}</span>
                     </div>
 
                     <div className="h-4 w-px bg-white/10" />
@@ -120,13 +133,20 @@ export function TimelinePanel() {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2">
                         <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Duration</div>
-                        <span className="text-xs font-mono text-zinc-400">{duration}s</span>
+                        <input
+                            type="number"
+                            value={duration}
+                            onChange={(e) => setDuration(Math.min(43200, Math.max(1, parseInt(e.target.value) || 30)))}
+                            className="w-16 h-6 bg-zinc-800 border border-zinc-700 rounded text-xs font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
+                            title="Max 12 hours (43200s)"
+                        />
+                        <span className="text-[10px] text-zinc-600 font-mono">s</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="text-[9px] text-zinc-600 font-bold uppercase">MASTER BPM 120.00</div>
                         <div className="flex gap-1.5">
                             {[0, 1, 2, 3].map(i => (
-                                <div key={i} className={`w-1.5 h-1.5 rounded-full ${i === Math.floor(currentTime * 2) % 4 ? 'bg-electric-cyan shadow-[0_0_8px_rgba(0,240,255,0.8)]' : 'bg-zinc-800'}`} />
+                                <div key={i} className={`w-1.4 h-1.5 rounded-full ${i === Math.floor(currentTime * 2) % 4 ? 'bg-electric-cyan shadow-[0_0_8px_rgba(0,240,255,0.8)]' : 'bg-zinc-800'}`} />
                             ))}
                         </div>
                     </div>
@@ -136,9 +156,8 @@ export function TimelinePanel() {
             {/* Main Timeline Area */}
             <div className="flex-1 flex overflow-hidden">
 
-                {/* Transport & Track Control Side (Fixed Width) */}
+                {/* Fixed Sidebar (Track Labels) */}
                 <div className="w-48 border-r border-white/5 flex flex-col bg-zinc-950 shrink-0">
-                    {/* Compact Transport */}
                     <div className="h-10 border-b border-white/5 flex items-center px-2 gap-1.5 bg-zinc-900/50">
                         <button
                             onClick={isPlaying ? pause : play}
@@ -160,53 +179,40 @@ export function TimelinePanel() {
                         </button>
                     </div>
 
-                    {/* Track Labels Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
                         {surfaces.map(surface => (
-                            <div key={surface.id} className="w-full">
-                                {/* Track Header & Properties are handled here */}
-                                <TimelineTrack
-                                    surfaceId={surface.id}
-                                    surfaceName={surface.name}
-                                    keyframes={keyframes}
-                                    duration={duration}
-                                />
-                            </div>
+                            <TimelineTrackSidebar
+                                key={surface.id}
+                                surfaceId={surface.id}
+                                surfaceName={surface.name}
+                                keyframes={keyframes}
+                            />
                         ))}
                     </div>
                 </div>
 
-                {/* Scrubber & Keyframe Area (Scrollable) */}
+                {/* Scrollable Content (Keyframes) */}
                 <div className="flex-1 flex flex-col overflow-hidden relative">
-                    {/* Time Ruler / Scrubber */}
                     <div
-                        className="h-10 border-b border-white/5 relative bg-zinc-900/30 cursor-crosshair group/ruler shrink-0"
+                        className="h-10 border-b border-white/5 relative bg-zinc-900/30 cursor-crosshair group/ruler shrink-0 overflow-hidden"
                         onMouseDown={handleScrubberMouseDown}
                         ref={timelineRef}
                     >
-                        {/* Time Markers */}
-                        {Array.from({ length: duration + 1 }).map((_, i) => (
+                        {Array.from({ length: Math.floor(duration / step) + 1 }).map((_, i) => (
                             <div
                                 key={i}
                                 className="absolute top-0 bottom-0 border-l border-white/5"
-                                style={{ left: `${(i / duration) * 100}%` }}
+                                style={{ left: `${((i * step) / duration) * 100}%` }}
                             >
-                                <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 group-hover/ruler:text-zinc-400">{i}s</span>
-                                {/* Sub-ticks */}
-                                {i < duration && Array.from({ length: 9 }).map((_, j) => (
-                                    <div
-                                        key={j}
-                                        className="absolute top-6 bottom-0 border-l border-white/5"
-                                        style={{ left: `${((j + 1) / 10) * (1 / duration) * 100}%`, height: '20%' }}
-                                    />
-                                ))}
+                                <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 whitespace-nowrap">
+                                    {formatTime(i * step).split('.')[0]}
+                                </span>
                             </div>
                         ))}
                     </div>
 
-                    {/* Content Area */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-zinc-950/20" ref={scrollRef}>
-                        {/* Vertical Progress Bar */}
+                        {/* Playhead */}
                         <div
                             className="absolute top-0 bottom-0 w-px bg-electric-cyan/40 z-30 pointer-events-none shadow-[0_0_8px_rgba(0,240,255,0.4)]"
                             style={{ left: `${(currentTime / duration) * 100}%` }}
@@ -214,12 +220,10 @@ export function TimelinePanel() {
                             <div className="absolute top-0 -translate-x-1/2 -translate-y-[1px] w-2 h-2 rounded-full bg-electric-cyan" />
                         </div>
 
-                        {/* Repeat the tracks logic for the right side visual area */}
                         {surfaces.map(surface => (
-                            <TimelineTrack
-                                key={`visual-${surface.id}`}
+                            <TimelineTrackContent
+                                key={`content-${surface.id}`}
                                 surfaceId={surface.id}
-                                surfaceName={surface.name}
                                 keyframes={keyframes}
                                 duration={duration}
                             />
