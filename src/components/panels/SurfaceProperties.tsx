@@ -17,6 +17,7 @@ export function SurfaceProperties() {
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const alignSurfaces = useProjectStore((state) => state.alignSurfaces);
     const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
     const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
@@ -261,11 +262,7 @@ export function SurfaceProperties() {
                         </div>
                     </div>
 
-    const alignSurfaces = useProjectStore((state) => state.alignSurfaces);
 
-                    // ... (inside the component)
-
-                    // ...
                     <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
                         {/* Horizontal Alignment */}
                         <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">

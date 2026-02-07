@@ -30,7 +30,9 @@ export function useHotkeys(hotkeys: HotkeyConfig[], enabled = true) {
                 const keyMatch = keys.some(k => e.key.toLowerCase() === k.toLowerCase());
 
                 // On Mac, Command key triggers metaKey. We treat 'ctrl' config as 'Cmd' on Mac.
-                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+                // Robust Mac detection using platform (legacy) and userAgent (modern fallback)
+                const isMac = (navigator.platform?.toUpperCase().indexOf('MAC') >= 0) ||
+                    (navigator.userAgent?.toUpperCase().indexOf('MAC') >= 0);
                 const ctrlPressed = isMac ? e.metaKey : e.ctrlKey;
 
                 const ctrlMatch = hotkey.ctrl ? ctrlPressed : !ctrlPressed;
