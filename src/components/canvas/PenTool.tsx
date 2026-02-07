@@ -168,7 +168,7 @@ export function PenTool({ surface }: PenToolProps) {
             // Better: Raycast against the group's plane.
 
             const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera({ x, y }, camera);
+            raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
 
             // Intersect with an infinite plane defined by the group's transform?
             // Or just intersect a virtual plane mesh.
