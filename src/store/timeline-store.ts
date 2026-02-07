@@ -5,16 +5,16 @@ export interface Keyframe {
     id: string;
     time: number; // in seconds
     surfaceId: string;
-    property: string; // e.g., "position.x", "opacity", "effects.brightness"
-    value: any;
+    property: string; // e.g., "position.x", "position.y", "scale.x", "scale.y", "rotation", "opacity"
+    value: number;
     easing?: string; // GSAP easing function
 }
 
-export interface AnimationClip {
-    id: string;
-    name: string;
-    duration: number; // in seconds
+export interface Track {
+    surfaceId: string;
+    propertyName: string;
     keyframes: Keyframe[];
+    isExpanded: boolean;
 }
 
 interface TimelineState {
@@ -23,13 +23,14 @@ interface TimelineState {
     duration: number;
     isPlaying: boolean;
     loop: boolean;
+    snapToGrid: boolean;
+    gridSize: number; // in seconds, e.g., 0.1 for 100ms segments
 
-    // Animation clips
-    clips: AnimationClip[];
-    activeClipId: string | null;
-
-    // Keyframes
+    // Animation Keyframes
     keyframes: Keyframe[];
+
+    // UI State
+    expandedSurfaces: string[]; // surfaceIds that are expanded in the track list
 
     // GSAP timeline instance
     timeline: gsap.core.Timeline | null;
@@ -41,40 +42,33 @@ interface TimelineState {
     seek: (time: number) => void;
     setLoop: (loop: boolean) => void;
     setDuration: (duration: number) => void;
+    setSnapToGrid: (snap: boolean) => void;
 
     // Keyframe management
     addKeyframe: (keyframe: Omit<Keyframe, "id">) => void;
     updateKeyframe: (id: string, updates: Partial<Keyframe>) => void;
     deleteKeyframe: (id: string) => void;
-    getKeyframesForSurface: (surfaceId: string) => Keyframe[];
-    getKeyframesAtTime: (time: number, tolerance?: number) => Keyframe[];
 
-    // Clip management
-    addClip: (clip: Omit<AnimationClip, "id">) => void;
-    updateClip: (id: string, updates: Partial<AnimationClip>) => void;
-    deleteClip: (id: string) => void;
-    setActiveClip: (id: string | null) => void;
+    // UI Actions
+    toggleSurfaceExpanded: (surfaceId: string) => void;
 
-    // Timeline initialization
-    initTimeline: () => void;
-    updateTimeline: () => void;
+    // Internal
+    initTimeline: (updateSurface: (id: string, updates: any) => void) => void;
+    updateTimeline: (updateSurface: (id: string, updates: any) => void) => void;
 }
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
     currentTime: 0,
-    duration: 30, // Default 30 seconds
+    duration: 30,
     isPlaying: false,
     loop: false,
-    clips: [],
-    activeClipId: null,
+    snapToGrid: true,
+    gridSize: 0.1,
     keyframes: [],
+    expandedSurfaces: [],
     timeline: null,
 
     play: () => {
-        const { timeline, initTimeline } = get();
-        if (!timeline) {
-            initTimeline();
-        }
         get().timeline?.play();
         set({ isPlaying: true });
     },
@@ -90,10 +84,15 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     },
 
     seek: (time: number) => {
-        const { duration } = get();
-        const clampedTime = Math.max(0, Math.min(time, duration));
-        get().timeline?.time(clampedTime);
-        set({ currentTime: clampedTime });
+        const { duration, timeline, snapToGrid, gridSize } = get();
+        let targetTime = Math.max(0, Math.min(time, duration));
+
+        if (snapToGrid) {
+            targetTime = Math.round(targetTime / gridSize) * gridSize;
+        }
+
+        timeline?.time(targetTime);
+        set({ currentTime: targetTime });
     },
 
     setLoop: (loop: boolean) => {
@@ -107,12 +106,23 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
         set({ duration });
     },
 
+    setSnapToGrid: (snapToGrid: boolean) => {
+        set({ snapToGrid });
+    },
+
+    toggleSurfaceExpanded: (surfaceId: string) => {
+        set((state) => ({
+            expandedSurfaces: state.expandedSurfaces.includes(surfaceId)
+                ? state.expandedSurfaces.filter(id => id !== surfaceId)
+                : [...state.expandedSurfaces, surfaceId]
+        }));
+    },
+
     addKeyframe: (keyframe) => {
         const id = `kf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         set((state) => ({
             keyframes: [...state.keyframes, { ...keyframe, id }].sort((a, b) => a.time - b.time),
         }));
-        get().updateTimeline();
     },
 
     updateKeyframe: (id, updates) => {
@@ -121,56 +131,15 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
                 .map((kf) => (kf.id === id ? { ...kf, ...updates } : kf))
                 .sort((a, b) => a.time - b.time),
         }));
-        get().updateTimeline();
     },
 
     deleteKeyframe: (id) => {
         set((state) => ({
             keyframes: state.keyframes.filter((kf) => kf.id !== id),
         }));
-        get().updateTimeline();
     },
 
-    getKeyframesForSurface: (surfaceId) => {
-        return get().keyframes.filter((kf) => kf.surfaceId === surfaceId);
-    },
-
-    getKeyframesAtTime: (time, tolerance = 0.1) => {
-        return get().keyframes.filter((kf) => Math.abs(kf.time - time) <= tolerance);
-    },
-
-    addClip: (clip) => {
-        const id = `clip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        set((state) => ({
-            clips: [...state.clips, { ...clip, id }],
-        }));
-    },
-
-    updateClip: (id, updates) => {
-        set((state) => ({
-            clips: state.clips.map((clip) => (clip.id === id ? { ...clip, ...updates } : clip)),
-        }));
-    },
-
-    deleteClip: (id) => {
-        set((state) => ({
-            clips: state.clips.filter((clip) => clip.id !== id),
-            activeClipId: state.activeClipId === id ? null : state.activeClipId,
-        }));
-    },
-
-    setActiveClip: (id) => {
-        set({ activeClipId: id });
-        if (id) {
-            const clip = get().clips.find((c) => c.id === id);
-            if (clip) {
-                set({ keyframes: clip.keyframes, duration: clip.duration });
-                get().updateTimeline();
-            }
-        }
-    },
-
-    initTimeline: () => {
+    initTimeline: (updateSurface) => {
         const { duration, loop } = get();
         const tl = gsap.timeline({
             paused: true,
@@ -180,42 +149,59 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
             },
         });
         set({ timeline: tl });
-        get().updateTimeline();
+        get().updateTimeline(updateSurface);
     },
 
-    updateTimeline: () => {
+    updateTimeline: (updateSurface) => {
         const { timeline, keyframes } = get();
         if (!timeline) return;
 
-        // Clear existing timeline
         timeline.clear();
 
         // Group keyframes by surface and property
         const grouped = keyframes.reduce((acc, kf) => {
-            const key = `${kf.surfaceId}_${kf.property}`;
+            const key = `${kf.surfaceId}:${kf.property}`;
             if (!acc[key]) acc[key] = [];
             acc[key].push(kf);
             return acc;
         }, {} as Record<string, Keyframe[]>);
 
-        // Create GSAP tweens for each property
-        Object.values(grouped).forEach((kfs) => {
+        // Process each property track
+        Object.entries(grouped).forEach(([key, kfs]) => {
+            const [surfaceId, propertyPath] = key.split(":");
+
+            // GSAP target for this specific property
+            const target = { value: kfs[0].value };
+
             kfs.forEach((kf, index) => {
-                if (index === 0) return; // Skip first keyframe (initial state)
+                if (index === 0) {
+                    // Start at the first keyframe value
+                    timeline.set(target, { value: kf.value }, kf.time);
+                    return;
+                }
 
                 const prevKf = kfs[index - 1];
                 const duration = kf.time - prevKf.time;
 
-                // This is a placeholder - actual implementation would need to
-                // integrate with the project store to animate surface properties
-                timeline.to(
-                    {},
-                    {
-                        duration,
-                        ease: kf.easing || "power2.inOut",
-                    },
-                    prevKf.time
-                );
+                timeline.to(target, {
+                    value: kf.value,
+                    duration,
+                    ease: kf.easing || "power2.inOut",
+                    onUpdate: () => {
+                        // Bridge to project store
+                        // Split propertyPath (e.g., "position.x" -> ["position", "x"])
+                        const parts = propertyPath.split(".");
+                        if (parts.length === 2) {
+                            // Handle object properties like position: {x, y}
+                            updateSurface(surfaceId, {
+                                [parts[0]]: { [parts[1]]: target.value }
+                            });
+                        } else {
+                            // Handle simple properties like opacity
+                            updateSurface(surfaceId, { [propertyPath]: target.value });
+                        }
+                    }
+                }, prevKf.time);
             });
         });
     },
