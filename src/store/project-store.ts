@@ -22,6 +22,8 @@ export interface Surface {
     effects: Effect[];
     visible: boolean;
     locked: boolean;
+    startTime: number;
+    duration: number;
     aspectRatioLocked?: boolean;
     audioMappings: AudioMapping[];
     border?: {
@@ -246,6 +248,8 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             effects: [],
             visible: true,
             locked: false,
+            startTime: 0,
+            duration: 5, // Default 5 seconds
             aspectRatioLocked: false,
             audioMappings: [],
             border: {
