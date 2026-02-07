@@ -5,9 +5,11 @@ import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
+import { processFile } from "@/lib/media-utils";
+import { useRef } from "react";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -20,6 +22,16 @@ export function SurfaceProperties() {
     const addCorner = useProjectStore((state) => state.addCorner);
     const removeCorner = useProjectStore((state) => state.removeCorner);
     const resetCorners = useProjectStore((state) => state.resetCorners);
+    const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && selectedSurface) {
+            const mediaId = await processFile(file, addMediaAsset);
+            updateSurface(selectedSurface.id, { mediaId });
+        }
+    };
 
     const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
 
@@ -67,27 +79,43 @@ export function SurfaceProperties() {
                 {/* Media Selector */}
                 <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Media Source</label>
-                    <select
-                        value={selectedSurface.mediaId || ""}
-                        onChange={(e) => updateSurface(selectedSurface.id, {
-                            mediaId: e.target.value || null
-                        })}
-                        className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
-                    >
-                        <option value="">None</option>
-                        {mediaAssets
-                            .filter((asset) => asset.type !== "shader")
-                            .map((asset) => (
-                                <option key={asset.id} value={asset.id}>
-                                    {asset.type === "image" && "🖼️ "}
-                                    {asset.type === "video" && "🎬 "}
-                                    {asset.type === "color" && "🎨 "}
-                                    {asset.type === "text" && "📝 "}
-                                    {asset.type === "webcam" && "📷 "}
-                                    {asset.name}
-                                </option>
-                            ))}
-                    </select>
+                    <div className="flex gap-2">
+                        <select
+                            value={selectedSurface.mediaId || ""}
+                            onChange={(e) => updateSurface(selectedSurface.id, {
+                                mediaId: e.target.value || null
+                            })}
+                            className="flex-1 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                        >
+                            <option value="">None</option>
+                            {mediaAssets
+                                .filter((asset) => asset.type !== "shader")
+                                .map((asset) => (
+                                    <option key={asset.id} value={asset.id}>
+                                        {asset.type === "image" && "🖼️ "}
+                                        {asset.type === "video" && "🎬 "}
+                                        {asset.type === "color" && "🎨 "}
+                                        {asset.type === "text" && "📝 "}
+                                        {asset.type === "webcam" && "📷 "}
+                                        {asset.name}
+                                    </option>
+                                ))}
+                        </select>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-2 aspect-square glass glass-hover rounded-md flex items-center justify-center text-zinc-400 hover:text-electric-cyan transition-colors"
+                            title="Upload New Asset"
+                        >
+                            <Upload className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                    />
                 </div>
 
                 {/* Actions */}
