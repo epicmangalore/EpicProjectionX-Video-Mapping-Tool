@@ -261,7 +261,7 @@ export function Surface({ surface }: SurfaceProps) {
     const updateLevels = useAudioStore((state) => state.updateLevels);
     const audioLevels = useAudioStore((state) => state.levels);
 
-    const simpleMode = useUIStore((state) => state.simpleMode);
+
     const [hovered, setHovered] = useState(false);
     const bounceRef = useRef(1.0);
     const audioReactiveScale = useRef(1.0);
