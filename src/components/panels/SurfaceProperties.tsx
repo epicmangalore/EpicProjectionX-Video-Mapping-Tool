@@ -5,7 +5,7 @@ import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2 } from "lucide-react";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Pen, Grid3x3 } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
@@ -25,6 +25,8 @@ export function SurfaceProperties() {
     const removeCorner = useProjectStore((state) => state.removeCorner);
     const resetCorners = useProjectStore((state) => state.resetCorners);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
+    const toolMode = useUIStore((state) => state.toolMode);
+    const setToolMode = useUIStore((state) => state.setToolMode);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -524,6 +526,112 @@ export function SurfaceProperties() {
                             </button>
                         </div>
                     </div>
+
+                    {/* Tool Selection */}
+                    <div className="grid grid-cols-3 gap-1 mb-3 bg-zinc-900/50 border border-white/5 rounded p-0.5">
+                        <button
+                            onClick={() => setToolMode("select")}
+                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "select" ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"}`}
+                            title="Select / Transform"
+                        >
+                            <MousePointer2 className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold">Select</span>
+                        </button>
+                        <button
+                            onClick={() => setToolMode("pen")}
+                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "pen" ? "bg-electric-purple/20 text-electric-purple border border-electric-purple/30" : "text-zinc-500 hover:text-zinc-300"}`}
+                            title="Pen Tool (Add Points)"
+                        >
+                            <Pen className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold">Pen</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (toolMode === "mesh-warp") {
+                                    setToolMode("select");
+                                } else {
+                                    if (!selectedSurface.meshWarp) {
+                                        // Initialize default mesh warp
+                                        const gridSize = 3;
+                                        const controlPoints = [];
+                                        for (let i = 0; i <= gridSize; i++) {
+                                            const row = [];
+                                            for (let j = 0; j <= gridSize; j++) {
+                                                // Normalized UVs to Local Coords (centered at 0,0, size 1x1)
+                                                // UV (0,0) -> (-0.5, 0.5) [TL]
+                                                // UV (1,0) -> (0.5, 0.5) [TR]
+                                                // UV (0,1) -> (-0.5, -0.5) [BL]
+                                                // UV (1,1) -> (0.5, -0.5) [BR]
+                                                // Wait, plane Geometry is centered.
+                                                // x: (j / gridSize) - 0.5
+                                                // y: 0.5 - (i / gridSize)
+                                                row.push({
+                                                    x: (j / gridSize) - 0.5,
+                                                    y: 0.5 - (i / gridSize) // Y is up in 3D, but row 0 is top
+                                                });
+                                            }
+                                            controlPoints.push(row);
+                                        }
+                                        updateSurface(selectedSurface.id, {
+                                            meshWarp: { gridSize, controlPoints }
+                                        });
+                                    }
+                                    setToolMode("mesh-warp");
+                                }
+                            }}
+                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "mesh-warp" ? "bg-electric-cyan/20 text-electric-cyan border border-electric-cyan/30" : "text-zinc-500 hover:text-zinc-300"}`}
+                            title="Mesh Warp"
+                        >
+                            <Grid3x3 className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold">Warp</span>
+                        </button>
+                    </div>
+
+                    {/* Mesh Warp Settings */}
+                    {toolMode === "mesh-warp" && selectedSurface.meshWarp && (
+                        <div className="mb-3 px-2 py-2 bg-electric-cyan/5 border border-electric-cyan/20 rounded">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-[9px] text-electric-cyan font-bold uppercase">Grid Density</label>
+                                <span className="text-[9px] text-electric-cyan/70 font-mono">{selectedSurface.meshWarp.gridSize} x {selectedSurface.meshWarp.gridSize}</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="2"
+                                max="10"
+                                step="1"
+                                value={selectedSurface.meshWarp.gridSize}
+                                onChange={(e) => {
+                                    const newSize = parseInt(e.target.value);
+                                    // Re-initialize points (resetting warp) when grid size changes
+                                    // Or try to interpolate? For now, reset is safer/easier.
+                                    const controlPoints = [];
+                                    for (let i = 0; i <= newSize; i++) {
+                                        const row = [];
+                                        for (let j = 0; j <= newSize; j++) {
+                                            row.push({
+                                                x: (j / newSize) - 0.5,
+                                                y: 0.5 - (i / newSize)
+                                            });
+                                        }
+                                        controlPoints.push(row);
+                                    }
+                                    updateSurface(selectedSurface.id, {
+                                        meshWarp: { gridSize: newSize, controlPoints }
+                                    });
+                                }}
+                                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
+                            />
+                            <button
+                                onClick={() => {
+                                    updateSurface(selectedSurface.id, { meshWarp: null });
+                                    setToolMode("select");
+                                }}
+                                className="mt-2 w-full py-1 text-[9px] text-red-400 hover:text-red-300 border border-red-500/20 hover:bg-red-500/10 rounded"
+                            >
+                                Reset / Remove Warp
+                            </button>
+                        </div>
+                    )}
 
                     <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                         {selectedSurface.corners.map((corner, idx) => (
