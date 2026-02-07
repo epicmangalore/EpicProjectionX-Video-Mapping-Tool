@@ -19,9 +19,7 @@ export function PenTool({ surface }: PenToolProps) {
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
 
-    const mappingMode = useUIStore((state) => state.mappingMode);
-
-    const activeCorners = mappingMode === "output" ? surface.corners : surface.sourceCorners;
+    const activeCorners = surface.corners;
 
     // Generate line segments for edge detection
     const edgeSegments = useMemo(() => {
@@ -45,18 +43,14 @@ export function PenTool({ surface }: PenToolProps) {
         if (!activeCorners) return new Float32Array(0);
         const pts: number[] = [];
         activeCorners.forEach(p => {
-            const dx = mappingMode === "output" ? p.x : p.x - 0.5;
-            const dy = mappingMode === "output" ? p.y : p.y - 0.5;
-            pts.push(dx, dy, 0);
+            pts.push(p.x, p.y, 0);
         });
         if (activeCorners.length > 0) {
             const p = activeCorners[0];
-            const dx = mappingMode === "output" ? p.x : p.x - 0.5;
-            const dy = mappingMode === "output" ? p.y : p.y - 0.5;
-            pts.push(dx, dy, 0);
+            pts.push(p.x, p.y, 0);
         }
         return new Float32Array(pts);
-    }, [activeCorners, mappingMode]);
+    }, [activeCorners]);
 
     if (toolMode !== "pen" || surface.locked) return null;
 
@@ -139,18 +133,9 @@ export function PenTool({ surface }: PenToolProps) {
             const targetX = vector.x - surface.position.x;
             const targetY = vector.y - surface.position.y;
 
-            if (mappingMode === "output") {
-                const newCorners = [...surface.corners];
-                newCorners[cornerIndex] = { x: targetX, y: targetY };
-                updateSurface(surface.id, { corners: newCorners });
-            } else {
-                const newSource = [...surface.sourceCorners];
-                newSource[cornerIndex] = {
-                    x: Math.max(0, Math.min(1, targetX + 0.5)),
-                    y: Math.max(0, Math.min(1, targetY + 0.5))
-                };
-                updateSurface(surface.id, { sourceCorners: newSource });
-            }
+            const newCorners = [...surface.corners];
+            newCorners[cornerIndex] = { x: targetX, y: targetY };
+            updateSurface(surface.id, { corners: newCorners });
         };
 
         const onPointerUp = () => {
@@ -175,15 +160,15 @@ export function PenTool({ surface }: PenToolProps) {
         gl.domElement.style.cursor = 'crosshair';
     };
 
-    const handleColor = mappingMode === "output" ? "#22d3ee" : "#f472b6";
-    const baseColor = mappingMode === "output" ? "#7c3aed" : "#f97316";
+    const handleColor = "#22d3ee";
+    const baseColor = "#7c3aed";
 
     return (
         <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>
             {/* Render active corners ... */}
             {activeCorners.map((corner, index) => {
-                const displayX = mappingMode === "output" ? corner.x : corner.x - 0.5;
-                const displayY = mappingMode === "output" ? corner.y : corner.y - 0.5;
+                const displayX = corner.x;
+                const displayY = corner.y;
 
                 return (
                     <mesh
@@ -210,10 +195,10 @@ export function PenTool({ surface }: PenToolProps) {
 
             {/* Render edge segments for clicking */}
             {edgeSegments.map((segment, idx) => {
-                const startX = mappingMode === "output" ? segment.start.x : segment.start.x - 0.5;
-                const startY = mappingMode === "output" ? segment.start.y : segment.start.y - 0.5;
-                const endX = mappingMode === "output" ? segment.end.x : segment.end.x - 0.5;
-                const endY = mappingMode === "output" ? segment.end.y : segment.end.y - 0.5;
+                const startX = segment.start.x;
+                const startY = segment.start.y;
+                const endX = segment.end.x;
+                const endY = segment.end.y;
 
                 const midX = (startX + endX) / 2;
                 const midY = (startY + endY) / 2;

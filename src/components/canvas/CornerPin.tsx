@@ -15,12 +15,10 @@ export function CornerPin({ surface }: CornerPinProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const settings = useProjectStore((state) => state.projectSettings);
     const toolMode = useUIStore((state) => state.toolMode);
-    const mappingMode = useUIStore((state) => state.mappingMode);
+    const activeCorners = surface.corners;
 
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
-
-    const activeCorners = mappingMode === "output" ? surface.corners : surface.sourceCorners;
 
     const linePoints = useMemo(() => {
         if (!activeCorners) return new Float32Array(0);
@@ -68,20 +66,9 @@ export function CornerPin({ surface }: CornerPinProps) {
                 targetY = Math.round(targetY / gridSize) * gridSize;
             }
 
-            if (mappingMode === "output") {
-                const newCorners = [...surface.corners];
-                newCorners[cornerIndex] = { x: targetX, y: targetY };
-                updateSurface(surface.id, { corners: newCorners });
-            } else {
-                // For input (UV), we map -0.5..0.5 back to 0..1
-                // But UV Y is usually flipped in mapping logic
-                const newSourceCorners = [...surface.sourceCorners];
-                newSourceCorners[cornerIndex] = {
-                    x: Math.max(0, Math.min(1, targetX + 0.5)),
-                    y: Math.max(0, Math.min(1, targetY + 0.5))
-                };
-                updateSurface(surface.id, { sourceCorners: newSourceCorners });
-            }
+            const newCorners = [...surface.corners];
+            newCorners[cornerIndex] = { x: targetX, y: targetY };
+            updateSurface(surface.id, { corners: newCorners });
         };
 
         const onPointerUp = () => {
@@ -94,16 +81,11 @@ export function CornerPin({ surface }: CornerPinProps) {
         window.addEventListener("pointerup", onPointerUp);
     };
 
-    const handleColor = mappingMode === "output" ? "#22d3ee" : "#f472b6"; // Cyan vs Pink
-    const baseColor = mappingMode === "output" ? "#7c3aed" : "#f97316"; // Purple vs Orange
-
     return (
         <group position={[0, 0, 0.1]}>
             {activeCorners.map((corner, index) => {
-                // For input mode, we preview the Source Corners in the same local space
-                // by mapping 0..1 to -0.5..0.5
-                const displayX = mappingMode === "output" ? corner.x : corner.x - 0.5;
-                const displayY = mappingMode === "output" ? corner.y : corner.y - 0.5;
+                const displayX = corner.x;
+                const displayY = corner.y;
 
                 return (
                     <mesh
@@ -116,7 +98,7 @@ export function CornerPin({ surface }: CornerPinProps) {
                     >
                         <circleGeometry args={[0.035, 32]} />
                         <meshBasicMaterial
-                            color={draggingCorner === index ? handleColor : (index < 4 ? baseColor : "#ec4899")}
+                            color={draggingCorner === index ? "#22d3ee" : "#7c3aed"}
                             transparent
                             opacity={0.9}
                             depthTest={false}
@@ -139,7 +121,7 @@ export function CornerPin({ surface }: CornerPinProps) {
                     />
                 </bufferGeometry>
                 <lineBasicMaterial
-                    color={baseColor}
+                    color="#7c3aed"
                     linewidth={2}
                     transparent
                     opacity={0.4}
