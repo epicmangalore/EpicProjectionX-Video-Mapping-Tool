@@ -12,11 +12,13 @@ import { CanvasFrame } from "./CanvasFrame";
 import { SpacebarPan } from "./SpacebarPan";
 
 import { useOutputStore } from "@/store/output-store";
+import { SelectionBox } from "./SelectionBox";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const projectSettings = useProjectStore((state) => state.projectSettings);
+    const deselectAll = useProjectStore((state) => state.deselectAll);
     const isOutput = useOutputStore((state) => state.isOutput);
 
     return (
@@ -42,27 +44,33 @@ export function ProjectionCanvas() {
                 far={1000}
             />
 
+            {/* Background plane to catch 'empty' clicks for deselection */}
+            {!isOutput && (
+                <mesh
+                    position={[0, 0, -1]}
+                    onPointerDown={(e) => {
+                        if (e.button === 0) deselectAll();
+                    }}
+                >
+                    <planeGeometry args={[1000, 1000]} />
+                    <meshBasicMaterial transparent opacity={0} />
+                </mesh>
+            )}
+
             {/* Ambient light for visibility */}
             <ambientLight intensity={1} />
 
             {/* Canvas frame indicator */}
             <CanvasFrame />
 
+            {/* Marquee Selection Box */}
+            {!isOutput && <SelectionBox />}
+
             {/* Render all surfaces */}
             {surfaces.map((surface) => (
                 <Surface key={surface.id} surface={surface} />
             ))}
 
-            {/* Render corner-pin or mesh-warp controls for selected surfaces */}
-            {!isOutput && surfaces
-                .filter((surface) => selectedIds.includes(surface.id))
-                .map((surface) => (
-                    <group key={`controls-${surface.id}`}>
-                        <CornerPin surface={surface} />
-                        <MeshWarp surface={surface} />
-                        <PenTool surface={surface} />
-                    </group>
-                ))}
             {/* Orbit Controls for Pan/Zoom */}
             <OrbitControls
                 makeDefault

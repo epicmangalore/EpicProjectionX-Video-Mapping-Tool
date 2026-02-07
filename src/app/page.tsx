@@ -49,6 +49,7 @@ export default function Home() {
                 deselectAll();
             }
         },
+        { key: APP_HOTKEYS.DESELECT_ALL, callback: () => deselectAll() },
         { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
     ]);
 

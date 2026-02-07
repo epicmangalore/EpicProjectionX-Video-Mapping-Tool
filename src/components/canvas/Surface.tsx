@@ -375,8 +375,14 @@ export function Surface({ surface }: SurfaceProps) {
 
         e.stopPropagation();
 
-        // Select the surface first
-        selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
+        // If shift isn't pressed and this surface isn't already selected,
+        // we select ONLY this surface (standard Figma behavior).
+        // If it IS already selected, we keep the selection to allow dragging the group.
+        if (!e.nativeEvent?.shiftKey && !isSelected) {
+            selectSurface(surface.id, false);
+        } else if (e.nativeEvent?.shiftKey) {
+            selectSurface(surface.id, true);
+        }
 
         const rect = gl.domElement.getBoundingClientRect();
         const startX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -385,8 +391,16 @@ export function Surface({ surface }: SurfaceProps) {
         const startVector = new THREE.Vector3(startX, startY, 0.5);
         startVector.unproject(camera);
 
-        const startPosX = surface.position.x;
-        const startPosY = surface.position.y;
+        // Snapshot of all selected surfaces' starting positions
+        const selectedSurfaces = useProjectStore.getState().surfaces.filter(s =>
+            useProjectStore.getState().selectedSurfaceIds.includes(s.id)
+        );
+
+        const initialPositions = selectedSurfaces.map(s => ({
+            id: s.id,
+            x: s.position.x,
+            y: s.position.y
+        }));
 
         const onPointerMove = (moveEvent: PointerEvent) => {
             const x = ((moveEvent.clientX - rect.left) / rect.width) * 2 - 1;
@@ -398,11 +412,14 @@ export function Surface({ surface }: SurfaceProps) {
             const deltaX = vector.x - startVector.x;
             const deltaY = vector.y - startVector.y;
 
-            updateSurface(surface.id, {
-                position: {
-                    x: startPosX + deltaX,
-                    y: startPosY + deltaY
-                }
+            // Move all selected surfaces
+            initialPositions.forEach(pos => {
+                updateSurface(pos.id, {
+                    position: {
+                        x: pos.x + deltaX,
+                        y: pos.y + deltaY
+                    }
+                });
             });
         };
 

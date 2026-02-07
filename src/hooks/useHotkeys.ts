@@ -59,6 +59,7 @@ export const APP_HOTKEYS = {
     SAVE: { key: "s", ctrl: true },
     UNDO: { key: "z", ctrl: true },
     REDO: { key: "z", ctrl: true, shift: true },
+    DESELECT_ALL: "Escape",
 
     // Playback
     PLAY_PAUSE: " ", // Spacebar

@@ -60,12 +60,13 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
             let nextPosY = startData.current.pos.y;
 
             const shiftPressed = moveEvent.shiftKey;
+            const altPressed = moveEvent.altKey;
 
             // Calculate scale changes based on handle
-            if (pos.includes("r")) nextScaleX = startData.current.scale.x + rdx;
-            if (pos.includes("l")) nextScaleX = startData.current.scale.x - rdx;
-            if (pos.includes("b")) nextScaleY = startData.current.scale.y - rdy;
-            if (pos.includes("t")) nextScaleY = startData.current.scale.y + rdy;
+            if (pos.includes("r")) nextScaleX = startData.current.scale.x + (altPressed ? rdx * 2 : rdx);
+            if (pos.includes("l")) nextScaleX = startData.current.scale.x - (altPressed ? rdx * 2 : rdx);
+            if (pos.includes("b")) nextScaleY = startData.current.scale.y - (altPressed ? rdy * 2 : rdy);
+            if (pos.includes("t")) nextScaleY = startData.current.scale.y + (altPressed ? rdy * 2 : rdy);
 
             // Constrain minimum scale
             nextScaleX = Math.max(0.01, nextScaleX);
@@ -85,22 +86,26 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
                 }
             }
 
-            // Calculate position offset to keep opposite side fixed
-            // For a centered plane, if we increase scale by 10, we move center by 5 in that direction
-            const dsx = nextScaleX - startData.current.scale.x;
-            const dsy = nextScaleY - startData.current.scale.y;
+            // Calculate position offset to keep opposite side fixed (or keep center if Alt)
+            let worldOffsetX = 0;
+            let worldOffsetY = 0;
 
-            let localOffsetX = 0;
-            let localOffsetY = 0;
+            if (!altPressed) {
+                const dsx = nextScaleX - startData.current.scale.x;
+                const dsy = nextScaleY - startData.current.scale.y;
 
-            if (pos.includes("r")) localOffsetX = dsx / 2;
-            if (pos.includes("l")) localOffsetX = -dsx / 2;
-            if (pos.includes("b")) localOffsetY = -dsy / 2;
-            if (pos.includes("t")) localOffsetY = dsy / 2;
+                let localOffsetX = 0;
+                let localOffsetY = 0;
 
-            // Rotate local offset back to world space
-            const worldOffsetX = localOffsetX * Math.cos(surface.rotation) - localOffsetY * Math.sin(surface.rotation);
-            const worldOffsetY = localOffsetX * Math.sin(surface.rotation) + localOffsetY * Math.cos(surface.rotation);
+                if (pos.includes("r")) localOffsetX = dsx / 2;
+                if (pos.includes("l")) localOffsetX = -dsx / 2;
+                if (pos.includes("b")) localOffsetY = -dsy / 2;
+                if (pos.includes("t")) localOffsetY = dsy / 2;
+
+                // Rotate local offset back to world space
+                worldOffsetX = localOffsetX * Math.cos(surface.rotation) - localOffsetY * Math.sin(surface.rotation);
+                worldOffsetY = localOffsetX * Math.sin(surface.rotation) + localOffsetY * Math.cos(surface.rotation);
+            }
 
             updateSurface(surface.id, {
                 scale: { x: nextScaleX, y: nextScaleY },
