@@ -35,6 +35,7 @@ export function CornerPin({ surface }: CornerPinProps) {
 
     const handleCornerDrag = (cornerIndex: number, event: any) => {
         event.stopPropagation();
+        useProjectStore.getState().saveHistory(); // Snapshot before transform
         setDraggingCorner(cornerIndex);
 
         const rect = gl.domElement.getBoundingClientRect();

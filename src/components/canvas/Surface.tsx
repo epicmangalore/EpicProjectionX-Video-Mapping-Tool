@@ -397,12 +397,16 @@ export function Surface({ surface }: SurfaceProps) {
 
     // Add drag functionality for select mode
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const saveHistory = useProjectStore((state) => state.saveHistory);
     const { camera, gl } = useThree();
 
     const handlePointerDown = (e: any) => {
         if (surface.locked || toolMode !== "select") return;
 
         e.stopPropagation();
+
+        // Save history state before starting drag
+        saveHistory();
 
         // If shift isn't pressed and this surface isn't already selected,
         // we select ONLY this surface (standard Figma behavior).
