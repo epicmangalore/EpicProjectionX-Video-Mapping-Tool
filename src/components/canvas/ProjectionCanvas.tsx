@@ -7,6 +7,7 @@ import { useProjectStore } from "@/store/project-store";
 import { Surface } from "./Surface";
 import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
+import { PenTool } from "./PenTool";
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -51,6 +52,7 @@ export function ProjectionCanvas() {
                     <group key={`controls-${surface.id}`}>
                         <CornerPin surface={surface} />
                         <MeshWarp surface={surface} />
+                        <PenTool surface={surface} />
                     </group>
                 ))}
             {/* Orbit Controls for Pan/Zoom */}

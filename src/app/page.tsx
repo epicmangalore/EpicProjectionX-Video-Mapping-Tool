@@ -16,7 +16,7 @@ import { MIDIMapper } from "@/components/panels/MIDIMapper";
 import { CanvasSettings } from "@/components/panels/CanvasSettings";
 import { OnboardingGuide } from "@/components/ui/OnboardingGuide";
 import { useState } from "react";
-import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon } from "lucide-react";
+import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon, Pen } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Home() {
@@ -38,6 +38,7 @@ export default function Home() {
         { key: APP_HOTKEYS.TRANSFORM_MODE, callback: () => setToolMode("transform") },
         { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
         { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
+        { key: APP_HOTKEYS.PEN_MODE, callback: () => setToolMode("pen") },
         { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
     ]);
 
@@ -126,6 +127,22 @@ export default function Home() {
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent>Mesh Warp (M)</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setToolMode("pen")}
+                                        className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "pen"
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                            }`}
+                                    >
+                                        <Pen className="w-3 h-3" />
+                                        <span className="hidden lg:inline">Pen</span>
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Pen Tool (P)</TooltipContent>
                             </Tooltip>
                         </div>
                     </div>

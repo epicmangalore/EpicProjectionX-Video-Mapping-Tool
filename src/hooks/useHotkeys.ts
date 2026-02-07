@@ -50,6 +50,7 @@ export const APP_HOTKEYS = {
     TRANSFORM_MODE: "t",
     CORNER_PIN_MODE: "c",
     MESH_WARP_MODE: "m",
+    PEN_MODE: "p",
 
     // Actions
     DELETE: "Delete",
