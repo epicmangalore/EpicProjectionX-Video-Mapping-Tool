@@ -4,14 +4,16 @@ import { useProjectStore } from "@/store/project-store";
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw } from "lucide-react";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
+    const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const updateSurface = useProjectStore((state) => state.updateSurface);
+    const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
     const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
     const addCorner = useProjectStore((state) => state.addCorner);
@@ -146,6 +148,132 @@ export function SurfaceProperties() {
                             />
                         </div>
                     </div>
+
+                    {/* Text Properties Deck */}
+                    {(() => {
+                        const media = mediaAssets.find(m => m.id === selectedSurface.mediaId);
+                        if (media?.type === "text") {
+                            return (
+                                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
+                                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Text Properties</h3>
+                                        <Type className="w-3 h-3 text-zinc-500" />
+                                    </div>
+
+                                    {/* Text Content */}
+                                    <div className="mb-4">
+                                        <textarea
+                                            value={media.text || ""}
+                                            onChange={(e) => updateMediaAsset(media.id, { text: e.target.value })}
+                                            className="w-full bg-zinc-900 border border-white/10 rounded p-2 text-xs font-sans focus:outline-none focus:border-white/20 min-h-[60px] resize-y"
+                                            placeholder="Enter text..."
+                                        />
+                                    </div>
+
+                                    {/* Typography Controls */}
+                                    <div className="space-y-3">
+                                        {/* Font & Style */}
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={media.fontFamily || "sans-serif"}
+                                                onChange={(e) => updateMediaAsset(media.id, { fontFamily: e.target.value })}
+                                                className="flex-1 bg-zinc-900 border border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none"
+                                            >
+                                                <option value="sans-serif">Sans Serif</option>
+                                                <option value="serif">Serif</option>
+                                                <option value="monospace">Monospace</option>
+                                                <option value="Inter">Inter</option>
+                                                <option value="Arial">Arial</option>
+                                            </select>
+                                            <button
+                                                onClick={() => updateMediaAsset(media.id, { fontStyle: media.fontStyle === "italic" ? "normal" : "italic" })}
+                                                className={`p-1.5 rounded border ${media.fontStyle === "italic" ? "bg-zinc-800 border-white/20 text-white" : "border-white/5 text-zinc-500 hover:text-zinc-300"}`}
+                                            >
+                                                <Italic className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+
+                                        {/* Weight & Size */}
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={media.fontWeight || "normal"}
+                                                onChange={(e) => updateMediaAsset(media.id, { fontWeight: e.target.value })}
+                                                className="flex-1 bg-zinc-900 border border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none"
+                                            >
+                                                <option value="light">Light</option>
+                                                <option value="normal">Regular</option>
+                                                <option value="bold">Bold</option>
+                                            </select>
+                                            <div className="flex items-center gap-1 bg-zinc-900 border border-white/10 rounded px-2 w-20">
+                                                <span className="text-[9px] text-zinc-600 font-bold">px</span>
+                                                <input
+                                                    type="number"
+                                                    value={media.fontSize || 80}
+                                                    onChange={(e) => updateMediaAsset(media.id, { fontSize: parseInt(e.target.value) || 12 })}
+                                                    className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Line Height & Spacing */}
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                                <span className="text-[10px] text-zinc-500">↕</span>
+                                                <input
+                                                    type="number"
+                                                    step="0.1"
+                                                    value={media.lineHeight || 1.2}
+                                                    onChange={(e) => updateMediaAsset(media.id, { lineHeight: parseFloat(e.target.value) || 1.2 })}
+                                                    className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1.5"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                                <span className="text-[10px] text-zinc-500">↔</span>
+                                                <input
+                                                    type="number"
+                                                    value={media.letterSpacing || 0}
+                                                    onChange={(e) => updateMediaAsset(media.id, { letterSpacing: parseInt(e.target.value) || 0 })}
+                                                    className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1.5"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Alignment & Color */}
+                                        <div className="flex gap-2">
+                                            <div className="flex bg-zinc-900 border border-white/10 rounded p-0.5">
+                                                {[
+                                                    { align: "left", Icon: AlignLeft },
+                                                    { align: "center", Icon: AlignCenter },
+                                                    { align: "right", Icon: AlignRight },
+                                                ].map(({ align, Icon }) => (
+                                                    <button
+                                                        key={align}
+                                                        onClick={() => updateMediaAsset(media.id, { textAlign: align as CanvasTextAlign })}
+                                                        className={`p-1.5 rounded-sm ${media.textAlign === align ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"}`}
+                                                    >
+                                                        <Icon className="w-3.5 h-3.5" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                            <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                                <div
+                                                    className="w-4 h-4 rounded-sm border border-white/10 shadow-sm"
+                                                    style={{ backgroundColor: media.textColor || "#ffffff" }}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    value={media.textColor || "#ffffff"}
+                                                    onChange={(e) => updateMediaAsset(media.id, { textColor: e.target.value })}
+                                                    className="flex-1 bg-transparent border-none text-xs font-mono focus:outline-none py-1.5"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
                 </div>
 
                 {/* Appearance Deck */}

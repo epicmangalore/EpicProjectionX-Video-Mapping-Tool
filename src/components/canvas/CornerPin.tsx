@@ -19,6 +19,17 @@ export function CornerPin({ surface }: CornerPinProps) {
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
 
+    const linePoints = useMemo(() => {
+        if (!surface?.corners) return new Float32Array(0);
+        const pts: number[] = [];
+        surface.corners.forEach(p => pts.push(p.x, p.y, 0));
+        // Always close the loop for lines
+        if (surface.corners.length > 0) {
+            pts.push(surface.corners[0].x, surface.corners[0].y, 0);
+        }
+        return new Float32Array(pts);
+    }, [surface.corners]);
+
     if (toolMode !== "corner-pin" || surface.locked) return null;
 
     const handleCornerDrag = (cornerIndex: number, event: any) => {
@@ -79,16 +90,6 @@ export function CornerPin({ surface }: CornerPinProps) {
         window.addEventListener("pointermove", onPointerMove);
         window.addEventListener("pointerup", onPointerUp);
     };
-
-    const linePoints = useMemo(() => {
-        const pts: number[] = [];
-        surface.corners.forEach(p => pts.push(p.x, p.y, 0));
-        // Always close the loop for lines
-        if (surface.corners.length > 0) {
-            pts.push(surface.corners[0].x, surface.corners[0].y, 0);
-        }
-        return new Float32Array(pts);
-    }, [surface.corners]);
 
     return (
         <group position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}>

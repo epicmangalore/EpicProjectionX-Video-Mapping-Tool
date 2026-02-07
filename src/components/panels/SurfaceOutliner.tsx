@@ -1,8 +1,112 @@
 "use client";
 
 import { useProjectStore } from "@/store/project-store";
-import { Eye, EyeOff, Lock, Unlock, Layers, Search, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, Layers, Search, ChevronUp, ChevronDown, Trash2, GripVertical } from "lucide-react";
 import { useState } from "react";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Sortable Row Component
+function SortableLayerRow({ surface, index, isSelected, selectSurface, toggleVisibility, toggleLock, deleteSurface, totalCount }: any) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: surface.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 100 : "auto",
+        position: "relative" as "relative",
+    };
+
+    // Traktor Zebra Striping: Darker alternating rows
+    const bgClass = isSelected
+        ? "bg-electric-cyan/20 text-electric-cyan"
+        : index % 2 === 0 ? "bg-zinc-900/30" : "bg-transparent";
+
+    const textClass = isSelected ? "text-electric-cyan" : "text-zinc-300";
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            onClick={() => selectSurface(surface.id)}
+            className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass} ${isDragging ? "opacity-50 ring-1 ring-electric-cyan" : ""}`}
+        >
+            {/* Drag Handle & Index */}
+            <div className="w-6 flex items-center justify-center relative group/handle" {...listeners}>
+                <div className="group-hover/handle:hidden text-[9px] font-mono opacity-50">
+                    {totalCount - index}
+                </div>
+                <div className="hidden group-hover/handle:flex text-zinc-500 hover:text-white cursor-grab active:cursor-grabbing">
+                    <GripVertical className="w-3 h-3" />
+                </div>
+            </div>
+
+            {/* Surface Name */}
+            <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
+                {surface.name}
+            </div>
+
+            {/* Controls (Right Aligned) */}
+            <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                {/* Visibility Toggle */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleVisibility(surface.id);
+                    }}
+                    className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
+                >
+                    {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                </button>
+
+                {/* Lock Toggle */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLock(surface.id);
+                    }}
+                    className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
+                >
+                    {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                </button>
+            </div>
+
+            {/* Simple Delete (Hover only) */}
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    deleteSurface(surface.id);
+                }}
+                className="w-4 h-full flex items-center justify-center text-zinc-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all ml-1"
+            >
+                <Trash2 className="w-2.5 h-2.5" />
+            </button>
+        </div>
+    );
+}
 
 export function SurfaceOutliner() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -19,6 +123,36 @@ export function SurfaceOutliner() {
     const sortedSurfaces = [...surfaces]
         .sort((a, b) => b.zIndex - a.zIndex)
         .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (active.id !== over?.id) {
+            const oldIndex = sortedSurfaces.findIndex((s) => s.id === active.id);
+            const newIndex = sortedSurfaces.findIndex((s) => s.id === over?.id);
+
+            if (oldIndex !== -1 && newIndex !== -1) {
+                // Convert UI index (descending zIndex) to Store index (ascending zIndex)
+                // UI: [Top (N), ..., Bottom (0)]
+                // Store: [Bottom (0), ..., Top (N)]
+                // Target Store Index = (Count - 1) - New UI Index
+
+                const targetStoreIndex = (sortedSurfaces.length - 1) - newIndex;
+                reorderSurface(active.id as string, targetStoreIndex);
+            }
+        }
+    };
 
     return (
         <aside className="w-full h-full flex flex-col pointer-events-auto bg-zinc-950 font-sans text-xs">
@@ -53,71 +187,31 @@ export function SurfaceOutliner() {
                         {searchQuery ? "No Matches" : "Empty"}
                     </div>
                 ) : (
-                    <div>
-                        {sortedSurfaces.map((surface, index) => {
-                            const isSelected = selectedIds.includes(surface.id);
-                            // Traktor Zebra Striping: Darker alternating rows
-                            const bgClass = isSelected
-                                ? "bg-electric-cyan/20 text-electric-cyan"
-                                : index % 2 === 0 ? "bg-zinc-900/30" : "bg-transparent";
-
-                            const textClass = isSelected ? "text-electric-cyan" : "text-zinc-300";
-
-                            return (
-                                <div
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={sortedSurfaces.map(s => s.id)}
+                            strategy={verticalListSortingStrategy}
+                            disabled={searchQuery !== ""} // Disable drag when filtering
+                        >
+                            {sortedSurfaces.map((surface, index) => (
+                                <SortableLayerRow
                                     key={surface.id}
-                                    onClick={() => selectSurface(surface.id)}
-                                    className={`group flex items-center h-7 px-1 cursor-pointer transition-colors border-b border-white/5 ${bgClass}`}
-                                >
-                                    {/* Index / ID */}
-                                    <div className="w-6 text-center text-[9px] font-mono opacity-50">
-                                        {sortedSurfaces.length - index}
-                                    </div>
-
-                                    {/* Surface Name */}
-                                    <div className={`flex-1 px-2 text-[10px] font-medium truncate ${textClass} ${!surface.visible ? "opacity-40" : ""}`}>
-                                        {surface.name}
-                                    </div>
-
-                                    {/* Controls (Right Aligned) */}
-                                    <div className="w-16 flex justify-end gap-1 px-1 opacity-40 group-hover:opacity-100 transition-opacity">
-                                        {/* Visibility Toggle */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleVisibility(surface.id);
-                                            }}
-                                            className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.visible ? "text-zinc-400" : "text-zinc-700"}`}
-                                        >
-                                            {surface.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                                        </button>
-
-                                        {/* Lock Toggle */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleLock(surface.id);
-                                            }}
-                                            className={`w-6 h-full flex items-center justify-center hover:text-white ${surface.locked ? "text-electric-orange" : "text-zinc-700"}`}
-                                        >
-                                            {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                                        </button>
-                                    </div>
-
-                                    {/* Simple Delete (Hover only) - Traktor doesn't have inline delete usually but useful here */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteSurface(surface.id);
-                                        }}
-                                        className="w-4 h-full flex items-center justify-center text-zinc-800 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all ml-1"
-                                    >
-                                        <Trash2 className="w-2.5 h-2.5" />
-                                    </button>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                    surface={surface}
+                                    index={index}
+                                    isSelected={selectedIds.includes(surface.id)}
+                                    selectSurface={selectSurface}
+                                    toggleVisibility={toggleVisibility}
+                                    toggleLock={toggleLock}
+                                    deleteSurface={deleteSurface}
+                                    totalCount={sortedSurfaces.length}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
                 )}
             </div>
 

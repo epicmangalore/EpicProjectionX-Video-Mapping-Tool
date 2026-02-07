@@ -14,17 +14,40 @@ export function useSync() {
         const channel = new BroadcastChannel(SYNC_CHANNEL);
 
         if (isOutput) {
+            // Request initial state
+            channel.postMessage({ type: "SYNC_REQUEST" });
+
             // Listen for state updates in Output window
             channel.onmessage = (event) => {
                 const { type, data } = event.data;
                 if (type === "STATE_UPDATE") {
-                    console.log("Sync: Received state update");
                     if (data.project) useProjectStore.setState(data.project);
                     if (data.effects) useEffectsStore.setState(data.effects);
                 }
             };
         } else {
-            // Broadcast state updates from Control window
+            // Listen for sync requests from new output windows
+            channel.onmessage = (event) => {
+                if (event.data.type === "SYNC_REQUEST") {
+                    const projectData = {
+                        surfaces: useProjectStore.getState().surfaces,
+                        mediaAssets: useProjectStore.getState().mediaAssets,
+                        cues: useProjectStore.getState().cues,
+                        projectSettings: useProjectStore.getState().projectSettings,
+                        selectedSurfaceIds: [], // Don't sync selection to output
+                        currentProjectId: useProjectStore.getState().currentProjectId
+                    };
+
+                    channel.postMessage({
+                        type: "STATE_UPDATE",
+                        data: {
+                            project: JSON.parse(JSON.stringify(projectData)),
+                            effects: JSON.parse(JSON.stringify(useEffectsStore.getState())),
+                        }
+                    });
+                }
+            };
+
             // Broadcast state updates from Control window
             const unsubscribeProject = useProjectStore.subscribe((state) => {
                 // Only sync data, not functions
@@ -33,13 +56,9 @@ export function useSync() {
                     mediaAssets: state.mediaAssets,
                     cues: state.cues,
                     projectSettings: state.projectSettings,
-                    selectedSurfaceIds: state.selectedSurfaceIds,
+                    selectedSurfaceIds: [], // Don't sync selection to output to avoid gizmos
                     currentProjectId: state.currentProjectId
                 };
-
-                // Deep clone to ensure no references are passed (though postMessage does this, it helps stripping undefineds/functions if JSONified)
-                // But structureClone/postMessage is better for performance if data is clean.
-                // We just need to make sure we don't pass the 'actions' from the store.
 
                 channel.postMessage({
                     type: "STATE_UPDATE",
@@ -56,7 +75,7 @@ export function useSync() {
                     mediaAssets: useProjectStore.getState().mediaAssets,
                     cues: useProjectStore.getState().cues,
                     projectSettings: useProjectStore.getState().projectSettings,
-                    selectedSurfaceIds: useProjectStore.getState().selectedSurfaceIds,
+                    selectedSurfaceIds: [],
                     currentProjectId: useProjectStore.getState().currentProjectId
                 };
 

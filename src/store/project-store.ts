@@ -73,8 +73,12 @@ export interface MediaAsset {
     text?: string; // for text overlays
     fontSize?: number;
     fontFamily?: string;
+    fontWeight?: string;
+    fontStyle?: string;
+    lineHeight?: number;
+    letterSpacing?: number;
     textColor?: string;
-    textAlign?: string;
+    textAlign?: "left" | "right" | "center" | "start" | "end";
 }
 
 export interface Cue {
@@ -123,6 +127,7 @@ interface ProjectStore {
 
     // Media actions
     addMediaAsset: (asset: MediaAsset) => void;
+    updateMediaAsset: (id: string, updates: Partial<MediaAsset>) => void;
     removeMediaAsset: (id: string) => void;
 
     // Cue actions
@@ -300,6 +305,14 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
     addMediaAsset: (asset) => {
         set((state) => ({
             mediaAssets: [...state.mediaAssets, asset],
+        }));
+    },
+
+    updateMediaAsset: (id, updates) => {
+        set((state) => ({
+            mediaAssets: state.mediaAssets.map((a) =>
+                a.id === id ? { ...a, ...updates } : a
+            ),
         }));
     },
 

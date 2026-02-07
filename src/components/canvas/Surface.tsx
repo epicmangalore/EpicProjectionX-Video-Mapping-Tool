@@ -128,14 +128,35 @@ export function Surface({ surface }: SurfaceProps) {
         if (mediaAsset.type === "text") {
             const canvas = document.createElement("canvas");
             canvas.width = 1024;
-            canvas.height = 512;
+            canvas.height = 1024; // Increased height for multiline
             const ctx = canvas.getContext("2d");
             if (ctx) {
-                ctx.fillStyle = mediaAsset.color || "#ffffff";
-                ctx.font = "bold 80px sans-serif";
-                ctx.textAlign = "center";
+                const text = mediaAsset.text || mediaAsset.name || "Text";
+                const fontSize = mediaAsset.fontSize || 80;
+                const fontFamily = mediaAsset.fontFamily || "sans-serif";
+                const fontWeight = mediaAsset.fontWeight || "normal";
+                const fontStyle = mediaAsset.fontStyle || "normal";
+                const lineHeight = mediaAsset.lineHeight || 1.2;
+                // @ts-ignore - letterSpacing is supported in modern browsers/types
+                if (mediaAsset.letterSpacing) ctx.letterSpacing = `${mediaAsset.letterSpacing}px`;
+
+                ctx.fillStyle = mediaAsset.textColor || "#ffffff";
+                ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
                 ctx.textBaseline = "middle";
-                ctx.fillText(mediaAsset.name || "Text", 512, 256);
+
+                const textAlign = mediaAsset.textAlign || "center";
+                ctx.textAlign = textAlign;
+
+                const x = textAlign === "left" ? 50 : textAlign === "right" ? 974 : 512;
+                let y = 512;
+
+                const lines = text.split('\n');
+                const totalHeight = lines.length * (fontSize * lineHeight);
+                y -= totalHeight / 2; // Center vertically initially
+
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, x, y + i * (fontSize * lineHeight) + (fontSize * lineHeight) / 2);
+                });
             }
             return new THREE.CanvasTexture(canvas);
         }

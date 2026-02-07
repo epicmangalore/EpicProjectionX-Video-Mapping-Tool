@@ -156,6 +156,7 @@ export function MediaLibrary() {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         className="px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 hover:bg-white/5 active:scale-95 transition-all"
+                        data-tour="import-media"
                     >
                         <Image className="w-4 h-4" />
                         Import
