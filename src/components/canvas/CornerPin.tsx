@@ -82,11 +82,7 @@ export function CornerPin({ surface }: CornerPinProps) {
     };
 
     return (
-        <group
-            position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.1]}
-            rotation={[0, 0, surface.rotation]}
-            scale={[surface.scale.x, surface.scale.y, 1]}
-        >
+        <group position={[0, 0, 0.1]}>
             {surface.corners.map((corner, index) => (
                 <mesh
                     key={`${surface.id}-corner-${index}`}

@@ -131,11 +131,7 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
     ];
 
     return (
-        <group
-            position={[surface.position.x, surface.position.y, surface.zIndex * 0.01 + 0.05]}
-            rotation={[0, 0, surface.rotation]}
-            scale={[surface.scale.x, surface.scale.y, 1]}
-        >
+        <group position={[0, 0, 0.05]}>
             {handlePositions.map((h) => (
                 <mesh
                     key={h.pos}

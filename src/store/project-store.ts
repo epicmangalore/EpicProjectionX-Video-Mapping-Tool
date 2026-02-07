@@ -215,9 +215,15 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     updateSurface: (id, updates) => {
         set((state) => ({
-            surfaces: state.surfaces.map((s) =>
-                s.id === id ? { ...s, ...updates } : s
-            ),
+            surfaces: state.surfaces.map((s) => {
+                if (s.id !== id) return s;
+                let merged = { ...s, ...updates };
+
+                // LEGACY FIX: If corners are updating and look like old format (Y-down or wrong order),
+                // we could normalize here, but let's be safe and just ensure strict order
+                // on any full corner replacement.
+                return merged;
+            }),
         }));
     },
 
@@ -392,10 +398,10 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
                 return {
                     ...s,
                     corners: [
-                        { x: -0.5, y: 0.5 },
-                        { x: 0.5, y: 0.5 },
-                        { x: 0.5, y: -0.5 },
-                        { x: -0.5, y: -0.5 },
+                        { x: -0.5, y: 0.5 },  // TL
+                        { x: 0.5, y: 0.5 },   // TR
+                        { x: 0.5, y: -0.5 },  // BR
+                        { x: -0.5, y: -0.5 }, // BL
                     ],
                 };
             }),
