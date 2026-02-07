@@ -18,6 +18,8 @@ import { useUIStore } from "@/store/ui-store";
 import { useOutputStore } from "@/store/output-store";
 import { ResizeHandles } from "./ResizeHandles";
 import { CornerPin } from "./CornerPin";
+import { MeshWarp } from "./MeshWarp";
+import { PenTool } from "./PenTool";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -509,7 +511,7 @@ export function Surface({ surface }: SurfaceProps) {
                         </lineSegments>
                     </mesh>
 
-                    {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && (
+                    {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && toolMode !== "mesh-warp" && (
                         <>
                             {/* Brighter border for highlighted selection */}
                             <mesh position={[0, 0, 0.03]}>
@@ -532,8 +534,21 @@ export function Surface({ surface }: SurfaceProps) {
                     {/* Corner Pin Mode */}
                     {isSelected && toolMode === "corner-pin" && (
                         <group position={[0, 0, 0.05]}>
-                            {/* In corner-pin mode, we show pins at the corners defined in the store */}
                             <CornerPin surface={surface} />
+                        </group>
+                    )}
+
+                    {/* Mesh Warp Mode */}
+                    {isSelected && toolMode === "mesh-warp" && (
+                        <group position={[0, 0, 0.05]}>
+                            <MeshWarp surface={surface} />
+                        </group>
+                    )}
+
+                    {/* Pen Tool Mode */}
+                    {isSelected && toolMode === "pen" && (
+                        <group position={[0, 0, 0.05]}>
+                            <PenTool surface={surface} />
                         </group>
                     )}
                 </>

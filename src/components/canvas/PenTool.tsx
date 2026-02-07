@@ -130,8 +130,12 @@ export function PenTool({ surface }: PenToolProps) {
             const vector = new THREE.Vector3(x, y, 0.5);
             vector.unproject(camera);
 
-            const targetX = vector.x - surface.position.x;
-            const targetY = vector.y - surface.position.y;
+            const dx = vector.x - surface.position.x;
+            const dy = vector.y - surface.position.y;
+            const cos = Math.cos(-surface.rotation);
+            const sin = Math.sin(-surface.rotation);
+            const targetX = (dx * cos - dy * sin) / surface.scale.x;
+            const targetY = (dx * sin + dy * cos) / surface.scale.y;
 
             const newCorners = [...surface.corners];
             newCorners[cornerIndex] = { x: targetX, y: targetY };
@@ -177,16 +181,18 @@ export function PenTool({ surface }: PenToolProps) {
                         onPointerDown={(e) => handleCornerDrag(index, e)}
                         onPointerOver={() => gl.domElement.style.cursor = 'move'}
                         onPointerOut={() => gl.domElement.style.cursor = 'crosshair'}
+                        scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
                     >
                         <circleGeometry args={[0.035, 32]} />
                         <meshBasicMaterial
                             color={draggingCorner === index ? handleColor : baseColor}
                             transparent
                             opacity={0.9}
+                            depthTest={false}
                         />
                         <mesh scale={[1.2, 1.2, 1]}>
                             <ringGeometry args={[0.035, 0.045, 32]} />
-                            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} />
+                            <meshBasicMaterial color="#ffffff" transparent opacity={0.3} depthTest={false} />
                         </mesh>
                     </mesh>
                 );

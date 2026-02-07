@@ -151,11 +151,11 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
                     }}
                 >
                     <planeGeometry args={[handleSize / surface.scale.x, handleSize / surface.scale.y]} />
-                    <meshBasicMaterial color="white" />
+                    <meshBasicMaterial color="white" depthTest={false} />
                     {/* Border for handles */}
                     <lineSegments>
                         <edgesGeometry args={[new THREE.PlaneGeometry(handleSize / surface.scale.x, handleSize / surface.scale.y)]} />
-                        <lineBasicMaterial color="#7c3aed" />
+                        <lineBasicMaterial color="#7c3aed" depthTest={false} />
                     </lineSegments>
                 </mesh>
             ))}

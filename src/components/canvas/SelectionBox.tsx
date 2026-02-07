@@ -15,113 +15,93 @@ export function SelectionBox() {
 
     const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null);
     const [dragEnd, setDragEnd] = useState<THREE.Vector3 | null>(null);
-    const boxRef = useRef<THREE.Mesh>(null);
+    const dragStartRef = useRef<THREE.Vector3 | null>(null);
+    const dragEndRef = useRef<THREE.Vector3 | null>(null);
 
-    useEffect(() => {
-        if (toolMode !== "select") return;
+    const handlePointerDown = (e: any) => {
+        if (toolMode !== "select" || e.button !== 0) return;
+        e.stopPropagation();
 
-        const handlePointerDown = (e: PointerEvent) => {
-            // Only left click on the actual canvas (background)
-            if (e.button !== 0 || (e.target as HTMLElement).tagName !== "CANVAS") return;
+        const x = e.intersections[0]?.point.x || 0;
+        const y = e.intersections[0]?.point.y || 0;
+        const startVec = new THREE.Vector3(x, y, 0);
 
-            // We need to check if we hit a surface first. 
-            // In Three.js, we can use raycaster, but since we are in R3F, 
-            // the background catch-all plane in ProjectionCanvas will handle deselection.
-            // This component just handles the marquee.
+        setDragStart(startVec);
+        setDragEnd(startVec);
+        dragStartRef.current = startVec;
+        dragEndRef.current = startVec;
 
+        const handlePointerMove = (moveEvent: PointerEvent) => {
             const rect = gl.domElement.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-            const startVec = new THREE.Vector3(x, y, 0).unproject(camera);
-            setDragStart(startVec);
-            setDragEnd(startVec);
-        };
-
-        const handlePointerMove = (e: PointerEvent) => {
-            if (!dragStart) return;
-
-            const rect = gl.domElement.getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-            const endVec = new THREE.Vector3(x, y, 0).unproject(camera);
+            const mx = ((moveEvent.clientX - rect.left) / rect.width) * 2 - 1;
+            const my = -((moveEvent.clientY - rect.top) / rect.height) * 2 + 1;
+            const endVec = new THREE.Vector3(mx, my, 0).unproject(camera);
             setDragEnd(endVec);
+            dragEndRef.current = endVec;
         };
 
         const handlePointerUp = () => {
-            if (dragStart && dragEnd) {
-                // Calculate selection
-                const minX = Math.min(dragStart.x, dragEnd.x);
-                const maxX = Math.max(dragStart.x, dragEnd.x);
-                const minY = Math.min(dragStart.y, dragEnd.y);
-                const maxY = Math.max(dragStart.y, dragEnd.y);
+            const finalStart = dragStartRef.current;
+            const finalEnd = dragEndRef.current;
 
-                // Simple AABB check for now (ignoring rotation for the marquee itself)
-                // In Figma, selection usually hits the bounding box
+            setDragStart(null);
+            setDragEnd(null);
+            dragStartRef.current = null;
+            dragEndRef.current = null;
+
+            window.removeEventListener("pointermove", handlePointerMove);
+            window.removeEventListener("pointerup", handlePointerUp);
+
+            if (finalStart && finalEnd) {
+                const minX = Math.min(finalStart.x, finalEnd.x);
+                const maxX = Math.max(finalStart.x, finalEnd.x);
+                const minY = Math.min(finalStart.y, finalEnd.y);
+                const maxY = Math.max(finalStart.y, finalEnd.y);
+
                 const newlySelected: string[] = [];
-
                 surfaces.forEach(surface => {
-                    // Primitive check: surface center is inside marquee
-                    // Better check: surface bounding box overlaps marquee
                     const sHalfW = surface.scale.x / 2;
                     const sHalfH = surface.scale.y / 2;
-
                     const sMinX = surface.position.x - sHalfW;
                     const sMaxX = surface.position.x + sHalfW;
                     const sMinY = surface.position.y - sHalfH;
                     const sMaxY = surface.position.y + sHalfH;
 
                     const overlaps = !(maxX < sMinX || minX > sMaxX || maxY < sMinY || minY > sMaxY);
-
-                    if (overlaps) {
-                        newlySelected.push(surface.id);
-                    }
+                    if (overlaps) newlySelected.push(surface.id);
                 });
 
                 if (newlySelected.length > 0) {
-                    newlySelected.forEach((id, idx) => {
-                        selectSurface(id, idx > 0);
-                    });
-                } else if (Math.abs(dragStart.x - dragEnd.x) < 0.01 && Math.abs(dragStart.y - dragEnd.y) < 0.01) {
-                    // It was a click on background, handled by ProjectionCanvas
+                    newlySelected.forEach((id, idx) => selectSurface(id, idx > 0));
                 }
             }
-            setDragStart(null);
-            setDragEnd(null);
         };
 
-        gl.domElement.addEventListener("pointerdown", handlePointerDown);
         window.addEventListener("pointermove", handlePointerMove);
         window.addEventListener("pointerup", handlePointerUp);
-
-        return () => {
-            gl.domElement.removeEventListener("pointerdown", handlePointerDown);
-            window.removeEventListener("pointermove", handlePointerMove);
-            window.removeEventListener("pointerup", handlePointerUp);
-        };
-    }, [dragStart, dragEnd, camera, gl, surfaces, selectSurface, toolMode]);
-
-    if (!dragStart || !dragEnd) return null;
-
-    const width = Math.abs(dragEnd.x - dragStart.x);
-    const height = Math.abs(dragEnd.y - dragStart.y);
-    const centerX = (dragStart.x + dragEnd.x) / 2;
-    const centerY = (dragStart.y + dragEnd.y) / 2;
+    };
 
     return (
-        <mesh position={[centerX, centerY, 10]}>
-            <planeGeometry args={[width, height]} />
-            <meshBasicMaterial
-                color="#7c3aed"
-                transparent
-                opacity={0.15}
-                side={THREE.DoubleSide}
-            />
-            <lineSegments>
-                <edgesGeometry args={[new THREE.PlaneGeometry(width, height)]} />
-                <lineBasicMaterial color="#a78bfa" transparent opacity={0.5} />
-            </lineSegments>
-        </mesh>
+        <>
+            {/* Background plane to catch selection start */}
+            <mesh
+                position={[0, 0, -0.5]}
+                onPointerDown={handlePointerDown}
+            >
+                <planeGeometry args={[1000, 1000]} />
+                <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
+
+            {dragStart && dragEnd && (
+                <mesh position={[(dragStart.x + dragEnd.x) / 2, (dragStart.y + dragEnd.y) / 2, 0.1]}>
+                    <planeGeometry args={[Math.abs(dragEnd.x - dragStart.x), Math.abs(dragEnd.y - dragStart.y)]} />
+                    <meshBasicMaterial color="#7c3aed" transparent opacity={0.15} side={THREE.DoubleSide} />
+                    <lineSegments>
+                        <edgesGeometry args={[new THREE.PlaneGeometry(Math.abs(dragEnd.x - dragStart.x), Math.abs(dragEnd.y - dragStart.y))]} />
+                        <lineBasicMaterial color="#a78bfa" transparent opacity={0.5} />
+                    </lineSegments>
+                </mesh>
+            )}
+        </>
     );
 }

@@ -35,14 +35,19 @@ export function MeshWarp({ surface }: MeshWarpProps) {
             vector.unproject(camera);
 
             const newControlPoints = controlPoints.map((rowPoints, r) =>
-                rowPoints.map((point, c) =>
-                    r === row && c === col
-                        ? {
-                            x: vector.x - surface.position.x,
-                            y: vector.y - surface.position.y,
-                        }
-                        : point
-                )
+                rowPoints.map((point, c) => {
+                    if (r === row && c === col) {
+                        const dx = vector.x - surface.position.x;
+                        const dy = vector.y - surface.position.y;
+                        const cos = Math.cos(-surface.rotation);
+                        const sin = Math.sin(-surface.rotation);
+                        return {
+                            x: (dx * cos - dy * sin) / surface.scale.x,
+                            y: (dx * sin + dy * cos) / surface.scale.y,
+                        };
+                    }
+                    return point;
+                })
             );
 
             updateSurface(surface.id, {
@@ -145,6 +150,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
                         key={`point-${row}-${col}`}
                         position={[point.x, point.y, 0]}
                         onPointerDown={(e) => handlePointDrag(row, col, e)}
+                        scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
                     >
                         <circleGeometry args={[0.03, 16]} />
                         <meshBasicMaterial
@@ -155,6 +161,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
                             }
                             transparent
                             opacity={0.9}
+                            depthTest={false}
                         />
                     </mesh>
                 ))
