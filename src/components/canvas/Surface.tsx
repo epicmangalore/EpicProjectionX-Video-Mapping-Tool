@@ -401,12 +401,22 @@ export function Surface({ surface }: SurfaceProps) {
     const { camera, gl } = useThree();
 
     const handlePointerDown = (e: any) => {
-        if (surface.locked || toolMode !== "select") return;
+        // If surface is locked, let event pass through (to background/deselect)
+        if (surface.locked) return;
 
+        // Stop propagation for ANY unlocked surface interaction
+        // This prevents clicking a surface from triggering background deselect
         e.stopPropagation();
 
-        // Save history state before starting drag
-        saveHistory();
+        // Only proceed with drag logic if in SELECT mode
+        if (toolMode !== "select") return;
+
+        // Save history state before starting drag, with safety check
+        try {
+            saveHistory();
+        } catch (err) {
+            console.error("Failed to save history:", err);
+        }
 
         // If shift isn't pressed and this surface isn't already selected,
         // we select ONLY this surface (standard Figma behavior).
