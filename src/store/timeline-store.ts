@@ -158,6 +158,11 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 
         timeline.clear();
 
+        // Ensure timeline has the correct duration even if empty
+        // We add a dummy tween that spans the entire duration
+        const { duration: projectDuration } = get();
+        timeline.to({}, { duration: projectDuration, ease: "none" }, 0);
+
         // Group keyframes by surface and property
         const grouped = keyframes.reduce((acc, kf) => {
             const key = `${kf.surfaceId}:${kf.property}`;
