@@ -173,6 +173,7 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
 
     // Surface actions
     addSurface: (mediaId) => {
+        console.log("Adding surface with mediaId:", mediaId);
         get().saveHistory();
         const newSurface: Surface = {
             id: generateId(),

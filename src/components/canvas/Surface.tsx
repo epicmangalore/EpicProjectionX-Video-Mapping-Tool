@@ -93,7 +93,13 @@ export function Surface({ surface }: SurfaceProps) {
 
     // Create texture from media
     const texture = useMemo(() => {
-        if (!mediaAsset) return null;
+        // console.log("Creating texture for surface", surface.id, "mediaId:", surface.mediaId);
+        if (!mediaAsset) {
+            // console.log("No media asset found for surface", surface.id);
+            return null;
+        }
+
+        // console.log("Media asset found:", mediaAsset);
 
         if (mediaAsset.type === "color") {
             const canvas = document.createElement("canvas");
@@ -108,8 +114,14 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if (mediaAsset.type === "image" && mediaAsset.url) {
+            // console.log("Loading image texture from URL");
             const loader = new THREE.TextureLoader();
-            return loader.load(mediaAsset.url);
+            const tex = loader.load(mediaAsset.url,
+                () => console.log("Texture loaded successfully"),
+                undefined,
+                (err) => console.error("Error loading texture:", err)
+            );
+            return tex;
         }
 
         if ((mediaAsset.type === "video" || mediaAsset.type === "webcam") && videoElement) {
@@ -344,7 +356,15 @@ export function Surface({ surface }: SurfaceProps) {
         selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
     };
 
-    if (!shaderMaterial || !surface.visible) return null;
+    // Fallback material if shader/texture is not ready
+    const fallbackMaterial = useMemo(() => new THREE.MeshBasicMaterial({
+        color: "#ff00ff",
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5
+    }), []);
+
+    if (!surface.visible) return null;
 
     return (
         <>
@@ -359,7 +379,11 @@ export function Surface({ surface }: SurfaceProps) {
                 ) : (
                     <planeGeometry args={[1, 1, surface.meshWarp ? surface.meshWarp.gridSize : 1, surface.meshWarp ? surface.meshWarp.gridSize : 1]} />
                 )}
-                <primitive object={shaderMaterial} attach="material" />
+                {shaderMaterial ? (
+                    <primitive object={shaderMaterial} attach="material" />
+                ) : (
+                    <primitive object={fallbackMaterial} attach="material" />
+                )}
             </mesh>
             {isSelected && (
                 <>
