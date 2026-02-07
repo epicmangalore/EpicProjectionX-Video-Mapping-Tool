@@ -2,6 +2,7 @@
 
 import { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { Surface as SurfaceType } from "@/store/project-store";
 import { useProjectStore, type Vector2 } from "@/store/project-store";
@@ -513,6 +514,44 @@ export function Surface({ surface }: SurfaceProps) {
                     <primitive object={fallbackMaterial} attach="material" />
                 )}
             </mesh>
+
+            {/* Neon Border Effect */}
+            {surface.border?.enabled && (
+                <group position={[0, 0, 0.02]}>
+                    <Line
+                        points={[
+                            [-0.5, 0.5, 0],  // TL
+                            [0.5, 0.5, 0],   // TR
+                            [0.5, -0.5, 0],  // BR
+                            [-0.5, -0.5, 0], // BL
+                            [-0.5, 0.5, 0],  // Close loop
+                        ]}
+                        color={surface.border.color}
+                        lineWidth={surface.border.width}
+                        transparent
+                        opacity={surface.border.opacity}
+                        toneMapped={false} // Crucial for neon glow with bloom
+                    />
+                    {/* Inner Glow Layer (Optional, for extra bloom pop) */}
+                    {surface.border.glow > 0 && (
+                        <Line
+                            points={[
+                                [-0.5, 0.5, 0],
+                                [0.5, 0.5, 0],
+                                [0.5, -0.5, 0],
+                                [-0.5, -0.5, 0],
+                                [-0.5, 0.5, 0],
+                            ]}
+                            color={surface.border.color}
+                            lineWidth={surface.border.width * 2}
+                            transparent
+                            opacity={surface.border.opacity * 0.3 * surface.border.glow}
+                            toneMapped={false}
+                            depthTest={false} // Draw on top
+                        />
+                    )}
+                </group>
+            )}
 
             {/* Selection UI and Handles - rendered within the local space of the group */}
             {!isOutput && (

@@ -566,6 +566,94 @@ export function SurfaceProperties() {
                     </div>
                 </div>
 
+                {/* Border & Glow Deck */}
+                <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Border & Glow</h3>
+                            <button
+                                onClick={() => updateSurface(selectedSurface.id, {
+                                    border: {
+                                        ...selectedSurface.border || { color: "#00ff00", width: 2, opacity: 1, glow: 0.5 },
+                                        enabled: !selectedSurface.border?.enabled
+                                    }
+                                })}
+                                className={`w-8 h-4 rounded-full relative transition-colors ${selectedSurface.border?.enabled ? "bg-electric-cyan" : "bg-zinc-800"}`}
+                            >
+                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${selectedSurface.border?.enabled ? "left-4.5 translate-x-1" : "left-0.5"}`} />
+                            </button>
+                        </div>
+                        <div className={`w-2 h-2 rounded-full transition-shadow ${selectedSurface.border?.enabled ? "bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.5)]" : "bg-zinc-800"}`}></div>
+                    </div>
+
+                    {selectedSurface.border?.enabled && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            {/* Color Picker */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-[9px] text-zinc-500 font-bold uppercase">Color</label>
+                                <div className="flex items-center gap-2">
+                                    <div
+                                        className="w-4 h-4 rounded-sm border border-white/10 shadow-sm"
+                                        style={{ backgroundColor: selectedSurface.border.color }}
+                                    />
+                                    <input
+                                        type="color"
+                                        value={selectedSurface.border.color}
+                                        onChange={(e) => updateSurface(selectedSurface.id, {
+                                            border: { ...selectedSurface.border!, color: e.target.value }
+                                        })}
+                                        className="w-8 h-6 bg-transparent border-none p-0 cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <RotaryKnob
+                                    label="Width"
+                                    value={selectedSurface.border.width}
+                                    min={1}
+                                    max={20}
+                                    step={0.5}
+                                    color={selectedSurface.border.color}
+                                    onChange={(val) => updateSurface(selectedSurface.id, {
+                                        border: { ...selectedSurface.border!, width: val }
+                                    })}
+                                />
+                                <RotaryKnob
+                                    label="Opacity"
+                                    value={selectedSurface.border.opacity}
+                                    min={0}
+                                    max={1}
+                                    step={0.05}
+                                    color={selectedSurface.border.color}
+                                    formatValue={(v) => `${Math.round(v * 100)}%`}
+                                    onChange={(val) => updateSurface(selectedSurface.id, {
+                                        border: { ...selectedSurface.border!, opacity: val }
+                                    })}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[9px] text-zinc-500 font-bold uppercase">Glow Intensity</label>
+                                    <span className="text-[9px] text-zinc-400 font-mono">{(selectedSurface.border.glow * 100).toFixed(0)}%</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="2"
+                                    step="0.1"
+                                    value={selectedSurface.border.glow}
+                                    onChange={(e) => updateSurface(selectedSurface.id, {
+                                        border: { ...selectedSurface.border!, glow: parseFloat(e.target.value) }
+                                    })}
+                                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 <EdgeBlendingControls surfaceId={selectedSurface.id} />
                 <EffectsPanel />
                 <AudioReactivity />

@@ -24,6 +24,13 @@ export interface Surface {
     locked: boolean;
     aspectRatioLocked?: boolean;
     audioMappings: AudioMapping[];
+    border?: {
+        enabled: boolean;
+        color: string;
+        width: number;
+        opacity: number;
+        glow: number;
+    };
 }
 
 export interface AudioMapping {
@@ -241,6 +248,13 @@ export const useProjectStore = create<ProjectStore>((set, get) => ({
             locked: false,
             aspectRatioLocked: false,
             audioMappings: [],
+            border: {
+                enabled: false,
+                color: "#00ff00",
+                width: 2,
+                opacity: 1,
+                glow: 0.5
+            },
         };
         set((state) => ({
             surfaces: [...state.surfaces, newSurface],
