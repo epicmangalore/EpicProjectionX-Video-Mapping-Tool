@@ -555,7 +555,8 @@ export function Surface({ surface }: SurfaceProps) {
     // Visibility is handled in useFrame for timeline accuracy
     // if (!surface.visible) return null;
 
-    const isOutput = useOutputStore((state) => state.isOutput);
+
+
 
     return (
         <group
