@@ -9,6 +9,7 @@ import { useProjectStore, type Vector2 } from "@/store/project-store";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useAudioStore } from "@/store/audio-store";
+import { useTimelineStore } from "@/store/timeline-store";
 
 // Import shaders and utils
 import vertexShader from "@/shaders/surface.vert.glsl";
@@ -21,6 +22,7 @@ import { ResizeHandles } from "./ResizeHandles";
 import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
+import { SurfaceBorder } from "./SurfaceBorder";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -28,6 +30,7 @@ interface SurfaceProps {
 
 export function Surface({ surface }: SurfaceProps) {
     const meshRef = useRef<THREE.Mesh>(null);
+    const groupRef = useRef<THREE.Group>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -332,10 +335,6 @@ export function Surface({ surface }: SurfaceProps) {
         positions.needsUpdate = true;
     }, [surface.meshWarp, surface.id]);
 
-    const updateLevels = useAudioStore((state) => state.updateLevels);
-    const audioLevels = useAudioStore((state) => state.levels);
-
-
     const [hovered, setHovered] = useState(false);
     const bounceRef = useRef(1.0);
     const audioReactiveScale = useRef(1.0);
@@ -344,13 +343,27 @@ export function Surface({ surface }: SurfaceProps) {
     useFrame((state) => {
         if (!meshRef.current) return;
 
+        // Timeline Visibility Check
+        if (groupRef.current) {
+            const currentTime = useTimelineStore.getState().currentTime;
+            const endTime = surface.startTime + surface.duration;
+            const isInTimeRange = currentTime >= surface.startTime && currentTime < endTime;
+
+            // Only override visibility if surface is "globally" visible (eye icon on)
+            // If the eye icon is off (surface.visible === false), it stays hidden.
+            if (surface.visible) {
+                groupRef.current.visible = isInTimeRange;
+            } else {
+                groupRef.current.visible = false;
+            }
+        }
+
         // Apply audio mappings if enabled
         let reactiveOpacity = surface.opacity;
         let reactiveBlur = effects.blur;
         let reactiveChromatic = effects.chromaticAberration;
 
-        updateLevels();
-        const levels = audioLevels as any;
+        const levels = useAudioStore.getState().levels as any;
 
         if (surface.audioMappings.length > 0) {
             surface.audioMappings.forEach(mapping => {
@@ -503,12 +516,14 @@ export function Surface({ surface }: SurfaceProps) {
         opacity: 0.3
     }), []);
 
-    const isOutput = useOutputStore((state) => state.isOutput);
+    // Visibility is handled in useFrame for timeline accuracy
+    // if (!surface.visible) return null;
 
-    if (!surface.visible) return null;
+    const isOutput = useOutputStore((state) => state.isOutput);
 
     return (
         <group
+            ref={groupRef}
             position={[surface.position.x, surface.position.y, surface.zIndex * 0.01]}
             rotation={[0, 0, surface.rotation]}
             scale={[surface.scale.x, surface.scale.y, 1]}
@@ -535,38 +550,7 @@ export function Surface({ surface }: SurfaceProps) {
             {/* Neon Border Effect */}
             {surface.border?.enabled && (
                 <group position={[0, 0, 0.02]}>
-                    <Line
-                        points={[
-                            [-0.5, 0.5, 0],  // TL
-                            [0.5, 0.5, 0],   // TR
-                            [0.5, -0.5, 0],  // BR
-                            [-0.5, -0.5, 0], // BL
-                            [-0.5, 0.5, 0],  // Close loop
-                        ]}
-                        color={surface.border.color}
-                        lineWidth={surface.border.width}
-                        transparent
-                        opacity={surface.border.opacity}
-                        toneMapped={false} // Crucial for neon glow with bloom
-                    />
-                    {/* Inner Glow Layer (Optional, for extra bloom pop) */}
-                    {surface.border.glow > 0 && (
-                        <Line
-                            points={[
-                                [-0.5, 0.5, 0],
-                                [0.5, 0.5, 0],
-                                [0.5, -0.5, 0],
-                                [-0.5, -0.5, 0],
-                                [-0.5, 0.5, 0],
-                            ]}
-                            color={surface.border.color}
-                            lineWidth={surface.border.width * 2}
-                            transparent
-                            opacity={surface.border.opacity * 0.3 * surface.border.glow}
-                            toneMapped={false}
-                            depthTest={false} // Draw on top
-                        />
-                    )}
+                    <SurfaceBorder surface={surface} />
                 </group>
             )}
 

@@ -18,6 +18,7 @@ interface AudioState {
     initAudio: () => Promise<void>;
     stopAudio: () => void;
     updateLevels: () => void;
+    setLevels: (levels: AudioState["levels"]) => void;
 }
 
 export const useAudioStore = create<AudioState>((set, get) => ({
@@ -112,4 +113,6 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             levels: { bass, mid, treble, volume }
         });
     },
+
+    setLevels: (levels) => set({ levels }),
 }));

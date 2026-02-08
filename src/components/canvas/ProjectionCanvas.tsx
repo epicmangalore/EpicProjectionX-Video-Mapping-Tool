@@ -12,7 +12,22 @@ import { CanvasFrame } from "./CanvasFrame";
 import { SpacebarPan } from "./SpacebarPan";
 
 import { useOutputStore } from "@/store/output-store";
+import { useAudioStore } from "@/store/audio-store";
+import { useFrame } from "@react-three/fiber";
 import { SelectionBox } from "./SelectionBox";
+
+function AudioManager() {
+    const updateLevels = useAudioStore((state) => state.updateLevels);
+    const isOutput = useOutputStore((state) => state.isOutput);
+
+    useFrame(() => {
+        if (!isOutput) {
+            updateLevels();
+        }
+    });
+
+    return null;
+}
 
 export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -86,6 +101,7 @@ export function ProjectionCanvas() {
 
             {/* Spacebar panning */}
             <SpacebarPan />
+            <AudioManager />
         </Canvas>
     );
 }

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { useEffectsStore } from "@/store/effects-store";
 import { useOutputStore } from "@/store/output-store";
+import { useAudioStore } from "@/store/audio-store";
 
 const SYNC_CHANNEL = "projectionx_sync";
 
@@ -12,6 +13,7 @@ export function useSync() {
 
     useEffect(() => {
         const channel = new BroadcastChannel(SYNC_CHANNEL);
+        let animationFrameId: number;
 
         if (isOutput) {
             // Request initial state
@@ -23,6 +25,10 @@ export function useSync() {
                 if (type === "STATE_UPDATE") {
                     if (data.project) useProjectStore.setState(data.project);
                     if (data.effects) useEffectsStore.setState(data.effects);
+                } else if (type === "AUDIO_UPDATE") {
+                    if (data.levels) {
+                        useAudioStore.getState().setLevels(data.levels);
+                    }
                 }
             };
         } else {
@@ -41,56 +47,78 @@ export function useSync() {
                     channel.postMessage({
                         type: "STATE_UPDATE",
                         data: {
-                            project: JSON.parse(JSON.stringify(projectData)),
-                            effects: JSON.parse(JSON.stringify(useEffectsStore.getState())),
+                            project: projectData,
+                            effects: useEffectsStore.getState(),
                         }
                     });
                 }
             };
 
             // Broadcast state updates from Control window
-            const unsubscribeProject = useProjectStore.subscribe((state) => {
-                // Only sync data, not functions
+            let lastProjectStateStr = "";
+            let lastEffectsStateStr = "";
+
+            const syncState = () => {
+                const projectState = useProjectStore.getState();
+                const effectsState = useEffectsStore.getState();
+
+                // 1. Sync Project State
                 const projectData = {
-                    surfaces: state.surfaces,
-                    mediaAssets: state.mediaAssets,
-                    cues: state.cues,
-                    projectSettings: state.projectSettings,
-                    selectedSurfaceIds: [], // Don't sync selection to output to avoid gizmos
-                    currentProjectId: state.currentProjectId
+                    surfaces: projectState.surfaces,
+                    mediaAssets: projectState.mediaAssets,
+                    cues: projectState.cues,
+                    projectSettings: projectState.projectSettings,
+                    selectedSurfaceIds: [], // Don't sync selection
+                    currentProjectId: projectState.currentProjectId
                 };
 
-                channel.postMessage({
-                    type: "STATE_UPDATE",
-                    data: {
-                        project: JSON.parse(JSON.stringify(projectData)), // Safe strip of any hidden non-serializables
-                        effects: JSON.parse(JSON.stringify(useEffectsStore.getState())),
-                    }
-                });
-            });
+                // Simple check to avoid sending identical frames
+                // We use JSON stringify for comparison but send the object directly
+                // BroadcastChannel handles structured cloning efficiently
+                const currentProjectStr = JSON.stringify(projectData);
+                const currentEffectsStr = JSON.stringify(effectsState);
 
-            const unsubscribeEffects = useEffectsStore.subscribe((state) => {
-                const projectData = {
-                    surfaces: useProjectStore.getState().surfaces,
-                    mediaAssets: useProjectStore.getState().mediaAssets,
-                    cues: useProjectStore.getState().cues,
-                    projectSettings: useProjectStore.getState().projectSettings,
-                    selectedSurfaceIds: [],
-                    currentProjectId: useProjectStore.getState().currentProjectId
-                };
+                let hasUpdates = false;
+                const updateData: any = {};
 
-                channel.postMessage({
-                    type: "STATE_UPDATE",
-                    data: {
-                        project: JSON.parse(JSON.stringify(projectData)),
-                        effects: JSON.parse(JSON.stringify(state)),
-                    }
-                });
-            });
+                if (currentProjectStr !== lastProjectStateStr) {
+                    updateData.project = projectData;
+                    lastProjectStateStr = currentProjectStr;
+                    hasUpdates = true;
+                }
+
+                if (currentEffectsStr !== lastEffectsStateStr) {
+                    updateData.effects = effectsState;
+                    lastEffectsStateStr = currentEffectsStr;
+                    hasUpdates = true;
+                }
+
+                if (hasUpdates) {
+                    channel.postMessage({
+                        type: "STATE_UPDATE",
+                        data: updateData
+                    });
+                }
+
+                // 2. Sync Audio Levels (Separate high-frequency channel or same?)
+                // Audio updates are high frequency (every frame)
+                // We can just fire them if they change significantly or every frame
+                const audioState = useAudioStore.getState();
+                if (audioState.isEnabled) {
+                    channel.postMessage({
+                        type: "AUDIO_UPDATE",
+                        data: { levels: audioState.levels }
+                    });
+                }
+
+                animationFrameId = requestAnimationFrame(syncState);
+            };
+
+            // Start the sync loop
+            syncState();
 
             return () => {
-                unsubscribeProject();
-                unsubscribeEffects();
+                cancelAnimationFrame(animationFrameId);
                 channel.close();
             };
         }
