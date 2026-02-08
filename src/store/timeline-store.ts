@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import gsap from "gsap";
 
 export interface Keyframe {
@@ -57,157 +58,172 @@ interface TimelineState {
     updateTimeline: (updateSurface: (id: string, updates: any) => void) => void;
 }
 
-export const useTimelineStore = create<TimelineState>((set, get) => ({
-    currentTime: 0,
-    duration: 30,
-    isPlaying: false,
-    loop: false,
-    snapToGrid: true,
-    gridSize: 0.1,
-    keyframes: [],
-    expandedSurfaces: [],
-    timeline: null,
+export const useTimelineStore = create<TimelineState>()(
+    persist(
+        (set, get) => ({
+            currentTime: 0,
+            duration: 30,
+            isPlaying: false,
+            loop: false,
+            snapToGrid: true,
+            gridSize: 0.1,
+            keyframes: [],
+            expandedSurfaces: [],
+            timeline: null,
 
-    play: () => {
-        get().timeline?.play();
-        set({ isPlaying: true });
-    },
-
-    pause: () => {
-        get().timeline?.pause();
-        set({ isPlaying: false });
-    },
-
-    stop: () => {
-        get().timeline?.pause().time(0);
-        set({ isPlaying: false, currentTime: 0 });
-    },
-
-    seek: (time: number) => {
-        const { duration, timeline, snapToGrid, gridSize } = get();
-        let targetTime = Math.max(0, Math.min(time, duration));
-
-        if (snapToGrid) {
-            targetTime = Math.round(targetTime / gridSize) * gridSize;
-        }
-
-        timeline?.time(targetTime);
-        set({ currentTime: targetTime });
-    },
-
-    setLoop: (loop: boolean) => {
-        set({ loop });
-        if (get().timeline) {
-            get().timeline!.repeat(loop ? -1 : 0);
-        }
-    },
-
-    setDuration: (duration: number) => {
-        set({ duration });
-    },
-
-    setSnapToGrid: (snapToGrid: boolean) => {
-        set({ snapToGrid });
-    },
-
-    toggleSurfaceExpanded: (surfaceId: string) => {
-        set((state) => ({
-            expandedSurfaces: state.expandedSurfaces.includes(surfaceId)
-                ? state.expandedSurfaces.filter(id => id !== surfaceId)
-                : [...state.expandedSurfaces, surfaceId]
-        }));
-    },
-
-    addKeyframe: (keyframe) => {
-        const id = `kf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        set((state) => ({
-            keyframes: [...state.keyframes, { ...keyframe, id }].sort((a, b) => a.time - b.time),
-        }));
-    },
-
-    updateKeyframe: (id, updates) => {
-        set((state) => ({
-            keyframes: state.keyframes
-                .map((kf) => (kf.id === id ? { ...kf, ...updates } : kf))
-                .sort((a, b) => a.time - b.time),
-        }));
-    },
-
-    deleteKeyframe: (id) => {
-        set((state) => ({
-            keyframes: state.keyframes.filter((kf) => kf.id !== id),
-        }));
-    },
-
-    initTimeline: (updateSurface) => {
-        const { duration, loop } = get();
-        const tl = gsap.timeline({
-            paused: true,
-            repeat: loop ? -1 : 0,
-            onUpdate: () => {
-                set({ currentTime: tl.time() });
+            play: () => {
+                get().timeline?.play();
+                set({ isPlaying: true });
             },
-        });
-        set({ timeline: tl });
-        get().updateTimeline(updateSurface);
-    },
 
-    updateTimeline: (updateSurface) => {
-        const { timeline, keyframes } = get();
-        if (!timeline) return;
+            pause: () => {
+                get().timeline?.pause();
+                set({ isPlaying: false });
+            },
 
-        timeline.clear();
+            stop: () => {
+                get().timeline?.pause().time(0);
+                set({ isPlaying: false, currentTime: 0 });
+            },
 
-        // Ensure timeline has the correct duration even if empty
-        // We add a dummy tween that spans the entire duration
-        const { duration: projectDuration } = get();
-        timeline.to({}, { duration: projectDuration, ease: "none" }, 0);
+            seek: (time: number) => {
+                const { duration, timeline, snapToGrid, gridSize } = get();
+                let targetTime = Math.max(0, Math.min(time, duration));
 
-        // Group keyframes by surface and property
-        const grouped = keyframes.reduce((acc, kf) => {
-            const key = `${kf.surfaceId}:${kf.property}`;
-            if (!acc[key]) acc[key] = [];
-            acc[key].push(kf);
-            return acc;
-        }, {} as Record<string, Keyframe[]>);
-
-        // Process each property track
-        Object.entries(grouped).forEach(([key, kfs]) => {
-            const [surfaceId, propertyPath] = key.split(":");
-
-            // GSAP target for this specific property
-            const target = { value: kfs[0].value };
-
-            kfs.forEach((kf, index) => {
-                if (index === 0) {
-                    // Start at the first keyframe value
-                    timeline.set(target, { value: kf.value }, kf.time);
-                    return;
+                if (snapToGrid) {
+                    targetTime = Math.round(targetTime / gridSize) * gridSize;
                 }
 
-                const prevKf = kfs[index - 1];
-                const duration = kf.time - prevKf.time;
+                timeline?.time(targetTime);
+                set({ currentTime: targetTime });
+            },
 
-                timeline.to(target, {
-                    value: kf.value,
-                    duration,
-                    ease: kf.easing || "power2.inOut",
+            setLoop: (loop: boolean) => {
+                set({ loop });
+                if (get().timeline) {
+                    get().timeline!.repeat(loop ? -1 : 0);
+                }
+            },
+
+            setDuration: (duration: number) => {
+                set({ duration });
+            },
+
+            setSnapToGrid: (snapToGrid: boolean) => {
+                set({ snapToGrid });
+            },
+
+            toggleSurfaceExpanded: (surfaceId: string) => {
+                set((state) => ({
+                    expandedSurfaces: state.expandedSurfaces.includes(surfaceId)
+                        ? state.expandedSurfaces.filter(id => id !== surfaceId)
+                        : [...state.expandedSurfaces, surfaceId]
+                }));
+            },
+
+            addKeyframe: (keyframe) => {
+                const id = `kf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                set((state) => ({
+                    keyframes: [...state.keyframes, { ...keyframe, id }].sort((a, b) => a.time - b.time),
+                }));
+            },
+
+            updateKeyframe: (id, updates) => {
+                set((state) => ({
+                    keyframes: state.keyframes
+                        .map((kf) => (kf.id === id ? { ...kf, ...updates } : kf))
+                        .sort((a, b) => a.time - b.time),
+                }));
+            },
+
+            deleteKeyframe: (id) => {
+                set((state) => ({
+                    keyframes: state.keyframes.filter((kf) => kf.id !== id),
+                }));
+            },
+
+            initTimeline: (updateSurface) => {
+                const { duration, loop } = get();
+                const tl = gsap.timeline({
+                    paused: true,
+                    repeat: loop ? -1 : 0,
                     onUpdate: () => {
-                        // Bridge to project store
-                        // Split propertyPath (e.g., "position.x" -> ["position", "x"])
-                        const parts = propertyPath.split(".");
-                        if (parts.length === 2) {
-                            // Handle object properties like position: {x, y}
-                            updateSurface(surfaceId, {
-                                [parts[0]]: { [parts[1]]: target.value }
-                            });
-                        } else {
-                            // Handle simple properties like opacity
-                            updateSurface(surfaceId, { [propertyPath]: target.value });
+                        set({ currentTime: tl.time() });
+                    },
+                });
+                set({ timeline: tl });
+                get().updateTimeline(updateSurface);
+            },
+
+            updateTimeline: (updateSurface) => {
+                const { timeline, keyframes } = get();
+                if (!timeline) return;
+
+                timeline.clear();
+
+                // Ensure timeline has the correct duration even if empty
+                // We add a dummy tween that spans the entire duration
+                const { duration: projectDuration } = get();
+                timeline.to({}, { duration: projectDuration, ease: "none" }, 0);
+
+                // Group keyframes by surface and property
+                const grouped = keyframes.reduce((acc, kf) => {
+                    const key = `${kf.surfaceId}:${kf.property}`;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(kf);
+                    return acc;
+                }, {} as Record<string, Keyframe[]>);
+
+                // Process each property track
+                Object.entries(grouped).forEach(([key, kfs]) => {
+                    const [surfaceId, propertyPath] = key.split(":");
+
+                    // GSAP target for this specific property
+                    const target = { value: kfs[0].value };
+
+                    kfs.forEach((kf, index) => {
+                        if (index === 0) {
+                            // Start at the first keyframe value
+                            timeline.set(target, { value: kf.value }, kf.time);
+                            return;
                         }
-                    }
-                }, prevKf.time);
-            });
-        });
-    },
-}));
+
+                        const prevKf = kfs[index - 1];
+                        const duration = kf.time - prevKf.time;
+
+                        timeline.to(target, {
+                            value: kf.value,
+                            duration,
+                            ease: kf.easing || "power2.inOut",
+                            onUpdate: () => {
+                                // Bridge to project store
+                                // Split propertyPath (e.g., "position.x" -> ["position", "x"])
+                                const parts = propertyPath.split(".");
+                                if (parts.length === 2) {
+                                    // Handle object properties like position: {x, y}
+                                    updateSurface(surfaceId, {
+                                        [parts[0]]: { [parts[1]]: target.value }
+                                    });
+                                } else {
+                                    // Handle simple properties like opacity
+                                    updateSurface(surfaceId, { [propertyPath]: target.value });
+                                }
+                            }
+                        }, prevKf.time);
+                    });
+                });
+            },
+        }),
+        {
+            name: 'projectionx-timeline-storage',
+            partialize: (state) => ({
+                duration: state.duration,
+                loop: state.loop,
+                snapToGrid: state.snapToGrid,
+                gridSize: state.gridSize,
+                keyframes: state.keyframes,
+                expandedSurfaces: state.expandedSurfaces,
+            }),
+        }
+    )
+);

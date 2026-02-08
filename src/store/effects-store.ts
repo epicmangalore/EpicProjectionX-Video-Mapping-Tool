@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export interface EffectSettings {
     // Color adjustments
@@ -53,35 +54,42 @@ interface EffectsState {
     resetGlobalEffects: () => void;
 }
 
-export const useEffectsStore = create<EffectsState>((set) => ({
-    surfaceEffects: {},
-    globalEffects: { ...defaultEffectSettings },
+export const useEffectsStore = create<EffectsState>()(
+    persist(
+        (set) => ({
+            surfaceEffects: {},
+            globalEffects: { ...defaultEffectSettings },
 
-    updateSurfaceEffect: (surfaceId, settings) =>
-        set((state) => ({
-            surfaceEffects: {
-                ...state.surfaceEffects,
-                [surfaceId]: {
-                    ...(state.surfaceEffects[surfaceId] || defaultEffectSettings),
-                    ...settings,
-                },
-            },
-        })),
+            updateSurfaceEffect: (surfaceId, settings) =>
+                set((state) => ({
+                    surfaceEffects: {
+                        ...state.surfaceEffects,
+                        [surfaceId]: {
+                            ...(state.surfaceEffects[surfaceId] || defaultEffectSettings),
+                            ...settings,
+                        },
+                    },
+                })),
 
-    resetSurfaceEffects: (surfaceId) =>
-        set((state) => {
-            const { [surfaceId]: _, ...rest } = state.surfaceEffects;
-            return { surfaceEffects: rest };
+            resetSurfaceEffects: (surfaceId) =>
+                set((state) => {
+                    const { [surfaceId]: _, ...rest } = state.surfaceEffects;
+                    return { surfaceEffects: rest };
+                }),
+
+            updateGlobalEffect: (settings) =>
+                set((state) => ({
+                    globalEffects: {
+                        ...state.globalEffects,
+                        ...settings,
+                    },
+                })),
+
+            resetGlobalEffects: () =>
+                set({ globalEffects: { ...defaultEffectSettings } }),
         }),
-
-    updateGlobalEffect: (settings) =>
-        set((state) => ({
-            globalEffects: {
-                ...state.globalEffects,
-                ...settings,
-            },
-        })),
-
-    resetGlobalEffects: () =>
-        set({ globalEffects: { ...defaultEffectSettings } }),
-}));
+        {
+            name: 'projectionx-effects-storage',
+        }
+    )
+);
