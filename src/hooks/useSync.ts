@@ -48,7 +48,10 @@ export function useSync() {
                         type: "STATE_UPDATE",
                         data: {
                             project: projectData,
-                            effects: useEffectsStore.getState(),
+                            effects: {
+                                surfaceEffects: useEffectsStore.getState().surfaceEffects,
+                                globalEffects: useEffectsStore.getState().globalEffects
+                            },
                         }
                     });
                 }
@@ -72,11 +75,16 @@ export function useSync() {
                     currentProjectId: projectState.currentProjectId
                 };
 
+                const effectsData = {
+                    surfaceEffects: effectsState.surfaceEffects,
+                    globalEffects: effectsState.globalEffects
+                };
+
                 // Simple check to avoid sending identical frames
                 // We use JSON stringify for comparison but send the object directly
                 // BroadcastChannel handles structured cloning efficiently
                 const currentProjectStr = JSON.stringify(projectData);
-                const currentEffectsStr = JSON.stringify(effectsState);
+                const currentEffectsStr = JSON.stringify(effectsData);
 
                 let hasUpdates = false;
                 const updateData: any = {};
@@ -88,7 +96,7 @@ export function useSync() {
                 }
 
                 if (currentEffectsStr !== lastEffectsStateStr) {
-                    updateData.effects = effectsState;
+                    updateData.effects = effectsData;
                     lastEffectsStateStr = currentEffectsStr;
                     hasUpdates = true;
                 }
