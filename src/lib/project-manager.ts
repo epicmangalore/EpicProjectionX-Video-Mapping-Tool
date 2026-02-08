@@ -92,7 +92,7 @@ export class ProjectManager {
             updatedAt: Date.now(),
         };
 
-        return await db.projects.add(dbProject);
+        return (await db.projects.add(dbProject)) as number;
     }
 
     async createNewProject(name: string = "Untitled Project"): Promise<void> {
