@@ -3,6 +3,8 @@
 import { generateId } from "@/lib/utils";
 import { MediaAsset } from "@/store/project-store";
 
+import { db } from "@/lib/db";
+
 export const generateThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve) => {
         if (file.type.startsWith("image/")) {
@@ -41,47 +43,54 @@ export const processFile = async (
     const thumbnail = await generateThumbnail(file);
     const mediaId = generateId();
 
-    return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const url = event.target?.result as string;
+    // Store file in IndexedDB
+    try {
+        await db.files.add({
+            id: mediaId,
+            blob: file,
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error("Failed to store file in DB:", error);
+    }
 
-            if (file.type.startsWith("image/")) {
-                const img = new window.Image();
-                img.onload = () => {
-                    addMediaAsset({
-                        id: mediaId,
-                        name: file.name,
-                        type: "image",
-                        url,
-                        size: file.size,
-                        thumbnail,
-                        width: img.naturalWidth,
-                        height: img.naturalHeight,
-                    });
-                    resolve(mediaId);
-                };
-                img.src = url;
-            } else if (file.type.startsWith("video/")) {
-                const video = document.createElement("video");
-                video.onloadedmetadata = () => {
-                    addMediaAsset({
-                        id: mediaId,
-                        name: file.name,
-                        type: "video",
-                        url,
-                        size: file.size,
-                        thumbnail,
-                        width: video.videoWidth,
-                        height: video.videoHeight,
-                        duration: video.duration,
-                    });
-                    video.remove();
-                    resolve(mediaId);
-                };
-                video.src = url;
-            }
-        };
-        reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+
+    return new Promise((resolve) => {
+        if (file.type.startsWith("image/")) {
+            const img = new window.Image();
+            img.onload = () => {
+                addMediaAsset({
+                    id: mediaId,
+                    name: file.name,
+                    type: "image",
+                    url,
+                    size: file.size,
+                    thumbnail,
+                    width: img.naturalWidth,
+                    height: img.naturalHeight,
+                });
+                resolve(mediaId);
+            };
+            img.src = url;
+        } else if (file.type.startsWith("video/")) {
+            const video = document.createElement("video");
+            video.onloadedmetadata = () => {
+                addMediaAsset({
+                    id: mediaId,
+                    name: file.name,
+                    type: "video",
+                    url,
+                    size: file.size,
+                    thumbnail,
+                    width: video.videoWidth,
+                    height: video.videoHeight,
+                    duration: video.duration,
+                });
+                video.remove(); // We don't revoke URL here as it's needed for the app
+                resolve(mediaId);
+            };
+            video.src = url;
+        }
     });
 };

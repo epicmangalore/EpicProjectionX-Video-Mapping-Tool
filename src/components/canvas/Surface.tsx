@@ -53,13 +53,48 @@ export function Surface({ surface }: SurfaceProps) {
 
     // Manage Video/Webcam elements
     const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+    const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined);
+
+    // Hydrate Blob URLs for Output Window or use direct URL
+    useEffect(() => {
+        if (!mediaAsset) {
+            setResolvedUrl(undefined);
+            return;
+        }
+
+        const url = mediaAsset.url;
+        if (!url) {
+            setResolvedUrl(undefined);
+            return;
+        }
+
+        if (isOutput && url.startsWith("blob:")) {
+            fetch(url, { method: "HEAD" })
+                .then((res) => {
+                    if (res.ok) setResolvedUrl(url);
+                    else throw new Error("Invalid blob");
+                })
+                .catch(() => {
+                    import("@/lib/db").then(({ db }) => {
+                        db.files.get(mediaAsset.id).then((file) => {
+                            if (file?.blob) {
+                                const newUrl = URL.createObjectURL(file.blob);
+                                setResolvedUrl(newUrl);
+                            }
+                        });
+                    });
+                });
+        } else {
+            setResolvedUrl(url);
+        }
+    }, [mediaAsset, isOutput]);
 
     useEffect(() => {
-        if (!mediaAsset) return;
+        if (!mediaAsset || !resolvedUrl) return;
 
-        if (mediaAsset.type === "video" && mediaAsset.url) {
+        if (mediaAsset.type === "video") {
             const video = document.createElement("video");
-            video.src = mediaAsset.url;
+            video.src = resolvedUrl;
             video.crossOrigin = "anonymous";
             video.loop = true;
             video.muted = true;
@@ -104,7 +139,7 @@ export function Surface({ surface }: SurfaceProps) {
                 setVideoElement(null);
             };
         }
-    }, [mediaAsset, isPlayingGlobal]);
+    }, [mediaAsset, resolvedUrl, isPlayingGlobal]);
 
     // Create texture from media
     const texture = useMemo(() => {
@@ -122,10 +157,10 @@ export function Surface({ surface }: SurfaceProps) {
             return new THREE.CanvasTexture(canvas);
         }
 
-        if (mediaAsset.type === "image" && mediaAsset.url) {
+        if (mediaAsset.type === "image" && resolvedUrl) {
             // console.log("Loading image texture from URL");
             const loader = new THREE.TextureLoader();
-            const tex = loader.load(mediaAsset.url,
+            const tex = loader.load(resolvedUrl,
                 () => console.log("Texture loaded successfully"),
                 undefined,
                 (err) => console.error("Error loading texture:", err)
@@ -177,7 +212,7 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         return null;
-    }, [mediaAsset, videoElement]);
+    }, [mediaAsset, videoElement, resolvedUrl]);
 
     // Calculate warping matrix or polygon geometry
     const isQuad = surface.corners.length === 4;
