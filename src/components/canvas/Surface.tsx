@@ -41,6 +41,7 @@ export function Surface({ surface }: SurfaceProps) {
     const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
     const toolMode = useUIStore((state) => state.toolMode);
     const projectSettings = useProjectStore((state) => state.projectSettings);
+    const isOutput = useOutputStore((state) => state.isOutput);
 
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
