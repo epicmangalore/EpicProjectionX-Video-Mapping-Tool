@@ -6,7 +6,7 @@ import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Pen, Grid3x3, ArrowLeftRight, ArrowUpDown } from "lucide-react";
+import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Pen, Grid3x3, ArrowLeftRight, ArrowUpDown, Layers } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
@@ -205,8 +205,8 @@ export function SurfaceProperties() {
                                     }
                                 })}
                                 className={`flex-1 py-1.5 text-[10px] font-medium transition-colors border-r border-white/5 last:border-r-0 transform-gpu ${(selectedSurface.textureSettings?.fit || "stretch") === mode.id
-                                        ? "bg-zinc-800 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
-                                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                                    ? "bg-zinc-800 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
                                     }`}
                             >
                                 {mode.label}
@@ -513,7 +513,26 @@ export function SurfaceProperties() {
                         </div>
                     </div>
                 </div>
-                {/* Blend Mode */}
+
+                {/* Global Composition Source Toggle */}
+                <div className="pt-2 border-t border-white/5 space-y-2">
+                    <label className="flex items-center justify-between text-[11px] text-zinc-400 group cursor-pointer p-1 rounded hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-2">
+                            <Layers className="w-3 h-3 group-hover:text-electric-cyan transition-colors" />
+                            <span>Use Mixed Composition</span>
+                        </div>
+                        <button
+                            onClick={() => updateSurface(selectedSurface.id, { useComposition: !selectedSurface.useComposition })}
+                            className={`w-8 h-4 rounded-full transition-all relative ${selectedSurface.useComposition ? 'bg-electric-cyan/30' : 'bg-zinc-800'}`}
+                        >
+                            <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${selectedSurface.useComposition ? 'right-0.5 bg-electric-cyan' : 'left-0.5 bg-zinc-500'}`} />
+                        </button>
+                    </label>
+                    <p className="text-[10px] text-zinc-500 leading-relaxed italic px-1">
+                        Override individual media with the global layer mix.
+                    </p>
+                </div>
+
                 {/* Polygon Mapping */}
                 <div className="border-t border-white/5 pt-4">
                     <div className="flex items-center justify-between mb-3">

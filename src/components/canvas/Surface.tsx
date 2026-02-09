@@ -246,6 +246,10 @@ export function Surface({ surface }: SurfaceProps) {
             return tex;
         }
 
+        if (surface.useComposition && (window as any).compositionTexture) {
+            return (window as any).compositionTexture;
+        }
+
         if (mediaAsset.type === "text") {
             const canvas = document.createElement("canvas");
             canvas.width = 1024;

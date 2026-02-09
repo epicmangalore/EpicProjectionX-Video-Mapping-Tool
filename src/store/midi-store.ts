@@ -123,8 +123,31 @@ export const useMIDIStore = create<MIDIState>((set, get) => ({
 
         if (mapping) {
             // Trigger target action/property update
-            // This will involve other stores, but for now we just log
             console.log(`MIDI Mapping Triggered: ${mapping.targetId} = ${value / 127}`);
+
+            // Handle Layer Control
+            if (mapping.targetId.startsWith("layer-")) {
+                const parts = mapping.targetId.split(":");
+                const layerId = parts[0];
+                const property = parts[1]; // opacity, speed
+
+                const layerStore = require("./layer-store").useLayerStore.getState();
+                const currentLayer = layerStore.layers.find((l: any) => l.id === layerId);
+
+                if (currentLayer) {
+                    if (property === "opacity") {
+                        const opacity = (value / 127) * (mapping.maxValue - mapping.minValue) + mapping.minValue;
+                        layerStore.updateLayer(layerId, { opacity });
+                    } else if (property === "speed") {
+                        // Map 0-127 to -4 to 4
+                        // Center (63/64) should be 0 or 1 depending on preference, but here we map linearly
+                        // Let's assume user maps knob to specific range in UI, but defaults:
+                        const normalized = value / 127;
+                        const speed = normalized * (mapping.maxValue - mapping.minValue) + mapping.minValue;
+                        layerStore.updateLayer(layerId, { speed });
+                    }
+                }
+            }
         }
     },
 }));

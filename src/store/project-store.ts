@@ -27,6 +27,7 @@ export interface Surface {
     duration: number;
     aspectRatioLocked?: boolean;
     audioMappings: AudioMapping[];
+    useComposition?: boolean;
     border?: {
         enabled: boolean;
         color: string;

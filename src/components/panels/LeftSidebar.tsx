@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize, Sparkles } from "lucide-react";
+import { useRef, useState } from "react";
+import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize, Sparkles, SlidersHorizontal } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { MediaLibrary } from "./MediaLibrary";
+import { LayerPanel } from "./LayerPanel";
 import { AutoDetectDialog } from "../dialogs/AutoDetectDialog";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
 
 export function LeftSidebar() {
-    const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
+    const [activeTab, setActiveTab] = useState<"layers" | "assets" | "mixer">("layers");
     const [showScanner, setShowScanner] = useState(false);
     const [showAutoDetect, setShowAutoDetect] = useState(false);
 
@@ -79,6 +80,17 @@ export function LeftSidebar() {
                     Assets
                     {activeTab === "assets" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
+                <button
+                    onClick={() => setActiveTab("mixer")}
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "mixer"
+                        ? "text-white"
+                        : "text-zinc-500 hover:text-zinc-200 hover:text-zinc-300"
+                        }`}
+                >
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    Mixer
+                    {activeTab === "mixer" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-400" />}
+                </button>
             </div>
 
             {/* Tab Content */}
@@ -127,6 +139,14 @@ export function LeftSidebar() {
                     <div className="absolute inset-0 flex flex-col">
                         <div className="flex-1 overflow-hidden">
                             <MediaLibrary />
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "mixer" && (
+                    <div className="absolute inset-0 flex flex-col">
+                        <div className="flex-1 overflow-hidden">
+                            <LayerPanel />
                         </div>
                     </div>
                 )}
