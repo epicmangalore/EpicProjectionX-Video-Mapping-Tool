@@ -126,7 +126,7 @@ export function SurfaceProperties() {
                                     });
                                 }
                             }}
-                            className="flex-1 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                            className="flex-1 min-w-0 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
                         >
                             <option value="">None</option>
                             <option value="webcam-builtin">📷 Webcam</option>
