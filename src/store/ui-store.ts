@@ -18,6 +18,7 @@ interface UIStore {
     rightPanelOpen: boolean;
     bottomPanelOpen: boolean;
     activeSnapLines: SnapLine[];
+    isCanvasHovered: boolean;
     // Actions
     setToolMode: (mode: ToolMode) => void;
     toggleGrid: () => void;
@@ -27,6 +28,7 @@ interface UIStore {
     toggleRightPanel: () => void;
     toggleBottomPanel: () => void;
     setSnapLines: (lines: SnapLine[]) => void;
+    setCanvasHovered: (hovered: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -39,6 +41,7 @@ export const useUIStore = create<UIStore>((set) => ({
     rightPanelOpen: true,
     bottomPanelOpen: true,
     activeSnapLines: [],
+    isCanvasHovered: false,
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
@@ -53,4 +56,5 @@ export const useUIStore = create<UIStore>((set) => ({
     toggleBottomPanel: () =>
         set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
     setSnapLines: (lines) => set({ activeSnapLines: lines }),
+    setCanvasHovered: (hovered: boolean) => set({ isCanvasHovered: hovered }),
 }));

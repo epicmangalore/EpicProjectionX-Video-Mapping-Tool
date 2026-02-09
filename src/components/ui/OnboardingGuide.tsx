@@ -8,14 +8,18 @@ const STORAGE_KEY = "promap-has-onboarded";
 
 export function OnboardingGuide() {
     const [run, setRun] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const setToolMode = useUIStore((state) => state.setToolMode);
 
     useEffect(() => {
+        setMounted(true);
         const hasOnboarded = localStorage.getItem(STORAGE_KEY);
         if (!hasOnboarded) {
             setRun(true);
         }
     }, []);
+
+    if (!mounted) return null;
 
     const handleJoyrideCallback = (data: CallBackProps) => {
         const { status, type } = data;

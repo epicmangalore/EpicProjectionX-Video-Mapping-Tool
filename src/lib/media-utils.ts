@@ -108,8 +108,24 @@ export const processFile = async (
             blob: file,
             timestamp: Date.now()
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to store file in DB:", error);
+
+        // Handle QuotaExceededError specifically
+        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+            alert(
+                'Storage quota exceeded!\n\n' +
+                'Your browser has run out of storage space for media files.\n\n' +
+                'To fix this:\n' +
+                '1. Open DevTools (F12)\n' +
+                '2. Go to Application > Storage\n' +
+                '3. Click "Clear site data"\n\n' +
+                'Or run this in console:\n' +
+                'await db.files.clear()'
+            );
+            throw new Error('Storage quota exceeded');
+        }
+        throw error;
     }
 
     const url = URL.createObjectURL(file);
@@ -133,7 +149,42 @@ export const processFile = async (
             img.src = url;
         } else if (file.type.startsWith("video/")) {
             const video = document.createElement("video");
-            video.onloadedmetadata = () => {
+
+            // Timeout to prevent hanging on large/corrupt files
+            const metadataPromise = new Promise<{ width: number, height: number, duration: number }>((resolveMetadata) => {
+                let resolved = false;
+
+                const safeResolve = (data: { width: number, height: number, duration: number }) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolveMetadata(data);
+                    }
+                };
+
+                const timeoutId = setTimeout(() => {
+                    console.warn(`Video metadata detection timed out for ${file.name}, using defaults.`);
+                    safeResolve({ width: 1920, height: 1080, duration: 10 });
+                }, 2000); // 2 second timeout
+
+                video.onloadedmetadata = () => {
+                    clearTimeout(timeoutId);
+                    safeResolve({
+                        width: video.videoWidth || 1920,
+                        height: video.videoHeight || 1080,
+                        duration: video.duration || 10
+                    });
+                };
+
+                video.onerror = () => {
+                    clearTimeout(timeoutId);
+                    console.warn(`Video metadata load failed for ${file.name}, using defaults.`);
+                    safeResolve({ width: 1920, height: 1080, duration: 10 });
+                };
+
+                video.src = url;
+            });
+
+            metadataPromise.then((metadata) => {
                 addMediaAsset({
                     id: mediaId,
                     name: file.name,
@@ -141,14 +192,13 @@ export const processFile = async (
                     url,
                     size: file.size,
                     thumbnail,
-                    width: video.videoWidth,
-                    height: video.videoHeight,
-                    duration: video.duration,
+                    width: metadata.width,
+                    height: metadata.height,
+                    duration: metadata.duration,
                 });
-                video.remove(); // We don't revoke URL here as it's needed for the app
+                video.remove();
                 resolve(mediaId);
-            };
-            video.src = url;
+            });
         }
     });
 };

@@ -179,131 +179,40 @@ export function SurfaceProperties() {
                     </button>
                 </div>
 
-                {/* Media Fit & Crop Settings */}
+                {/* Media Placement */}
                 <div className={`space-y-4 border-t border-white/5 pt-4 ${!selectedSurface.mediaId ? "opacity-30 pointer-events-none" : ""}`}>
                     <div className="flex items-center justify-between">
                         <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Media Placement</h3>
                     </div>
 
-                    {/* Fit Mode */}
-                    <div className="bg-zinc-900 border border-white/10 rounded p-0.5 flex">
-                        {["stretch", "cover", "contain"].map(mode => (
+                    {/* Fit Mode - Segmented Control */}
+                    <div className="flex bg-zinc-900 border border-white/10 rounded overflow-hidden">
+                        {[
+                            { id: "stretch", label: "STRETCH" },
+                            { id: "cover", label: "FILL" },
+                            { id: "contain", label: "FIT" }
+                        ].map((mode) => (
                             <button
-                                key={mode}
+                                key={mode.id}
                                 onClick={() => updateSurface(selectedSurface.id, {
                                     textureSettings: {
-                                        ...(selectedSurface.textureSettings || { scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 }, rotation: 0 }),
-                                        fit: mode as any
+                                        fit: mode.id as any,
+                                        scale: { x: 1, y: 1 },
+                                        offset: { x: 0, y: 0 },
+                                        rotation: 0,
+                                        flipX: false,
+                                        flipY: false
                                     }
                                 })}
-                                className={`flex-1 py-1 text-[10px] uppercase rounded-sm transition-all ${(selectedSurface.textureSettings?.fit || "stretch") === mode
-                                    ? "bg-zinc-800 text-white shadow-sm"
-                                    : "text-zinc-500 hover:text-zinc-300"
+                                className={`flex-1 py-1.5 text-[10px] font-medium transition-colors border-r border-white/5 last:border-r-0 transform-gpu ${(selectedSurface.textureSettings?.fit || "stretch") === mode.id
+                                        ? "bg-zinc-800 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+                                        : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
                                     }`}
                             >
-                                {mode === "cover" ? "Fill" : mode === "contain" ? "Fit" : mode}
+                                {mode.label}
                             </button>
                         ))}
                     </div>
-
-                    {/* Manual Crop Controls */}
-                    {(selectedSurface.textureSettings?.fit === "cover" || selectedSurface.textureSettings?.fit === "contain" || true) && (
-                        <div className="space-y-3">
-                            {/* Scale & Rotate */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <RotaryKnob
-                                    label="Zoom"
-                                    value={selectedSurface.textureSettings?.scale?.x || 1}
-                                    min={0.1}
-                                    max={5}
-                                    step={0.01}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", offset: { x: 0, y: 0 }, rotation: 0 }),
-                                            scale: { x: val, y: val }
-                                        }
-                                    })}
-                                />
-                                <RotaryKnob
-                                    label="Rotate"
-                                    value={selectedSurface.textureSettings?.rotation || 0}
-                                    min={-180}
-                                    max={180}
-                                    step={1}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 } }),
-                                            rotation: val
-                                        }
-                                    })}
-                                />
-                            </div>
-
-                            {/* Offset X/Y */}
-                            <div className="grid grid-cols-2 gap-2">
-                                <RotaryKnob
-                                    label="Pan X"
-                                    value={selectedSurface.textureSettings?.offset?.x || 0}
-                                    min={-1}
-                                    max={1}
-                                    step={0.01}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", scale: { x: 1, y: 1 }, rotation: 0, offset: { x: 0, y: 0 } }),
-                                            offset: { ...(selectedSurface.textureSettings?.offset || { x: 0, y: 0 }), x: val }
-                                        }
-                                    })}
-                                />
-                                <RotaryKnob
-                                    label="Pan Y"
-                                    value={selectedSurface.textureSettings?.offset?.y || 0}
-                                    min={-1}
-                                    max={1}
-                                    step={0.01}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", scale: { x: 1, y: 1 }, rotation: 0, offset: { x: 0, y: 0 } }),
-                                            offset: { ...(selectedSurface.textureSettings?.offset || { x: 0, y: 0 }), y: val }
-                                        }
-                                    })}
-                                />
-                            </div>
-
-                            {/* Flip Controls */}
-                            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5 mt-2">
-                                <button
-                                    onClick={() => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 }, rotation: 0 }),
-                                            flipX: !selectedSurface.textureSettings?.flipX
-                                        }
-                                    })}
-                                    className={`py-1.5 text-[10px] rounded border transition-all flex items-center justify-center gap-2 ${selectedSurface.textureSettings?.flipX
-                                        ? "bg-zinc-800 border-zinc-600 text-white"
-                                        : "bg-transparent border-white/10 text-zinc-500 hover:text-zinc-300"
-                                        }`}
-                                >
-                                    <ArrowLeftRight className="w-3 h-3" />
-                                    Flip X
-                                </button>
-                                <button
-                                    onClick={() => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            ...(selectedSurface.textureSettings || { fit: "stretch", scale: { x: 1, y: 1 }, offset: { x: 0, y: 0 }, rotation: 0 }),
-                                            flipY: !selectedSurface.textureSettings?.flipY
-                                        }
-                                    })}
-                                    className={`py-1.5 text-[10px] rounded border transition-all flex items-center justify-center gap-2 ${selectedSurface.textureSettings?.flipY
-                                        ? "bg-zinc-800 border-zinc-600 text-white"
-                                        : "bg-transparent border-white/10 text-zinc-500 hover:text-zinc-300"
-                                        }`}
-                                >
-                                    <ArrowUpDown className="w-3 h-3" />
-                                    Flip Y
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Transform Deck - simplified */}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize } from "lucide-react";
+import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize, Sparkles } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { MediaLibrary } from "./MediaLibrary";
+import { AutoDetectDialog } from "../dialogs/AutoDetectDialog";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
@@ -11,6 +12,7 @@ import { generateId } from "@/lib/utils";
 export function LeftSidebar() {
     const [activeTab, setActiveTab] = useState<"layers" | "assets">("layers");
     const [showScanner, setShowScanner] = useState(false);
+    const [showAutoDetect, setShowAutoDetect] = useState(false);
 
     // Store hooks for creation actions
     const addSurface = useProjectStore((state) => state.addSurface);
@@ -84,24 +86,33 @@ export function LeftSidebar() {
                 {activeTab === "layers" && (
                     <div className="absolute inset-0 flex flex-col">
                         {/* Creation Toolbar */}
-                        <div className="p-3 grid grid-cols-2 gap-2 border-b border-white/5 bg-zinc-900/50">
+                        <div className="p-3 space-y-2 border-b border-white/5 bg-zinc-900/50">
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={handleCreateSurface}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors border ${toolMode === "surface"
+                                        ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
+                                        : "bg-zinc-800 border-white/5 hover:bg-zinc-700 text-zinc-100"
+                                        }`}
+                                    data-tour="add-surface"
+                                >
+                                    <Plus className="w-3 h-3" />
+                                    Surface
+                                </button>
+                                <button
+                                    onClick={handleCreateText}
+                                    className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
+                                >
+                                    <Type className="w-3 h-3" />
+                                    Text
+                                </button>
+                            </div>
                             <button
-                                onClick={handleCreateSurface}
-                                className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors border ${toolMode === "surface"
-                                    ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
-                                    : "bg-zinc-800 border-white/5 hover:bg-zinc-700 text-zinc-100"
-                                    }`}
-                                data-tour="add-surface"
+                                onClick={() => setShowAutoDetect(true)}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded bg-gradient-to-r from-electric-cyan/20 to-electric-purple/20 hover:from-electric-cyan/30 hover:to-electric-purple/30 text-white text-xs transition-colors border border-electric-cyan/30"
                             >
-                                <Plus className="w-3 h-3" />
-                                Surface
-                            </button>
-                            <button
-                                onClick={handleCreateText}
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
-                            >
-                                <Type className="w-3 h-3" />
-                                Text
+                                <Sparkles className="w-3 h-3" />
+                                Auto Detect Surfaces
                             </button>
                         </div>
 
@@ -120,6 +131,12 @@ export function LeftSidebar() {
                     </div>
                 )}
             </div>
+
+            {/* Auto Detect Dialog */}
+            <AutoDetectDialog
+                isOpen={showAutoDetect}
+                onClose={() => setShowAutoDetect(false)}
+            />
         </div>
     );
 }

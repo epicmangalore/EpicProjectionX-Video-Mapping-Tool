@@ -56,57 +56,99 @@ export function Surface({ surface }: SurfaceProps) {
     const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
     const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined);
 
-    // Hydrate Blob URLs for Output Window or use direct URL
+    const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
+
+    // Hydrate Blob URLs for Output Window AND Editor (persistence fix)
     useEffect(() => {
         if (!mediaAsset) {
+            console.log("🔴 No mediaAsset");
             setResolvedUrl(undefined);
             return;
         }
 
         const url = mediaAsset.url;
+        console.log("🔵 Media asset URL check:", { name: mediaAsset.name, url, type: mediaAsset.type });
+
         if (!url) {
+            console.log("🔴 No URL for media asset:", mediaAsset.name);
             setResolvedUrl(undefined);
             return;
         }
 
-        if (isOutput && url.startsWith("blob:")) {
-            fetch(url, { method: "HEAD" })
-                .then((res) => {
-                    if (res.ok) setResolvedUrl(url);
-                    else throw new Error("Invalid blob");
-                })
-                .catch(() => {
-                    import("@/lib/db").then(({ db }) => {
-                        db.files.get(mediaAsset.id).then((file) => {
-                            if (file?.blob) {
-                                const newUrl = URL.createObjectURL(file.blob);
-                                setResolvedUrl(newUrl);
-                            }
-                        });
-                    });
-                });
+        // Always use blob URLs directly - don't validate with HEAD request
+        // Blob URLs don't support HEAD requests, so the check always fails
+        if (url.startsWith("blob:")) {
+            console.log("✅ Using blob URL directly:", url.substring(0, 50) + "...");
+            setResolvedUrl(url);
         } else {
+            console.log("✅ Using HTTP/HTTPS URL directly:", url);
             setResolvedUrl(url);
         }
-    }, [mediaAsset, isOutput]);
+    }, [mediaAsset, updateMediaAsset]);
 
     useEffect(() => {
-        if (!mediaAsset || !resolvedUrl) return;
+        if (!mediaAsset || !resolvedUrl) {
+            console.log("No media or URL:", { mediaAsset: mediaAsset?.name, resolvedUrl });
+            return;
+        }
 
         if (mediaAsset.type === "video") {
+            console.log("Creating video element for:", mediaAsset.name, "URL:", resolvedUrl);
             const video = document.createElement("video");
             video.src = resolvedUrl;
             video.crossOrigin = "anonymous";
             video.loop = true;
             video.muted = true;
             video.playsInline = true;
-            if (isPlayingGlobal) video.play().catch(() => { });
+
+            // Important for long videos: preload metadata
+            video.preload = "auto";
+
+            const onLoadedMetadata = () => {
+                console.log("✓ Video metadata loaded:", mediaAsset.name, "Duration:", video.duration);
+            };
+
+            const onCanPlay = () => {
+                console.log("✓ Video can play:", mediaAsset.name);
+            };
+
+            const onError = (e: any) => {
+                console.error("✗ Video error for", mediaAsset.name, ":", video.error, e);
+            };
+
+            const onLoadStart = () => {
+                console.log("→ Video load started:", mediaAsset.name);
+            };
+
+            const onPlaying = () => {
+                console.log("▶ Video is playing:", mediaAsset.name);
+            };
+
+            const onWaiting = () => {
+                console.log("⏸ Video is waiting/buffering:", mediaAsset.name);
+            };
+
+            video.addEventListener("loadedmetadata", onLoadedMetadata);
+            video.addEventListener("canplay", onCanPlay);
+            video.addEventListener("error", onError);
+            video.addEventListener("loadstart", onLoadStart);
+            video.addEventListener("playing", onPlaying);
+            video.addEventListener("waiting", onWaiting);
+
             setVideoElement(video);
             videoRef.current = video;
 
             return () => {
+                console.log("Cleaning up video element:", mediaAsset.name);
+                video.removeEventListener("loadedmetadata", onLoadedMetadata);
+                video.removeEventListener("canplay", onCanPlay);
+                video.removeEventListener("error", onError);
+                video.removeEventListener("loadstart", onLoadStart);
+                video.removeEventListener("playing", onPlaying);
+                video.removeEventListener("waiting", onWaiting);
                 video.pause();
                 video.src = "";
+                video.load(); // Release memory
                 setVideoElement(null);
             };
         }
@@ -140,7 +182,27 @@ export function Surface({ surface }: SurfaceProps) {
                 setVideoElement(null);
             };
         }
-    }, [mediaAsset, resolvedUrl, isPlayingGlobal]);
+    }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl]);
+
+    // Separate effect to handle play/pause based on global playback state
+    useEffect(() => {
+        if (!videoRef.current) return;
+
+        const video = videoRef.current;
+        console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name);
+
+        if (isPlayingGlobal) {
+            if (video.readyState >= 3) {
+                video.play().catch(err => {
+                    console.warn("Play failed:", err);
+                });
+            } else {
+                console.log("Video not ready yet, waiting for canplay event");
+            }
+        } else {
+            video.pause();
+        }
+    }, [isPlayingGlobal, mediaAsset?.name]);
 
     // Create texture from media
     const texture = useMemo(() => {
@@ -170,9 +232,17 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if ((mediaAsset.type === "video" || mediaAsset.type === "webcam") && videoElement) {
+            console.log("Creating VideoTexture for:", mediaAsset.name, "Video state:", {
+                readyState: videoElement.readyState,
+                paused: videoElement.paused,
+                currentTime: videoElement.currentTime,
+                duration: videoElement.duration
+            });
             const tex = new THREE.VideoTexture(videoElement);
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
+            tex.format = THREE.RGBAFormat;
+            tex.needsUpdate = true;
             return tex;
         }
 
@@ -336,23 +406,18 @@ export function Surface({ surface }: SurfaceProps) {
         if (settings.fit === "cover") {
             if (surfaceAspect > mediaAspect) {
                 // Surface is wider than media: Fit to width, crop height
-                // scale Y needs to be > 1
-                // surfaceAspect / mediaAspect > 1
-                sy = surfaceAspect / mediaAspect;
+                // To crop height, we need to show LESS vertical UV.
+                // Scale < 1 means shrinking the UV space (zooming in on the texture).
+                sy = mediaAspect / surfaceAspect;
             } else {
                 // Surface is taller than media: Fit to height, crop width
-                sx = mediaAspect / surfaceAspect;
+                sx = surfaceAspect / mediaAspect;
             }
         } else if (settings.fit === "contain") {
             if (surfaceAspect > mediaAspect) {
                 // Surface is wider: Fit to height, letterbox width
-                // sx needs to be > 1 to "shrink" the texture (make it cover less UV space? No)
-                // To "contain", we see the whole image. 
-                // UV space 0..1 covers the whole image.
-                // If we want to show image in center, we scale UVs UP?
-                // Wait. UV 0..1 maps to Image 0..1.
-                // If we multiply UV by 2, we sample Image at 2. 
-                // To ZOOM OUT (contain), we need to multiply UVs by > 1.
+                // To show MORE width (black bars), we need to show MORE UV horizontal space.
+                // Scale > 1 means expanding UV space (zooming out).
                 sx = surfaceAspect / mediaAspect;
             } else {
                 sy = mediaAspect / surfaceAspect;
@@ -532,32 +597,59 @@ export function Surface({ surface }: SurfaceProps) {
     useFrame((state) => {
         if (!meshRef.current) return;
 
+
+        // Throttled Timeline/State access
+        const timelineState = useTimelineStore.getState();
+        const currentTime = timelineState.currentTime;
+
+        // CRITICAL: Update video texture only when playing or seeking + sync with timeline
+        if (texture && texture instanceof THREE.VideoTexture && videoElement) {
+            // Only force texture update if video is actually playing or seeking to save massive GPU bandwidth
+            const isPlaying = !videoElement.paused && !videoElement.ended;
+            if (isPlaying || videoElement.seeking) {
+                texture.needsUpdate = true;
+            }
+
+            // Sync video currentTime with timeline position
+            // Only seek if difference is significant (> 0.1s) to avoid jitter
+            if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
+                const timeDiff = Math.abs(videoElement.currentTime - currentTime);
+
+                if (timeDiff > 0.1) {
+                    videoElement.currentTime = currentTime;
+                }
+            }
+        }
+
         // Timeline Visibility Check
         if (groupRef.current) {
-            const currentTime = useTimelineStore.getState().currentTime;
             const endTime = surface.startTime + surface.duration;
             const isInTimeRange = currentTime >= surface.startTime && currentTime < endTime;
 
             // Only override visibility if surface is "globally" visible (eye icon on)
-            // If the eye icon is off (surface.visible === false), it stays hidden.
             if (surface.visible) {
-                groupRef.current.visible = isInTimeRange;
+                if (groupRef.current.visible !== isInTimeRange) {
+                    groupRef.current.visible = isInTimeRange;
+                }
             } else {
-                groupRef.current.visible = false;
+                if (groupRef.current.visible) {
+                    groupRef.current.visible = false;
+                }
             }
         }
 
-        // Apply audio mappings if enabled
+        // Apply audio mappings if enabled (Throttled or simplified)
         let reactiveOpacity = surface.opacity;
         let reactiveBlur = effects.blur;
         let reactiveChromatic = effects.chromaticAberration;
 
-        const levels = useAudioStore.getState().levels as any;
-
         if (surface.audioMappings.length > 0) {
+            const audioState = useAudioStore.getState();
+            const levels = audioState.levels as any;
+
             surface.audioMappings.forEach(mapping => {
                 if (!mapping.enabled) return;
-                const level = levels[mapping.band];
+                const level = levels[mapping.band] || 0;
                 const value = mapping.min + (mapping.max - mapping.min) * level;
 
                 if (mapping.property === "opacity") reactiveOpacity = value;
@@ -762,7 +854,8 @@ export function Surface({ surface }: SurfaceProps) {
             )}
 
             {/* Selection UI and Handles - rendered within the local space of the group */}
-            {!isOutput && (
+            {/* Selection UI and Handles - rendered within the local space of the group */}
+            {!isOutput && isSelected && (
                 <>
                     {/* Standard outline (follows the unit plane) */}
                     <mesh position={[0, 0, 0.01]}>

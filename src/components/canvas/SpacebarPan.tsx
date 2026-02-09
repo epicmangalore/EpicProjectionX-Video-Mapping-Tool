@@ -15,7 +15,19 @@ export function SpacebarPan() {
         const orbitControls = controls as unknown as OrbitControlsImpl;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.code === "Space" && !spacePressed.current) {
+            if (e.code === "Space") {
+                // Ignore key repeat
+                if (spacePressed.current) return;
+
+                // Ignore inputs
+                const activeTag = document.activeElement?.tagName.toLowerCase();
+                if (activeTag === "input" || activeTag === "textarea") return;
+
+                // Only activate if hovering canvas (to avoid conflict with Play/Pause outside)
+                // We access the store directly to get fresh state without re-binding listeners
+                const { isCanvasHovered } = require("@/store/ui-store").useUIStore.getState();
+                if (!isCanvasHovered) return;
+
                 spacePressed.current = true;
                 canvas.style.cursor = "grab";
                 e.preventDefault();

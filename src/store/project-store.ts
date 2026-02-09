@@ -751,6 +751,23 @@ export const useProjectStore = create<ProjectStore>()(
                 cues: state.cues,
                 projectSettings: state.projectSettings,
             }),
+            merge: (persistedState, currentState) => {
+                // Merge persisted state with current state, ensuring defaults for missing values
+                const merged = {
+                    ...currentState,
+                    ...(persistedState as any),
+                };
+
+                // Ensure projectSettings has all default values
+                if (merged.projectSettings) {
+                    merged.projectSettings = {
+                        ...defaultProjectSettings,
+                        ...merged.projectSettings,
+                    };
+                }
+
+                return merged;
+            },
         }
     )
 );

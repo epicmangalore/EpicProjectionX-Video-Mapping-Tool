@@ -14,7 +14,12 @@ export function MediaLibrary() {
 
     const processFiles = async (files: FileList | File[]) => {
         for (const file of Array.from(files)) {
-            await processFile(file, addMediaAsset);
+            try {
+                await processFile(file, addMediaAsset);
+            } catch (error: any) {
+                console.error('Failed to process file:', file.name, error);
+                // Error alert is already shown in processFile for quota errors
+            }
         }
     };
 

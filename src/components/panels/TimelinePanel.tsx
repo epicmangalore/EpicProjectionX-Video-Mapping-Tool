@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTimelineStore } from "@/store/timeline-store";
 import { useProjectStore } from "@/store/project-store";
+import { useUIStore } from "@/store/ui-store";
 import {
     Play,
     Pause,
@@ -64,6 +65,30 @@ export function TimelinePanel() {
     useEffect(() => {
         updateTimeline(updateSurface);
     }, [keyframes, duration, updateTimeline, updateSurface]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.code === "Space") {
+                // Ignore if user is typing in an input or textarea
+                const activeTag = document.activeElement?.tagName.toLowerCase();
+                if (activeTag === "input" || activeTag === "textarea") return;
+
+                // Ignore if interacting with canvas (Spacebar = Pan)
+                if (useUIStore.getState().isCanvasHovered) return;
+
+                e.preventDefault();
+                if (useTimelineStore.getState().isPlaying) {
+                    pause();
+                } else {
+                    play();
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [pause, play]);
 
     // Format time as HH:MM:SS.mmm
     const formatTime = (seconds: number) => {
@@ -167,12 +192,16 @@ export function TimelinePanel() {
                         <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Duration</div>
                         <input
                             type="number"
-                            value={duration}
-                            onChange={(e) => setDuration(Math.min(43200, Math.max(1, parseInt(e.target.value) || 30)))}
+                            value={Number((duration / 60).toFixed(2))} // Display as minutes
+                            step="0.1"
+                            onChange={(e) => {
+                                const mins = parseFloat(e.target.value) || 0.5;
+                                setDuration(Math.min(43200, Math.max(1, mins * 60)));
+                            }}
                             className="w-16 h-6 bg-zinc-800 border border-zinc-700 rounded text-xs font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
-                            title="Max 12 hours (43200s)"
+                            title="Max 12 hours (720m)"
                         />
-                        <span className="text-[10px] text-zinc-600 font-mono">s</span>
+                        <span className="text-[10px] text-zinc-600 font-mono">m</span>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="text-[9px] text-zinc-600 font-bold uppercase">MASTER BPM 120.00</div>
@@ -241,16 +270,29 @@ export function TimelinePanel() {
                                 </span>
                             </div>
                         ))}
+
+                        {/* Playhead Handle (Draggable via Ruler) */}
+                        <div
+                            className="absolute top-0 bottom-0 z-10 pointer-events-none"
+                            style={{ left: `${(currentTime / duration) * 100}%` }}
+                        >
+                            {/* Handle Shape */}
+                            <div className="absolute bottom-0 -translate-x-1/2 translate-y-1/2">
+                                <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5.5 12L0 6V0H11V6L5.5 12Z" fill="#06b6d4" />
+                                </svg>
+                            </div>
+                            {/* Vertical Line in Ruler */}
+                            <div className="absolute top-0 bottom-0 w-px bg-electric-cyan/50 -translate-x-[0.5px]" />
+                        </div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar relative bg-zinc-950/20" ref={scrollRef}>
-                        {/* Playhead */}
+                        {/* Playhead Line (Content Area) */}
                         <div
                             className="absolute top-0 bottom-0 w-px bg-electric-cyan/40 z-30 pointer-events-none shadow-[0_0_8px_rgba(0,240,255,0.4)]"
                             style={{ left: `${(currentTime / duration) * 100}%` }}
-                        >
-                            <div className="absolute top-0 -translate-x-1/2 -translate-y-[1px] w-2 h-2 rounded-full bg-electric-cyan" />
-                        </div>
+                        />
 
                         {surfaces.map(surface => (
                             <TimelineTrackContent
