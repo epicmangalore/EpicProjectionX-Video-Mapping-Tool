@@ -690,22 +690,8 @@ export function SurfaceProperties() {
                                 value={selectedSurface.meshWarp.gridSize}
                                 onChange={(e) => {
                                     const newSize = parseInt(e.target.value);
-                                    // Re-initialize points (resetting warp) when grid size changes
-                                    // Or try to interpolate? For now, reset is safer/easier.
-                                    const controlPoints = [];
-                                    for (let i = 0; i <= newSize; i++) {
-                                        const row = [];
-                                        for (let j = 0; j <= newSize; j++) {
-                                            row.push({
-                                                x: (j / newSize) - 0.5,
-                                                y: 0.5 - (i / newSize)
-                                            });
-                                        }
-                                        controlPoints.push(row);
-                                    }
-                                    updateSurface(selectedSurface.id, {
-                                        meshWarp: { gridSize: newSize, controlPoints }
-                                    });
+                                    // Use the store action to properly initialize mesh warp
+                                    initializeMeshWarp(selectedSurface.id, newSize);
                                 }}
                                 className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
                             />
