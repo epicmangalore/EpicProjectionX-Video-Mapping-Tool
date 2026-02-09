@@ -25,6 +25,7 @@ export function SurfaceProperties() {
     const removeCorner = useProjectStore((state) => state.removeCorner);
     const resetCorners = useProjectStore((state) => state.resetCorners);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
+    const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const toolMode = useUIStore((state) => state.toolMode);
     const setToolMode = useUIStore((state) => state.setToolMode);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -661,29 +662,7 @@ export function SurfaceProperties() {
                                 } else {
                                     if (!selectedSurface.meshWarp) {
                                         // Initialize default mesh warp
-                                        const gridSize = 3;
-                                        const controlPoints = [];
-                                        for (let i = 0; i <= gridSize; i++) {
-                                            const row = [];
-                                            for (let j = 0; j <= gridSize; j++) {
-                                                // Normalized UVs to Local Coords (centered at 0,0, size 1x1)
-                                                // UV (0,0) -> (-0.5, 0.5) [TL]
-                                                // UV (1,0) -> (0.5, 0.5) [TR]
-                                                // UV (0,1) -> (-0.5, -0.5) [BL]
-                                                // UV (1,1) -> (0.5, -0.5) [BR]
-                                                // Wait, plane Geometry is centered.
-                                                // x: (j / gridSize) - 0.5
-                                                // y: 0.5 - (i / gridSize)
-                                                row.push({
-                                                    x: (j / gridSize) - 0.5,
-                                                    y: 0.5 - (i / gridSize) // Y is up in 3D, but row 0 is top
-                                                });
-                                            }
-                                            controlPoints.push(row);
-                                        }
-                                        updateSurface(selectedSurface.id, {
-                                            meshWarp: { gridSize, controlPoints }
-                                        });
+                                        initializeMeshWarp(selectedSurface.id);
                                     }
                                     setToolMode("mesh-warp");
                                 }

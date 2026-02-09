@@ -2,6 +2,12 @@ import { create } from "zustand";
 
 export type ToolMode = "select" | "corner-pin" | "mesh-warp" | "transform" | "pen" | "hand" | "surface";
 
+export interface SnapLine {
+    id: string; // "x-100" or "y-500"
+    type: "horizontal" | "vertical";
+    position: number; // x or y value
+}
+
 interface UIStore {
     // UI state
     toolMode: ToolMode;
@@ -11,6 +17,7 @@ interface UIStore {
     leftPanelOpen: boolean;
     rightPanelOpen: boolean;
     bottomPanelOpen: boolean;
+    activeSnapLines: SnapLine[];
     // Actions
     setToolMode: (mode: ToolMode) => void;
     toggleGrid: () => void;
@@ -19,6 +26,7 @@ interface UIStore {
     toggleLeftPanel: () => void;
     toggleRightPanel: () => void;
     toggleBottomPanel: () => void;
+    setSnapLines: (lines: SnapLine[]) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -30,6 +38,7 @@ export const useUIStore = create<UIStore>((set) => ({
     leftPanelOpen: true,
     rightPanelOpen: true,
     bottomPanelOpen: true,
+    activeSnapLines: [],
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
@@ -43,4 +52,5 @@ export const useUIStore = create<UIStore>((set) => ({
         set((state) => ({ rightPanelOpen: !state.rightPanelOpen })),
     toggleBottomPanel: () =>
         set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
+    setSnapLines: (lines) => set({ activeSnapLines: lines }),
 }));

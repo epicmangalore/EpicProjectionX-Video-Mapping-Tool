@@ -21,6 +21,7 @@ import { ResizeHandles } from "./ResizeHandles";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { SurfaceBorder } from "./SurfaceBorder";
+import { useSnapping } from "@/hooks/useSnapping";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -40,6 +41,7 @@ export function Surface({ surface }: SurfaceProps) {
     const toolMode = useUIStore((state) => state.toolMode);
     const projectSettings = useProjectStore((state) => state.projectSettings);
     const isOutput = useOutputStore((state) => state.isOutput);
+    const { prepareSnap, checkSnap, clearSnap } = useSnapping();
 
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
@@ -663,6 +665,8 @@ export function Surface({ surface }: SurfaceProps) {
             y: s.position.y
         }));
 
+        prepareSnap(selectedIds);
+
         const onPointerMove = (moveEvent: PointerEvent) => {
             const x = ((moveEvent.clientX - rect.left) / rect.width) * 2 - 1;
             const y = -((moveEvent.clientY - rect.top) / rect.height) * 2 + 1;
@@ -674,17 +678,32 @@ export function Surface({ surface }: SurfaceProps) {
             const deltaY = vector.y - startVector.y;
 
             // Move all selected surfaces
+            // Calculate proposed position for THIS surface (the one being dragged)
+            const proposedX = surface.position.x + deltaX;
+            const proposedY = surface.position.y + deltaY;
+
+            // Check snapping for the primary dragged surface
+            const snap = checkSnap({
+                center: { x: proposedX, y: proposedY },
+                min: { x: proposedX - surface.scale.x / 2, y: proposedY - surface.scale.y / 2 },
+                max: { x: proposedX + surface.scale.x / 2, y: proposedY + surface.scale.y / 2 }
+            });
+
+            const finalDeltaX = deltaX + snap.offset.x;
+            const finalDeltaY = deltaY + snap.offset.y;
+
             initialPositions.forEach(pos => {
                 updateSurface(pos.id, {
                     position: {
-                        x: pos.x + deltaX,
-                        y: pos.y + deltaY
+                        x: pos.x + finalDeltaX,
+                        y: pos.y + finalDeltaY
                     }
                 });
             });
         };
 
         const onPointerUp = () => {
+            clearSnap();
             window.removeEventListener("pointermove", onPointerMove);
             window.removeEventListener("pointerup", onPointerUp);
             gl.domElement.style.cursor = "default";

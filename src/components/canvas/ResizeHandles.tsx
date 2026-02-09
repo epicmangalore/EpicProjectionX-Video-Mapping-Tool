@@ -5,6 +5,7 @@ import { useThree } from "@react-three/fiber";
 import { Line } from "@react-three/drei";
 import * as THREE from "three";
 import { useProjectStore, type Surface, type Vector2 } from "@/store/project-store";
+import { useSnapping } from "@/hooks/useSnapping";
 
 interface ResizeHandlesProps {
     surface: Surface;
@@ -16,6 +17,7 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
     const { camera, gl } = useThree();
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const saveHistory = useProjectStore((state) => state.saveHistory);
+    const { prepareSnap, checkSnap, clearSnap } = useSnapping();
     const [dragging, setDragging] = useState<HandlePosition | null>(null);
     const startData = useRef<{
         pos: Vector2;
@@ -44,6 +46,9 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
             mouse: mouseVector,
             aspect: surface.scale.x / surface.scale.y,
         };
+
+        // Prepare snap lines (exclude current surface)
+        prepareSnap([surface.id]);
 
         const onPointerMove = (moveEvent: PointerEvent) => {
             if (!startData.current) return;
@@ -164,6 +169,94 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
                 worldOffsetY = localOffsetX * Math.sin(surface.rotation) + localOffsetY * Math.cos(surface.rotation);
             }
 
+
+            // Define activeSnap - for now always true, or we can add a toggle later
+            const activeSnap = true;
+
+            // --- SNAPPING INTEGRATION START ---
+            // Only snap if not rotating, not distorting, and not holding Shift (maybe?)
+            // For now, let's keep it simple: Snap only if no modifier keys (or maybe just Alt allowed?)
+            // And mostly for non-rotated surfaces for best UX initially.
+            // But let's try to support it generally.
+
+            // We need to know which edge is moving.
+            // Construct the proposed AABB of the surface
+            // This is actually hard because we only know scale/pos.
+            // If rotation is 0:
+            // MinX = pos.x - scale.x/2
+            // MaxX = pos.x + scale.x/2
+            // etc.
+
+            if (activeSnap && Math.abs(surface.rotation) < 0.1) { // Only snap if roughly axis aligned for now
+                const halfW = nextScaleX / 2;
+                const halfH = nextScaleY / 2;
+                const nextX = startData.current.pos.x + worldOffsetX;
+                const nextY = startData.current.pos.y + worldOffsetY;
+
+                // Check snapping
+                const snap = checkSnap({
+                    center: { x: nextX, y: nextY },
+                    min: { x: nextX - halfW, y: nextY - halfH },
+                    max: { x: nextX + halfW, y: nextY + halfH }
+                });
+
+                // Apply Snap Offset
+                // If we snap X, we need to adjust Scale X and Position X
+                // This depends on WHICH handle we are holding.
+                // If 'r' handle: 
+                //   newRight = currentRight + offset
+                //   position changes by offset/2
+                //   scale changes by offset
+
+                // This is getting complicated to back-calculate standard logic.
+                // Simpler: Apply snap to the world position offset directly? 
+                // No, that moves the whole object. Resizing means moving an edge.
+
+                // Let's rely on visual feedback for now or implement smart logic later?
+                // User wants "Snapping System".
+                // Let's implement snapping for the HANDLE position.
+
+                // Actually, if we just adjust `worldOffsetX` and `nextScaleX`...
+                // If I snap the right edge, `nextScaleX` increases by `snap.x`. `worldOffsetX` increases by `snap.x / 2`.
+                // Let's try to apply the snap offset to the dimensions.
+
+                if (snap.offset.x !== 0 || snap.offset.y !== 0) {
+                    // We need to know if the snap applies to the edge we are moving.
+                    // checkSnap returns offset for ANY matched edge.
+
+                    // If moving 'r', we care about Max X match.
+                    // If moving 'l', we care about Min X match.
+
+                    // For now, let's just create the visual lines using checkSnap but NOT force the value
+                    // to avoid jumpy resizing until we have robust math?
+                    // No, user wants snapping.
+
+                    // Let's try a simple approach: verify which edge snapped in checkSnap?
+                    // checkSnap logic is: find closest match.
+
+                    // We can just add the offset to the relevant dimension if it makes sense.
+
+                    // If dragging 'r':
+                    if (pos.includes('r')) {
+                        nextScaleX += snap.offset.x * (altPressed ? 2 : 1);
+                        if (!altPressed) worldOffsetX += snap.offset.x / 2;
+                    }
+                    if (pos.includes('l')) {
+                        nextScaleX -= snap.offset.x * (altPressed ? 2 : 1);
+                        if (!altPressed) worldOffsetX += snap.offset.x / 2;
+                    }
+                    if (pos.includes('t')) {
+                        nextScaleY += snap.offset.y * (altPressed ? 2 : 1);
+                        if (!altPressed) worldOffsetY += snap.offset.y / 2;
+                    }
+                    if (pos.includes('b')) {
+                        nextScaleY -= snap.offset.y * (altPressed ? 2 : 1);
+                        if (!altPressed) worldOffsetY += snap.offset.y / 2;
+                    }
+                }
+            }
+            // --- SNAPPING INTEGRATION END ---
+
             updateSurface(surface.id, {
                 scale: { x: nextScaleX, y: nextScaleY },
                 position: { x: startData.current.pos.x + worldOffsetX, y: startData.current.pos.y + worldOffsetY }
@@ -172,6 +265,7 @@ export function ResizeHandles({ surface }: ResizeHandlesProps) {
 
         const onPointerUp = () => {
             setDragging(null);
+            clearSnap();
             window.removeEventListener("pointermove", onPointerMove);
             window.removeEventListener("pointerup", onPointerUp);
         };

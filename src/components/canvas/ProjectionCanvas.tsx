@@ -16,6 +16,7 @@ import { useOutputStore } from "@/store/output-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useFrame } from "@react-three/fiber";
 import { SelectionBox } from "./SelectionBox";
+import { SnapLines } from "./SnapLines";
 
 function AudioManager() {
     const updateLevels = useAudioStore((state) => state.updateLevels);
@@ -81,6 +82,9 @@ export function ProjectionCanvas() {
 
             {/* Marquee Selection Box */}
             {!isOutput && <SelectionBox />}
+
+            {/* Snap Lines */}
+            {!isOutput && <SnapLines />}
 
             {/* Surface Creation Tool */}
             {!isOutput && <SurfaceTool />}
