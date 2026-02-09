@@ -80,3 +80,13 @@ export function mapRange(
 ): number {
     return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
 }
+
+/**
+ * Truncate a string in the middle if it exceeds a certain length
+ */
+export function truncateMiddle(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    const start = Math.ceil(maxLength / 2);
+    const end = Math.floor(maxLength / 2);
+    return `${text.substring(0, start)}...${text.substring(text.length - end)}`;
+}

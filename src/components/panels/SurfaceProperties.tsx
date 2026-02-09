@@ -10,7 +10,11 @@ import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Itali
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
-import { generateId } from "@/lib/utils";
+import { generateId, truncateMiddle } from "@/lib/utils";
+
+// ... (existing imports)
+
+// ...
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -135,7 +139,7 @@ export function SurfaceProperties() {
                                             {asset.type === "video" && "🎬 "}
                                             {asset.type === "color" && "🎨 "}
                                             {asset.type === "text" && "📝 "}
-                                            {asset.name}
+                                            {truncateMiddle(asset.name, 25)}
                                         </option>
                                     ))}
                             </optgroup>

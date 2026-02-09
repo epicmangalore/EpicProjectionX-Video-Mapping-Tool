@@ -5,31 +5,89 @@ import { MediaAsset } from "@/store/project-store";
 
 import { db } from "@/lib/db";
 
+const MAX_THUMBNAIL_SIZE = 250 * 1024 * 1024; // 250MB
+const THUMBNAIL_TIMEOUT = 5000; // 5 seconds
+
 export const generateThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve) => {
         if (file.type.startsWith("image/")) {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target?.result as string);
+            reader.onerror = () => resolve("");
             reader.readAsDataURL(file);
         } else if (file.type.startsWith("video/")) {
+            // Skip thumbnail for large video files to prevent crashes
+            if (file.size > MAX_THUMBNAIL_SIZE) {
+                console.warn(`Skipping thumbnail generation for heavy video: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+                resolve("");
+                return;
+            }
+
             const video = document.createElement("video");
+            let isResolved = false;
+
+            const cleanup = () => {
+                if (video.src) {
+                    URL.revokeObjectURL(video.src);
+                    video.removeAttribute('src');
+                }
+                video.remove();
+            };
+
+            const safeResolve = (value: string) => {
+                if (!isResolved) {
+                    isResolved = true;
+                    resolve(value);
+                    cleanup();
+                }
+            };
+
+            // Timeout safety
+            const timeoutId = setTimeout(() => {
+                if (!isResolved) {
+                    console.warn("Thumbnail generation timed out for:", file.name);
+                    safeResolve("");
+                }
+            }, THUMBNAIL_TIMEOUT);
+
             video.preload = "metadata";
+            video.muted = true;
+            video.playsInline = true;
+
             video.onloadedmetadata = () => {
                 video.currentTime = 1; // Seek to 1 second
             };
+
             video.onseeked = () => {
-                const canvas = document.createElement("canvas");
-                canvas.width = 320;
-                canvas.height = 180;
-                const ctx = canvas.getContext("2d");
-                ctx?.drawImage(video, 0, 0, 320, 180);
-                resolve(canvas.toDataURL("image/jpeg"));
-                video.remove(); // Cleanup
+                try {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = 320;
+                    canvas.height = 180;
+                    const ctx = canvas.getContext("2d");
+                    ctx?.drawImage(video, 0, 0, 320, 180);
+                    const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+                    clearTimeout(timeoutId);
+                    safeResolve(dataUrl);
+                } catch (e) {
+                    console.warn("Failed to generate video thumbnail frame:", e);
+                    clearTimeout(timeoutId);
+                    safeResolve("");
+                }
             };
+
             video.onerror = () => {
-                resolve(""); // Fallback or empty
+                console.warn("Video load error for thumbnail:", file.name);
+                clearTimeout(timeoutId);
+                safeResolve("");
             };
-            video.src = URL.createObjectURL(file);
+
+            try {
+                video.src = URL.createObjectURL(file);
+            } catch (e) {
+                console.error("Failed to create object URL:", e);
+                clearTimeout(timeoutId);
+                safeResolve("");
+            }
         } else {
             resolve("");
         }
