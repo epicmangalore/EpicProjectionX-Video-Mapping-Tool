@@ -7,6 +7,8 @@ import type { Surface, Vector2 } from "@/store/project-store";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 
+import { Line } from "@react-three/drei";
+
 interface MeshWarpProps {
     surface: Surface;
 }
@@ -15,7 +17,7 @@ export function MeshWarp({ surface }: MeshWarpProps) {
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const saveHistory = useProjectStore((state) => state.saveHistory);
     const toolMode = useUIStore((state) => state.toolMode);
-    const [draggingPoint, setDraggingPoint] = useState<{ row: number; col: number } | null>(null);
+    const [draggingPoint, setDraggingPoint] = useState<{ row: number; col: number; type: "pos" | "handleLeft" | "handleRight" | "handleTop" | "handleBottom" } | null>(null);
     const { camera, gl } = useThree();
 
     if (toolMode !== "mesh-warp") return null;
@@ -25,10 +27,10 @@ export function MeshWarp({ surface }: MeshWarpProps) {
 
     const groupRef = useRef<THREE.Group>(null);
 
-    const handlePointDrag = (row: number, col: number, event: any) => {
+    const handleDrag = (row: number, col: number, type: "pos" | "handleLeft" | "handleRight" | "handleTop" | "handleBottom", event: any) => {
         event.stopPropagation();
         saveHistory();
-        setDraggingPoint({ row, col });
+        setDraggingPoint({ row, col, type });
 
         const onPointerMove = (e: PointerEvent) => {
             if (!groupRef.current) return;
@@ -51,16 +53,32 @@ export function MeshWarp({ surface }: MeshWarpProps) {
                 const localPos = groupRef.current.worldToLocal(target);
 
                 const newControlPoints = controlPoints.map((rowPoints, r) =>
-                    rowPoints.map((point, c) => {
+                    rowPoints.map((cp, c) => {
                         if (r === row && c === col) {
-                            return { x: localPos.x, y: localPos.y } as Vector2;
+                            if (type === "pos") {
+                                return { ...cp, position: { x: localPos.x, y: localPos.y } };
+                            } else {
+                                // Update handle relative to position
+                                const dx = localPos.x - cp.position.x;
+                                const dy = localPos.y - cp.position.y;
+                                const updatedCp = { ...cp, [type]: { x: dx, y: dy } };
+
+                                // Symmetric update for horizontal handles
+                                if (type === "handleLeft") updatedCp.handleRight = { x: -dx, y: -dy };
+                                if (type === "handleRight") updatedCp.handleLeft = { x: -dx, y: -dy };
+                                // Symmetric update for vertical handles
+                                if (type === "handleTop") updatedCp.handleBottom = { x: -dx, y: -dy };
+                                if (type === "handleBottom") updatedCp.handleTop = { x: -dx, y: -dy };
+
+                                return updatedCp;
+                            }
                         }
-                        return point;
+                        return cp;
                     })
                 );
 
                 updateSurface(surface.id, {
-                    meshWarp: { gridSize, controlPoints: newControlPoints },
+                    meshWarp: { gridSize, controlPoints: newControlPoints as any },
                 });
             }
         };
@@ -75,106 +93,105 @@ export function MeshWarp({ surface }: MeshWarpProps) {
         window.addEventListener("pointerup", onPointerUp);
     };
 
+    const getBezierPoints = (p0: Vector2, h0: Vector2, h1: Vector2, p1: Vector2) => {
+        const points = [];
+        const segments = 20;
+        for (let i = 0; i <= segments; i++) {
+            const t = i / segments;
+            const t2 = t * t;
+            const t3 = t2 * t;
+            const mt = 1 - t;
+            const mt2 = mt * mt;
+            const mt3 = mt2 * mt;
+            points.push([
+                mt3 * p0.x + 3 * mt2 * t * (p0.x + h0.x) + 3 * mt * t2 * (p1.x + h1.x) + t3 * p1.x,
+                mt3 * p0.y + 3 * mt2 * t * (p0.y + h0.y) + 3 * mt * t2 * (p1.y + h1.y) + t3 * p1.y,
+                0
+            ]);
+        }
+        return points;
+    };
+
     return (
         <group ref={groupRef} position={[0, 0, 0.1]}>
-            {/* Draw grid lines */}
-            {controlPoints.map((rowPoints, row) => {
-                if (row < gridSize) {
-                    return rowPoints.map((point, col) => {
-                        if (col < gridSize) {
-                            const nextRow = controlPoints[row + 1];
-                            const nextCol = rowPoints[col + 1];
-
-                            return (
-                                <group key={`grid-${row}-${col}`}>
-                                    {/* Horizontal line */}
-                                    {nextCol && (
-                                        <line>
-                                            <bufferGeometry>
-                                                <bufferAttribute
-                                                    attach="attributes-position"
-                                                    count={2}
-                                                    array={
-                                                        new Float32Array([
-                                                            point.x,
-                                                            point.y,
-                                                            0,
-                                                            nextCol.x,
-                                                            nextCol.y,
-                                                            0,
-                                                        ])
-                                                    }
-                                                    itemSize={3}
-                                                />
-                                            </bufferGeometry>
-                                            <lineBasicMaterial
-                                                color="#7c3aed"
-                                                linewidth={1}
-                                                transparent
-                                                opacity={0.4}
-                                            />
-                                        </line>
-                                    )}
-
-                                    {/* Vertical line */}
-                                    {nextRow && (
-                                        <line>
-                                            <bufferGeometry>
-                                                <bufferAttribute
-                                                    attach="attributes-position"
-                                                    count={2}
-                                                    array={
-                                                        new Float32Array([
-                                                            point.x,
-                                                            point.y,
-                                                            0,
-                                                            nextRow[col].x,
-                                                            nextRow[col].y,
-                                                            0,
-                                                        ])
-                                                    }
-                                                    itemSize={3}
-                                                />
-                                            </bufferGeometry>
-                                            <lineBasicMaterial
-                                                color="#7c3aed"
-                                                linewidth={1}
-                                                transparent
-                                                opacity={0.4}
-                                            />
-                                        </line>
-                                    )}
-                                </group>
-                            );
-                        }
-                        return null;
-                    });
-                }
-                return null;
-            })}
-
-            {/* Draw control points */}
+            {/* Draw grid curves */}
             {controlPoints.map((rowPoints, row) =>
-                rowPoints.map((point, col) => (
-                    <mesh
-                        key={`point-${row}-${col}`}
-                        position={[point.x, point.y, 0]}
-                        onPointerDown={(e) => handlePointDrag(row, col, e)}
-                        scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
-                    >
-                        <circleGeometry args={[0.03, 16]} />
-                        <meshBasicMaterial
-                            color={
-                                draggingPoint?.row === row && draggingPoint?.col === col
-                                    ? "#06b6d4"
-                                    : "#7c3aed"
-                            }
-                            transparent
-                            opacity={0.9}
-                            depthTest={false}
-                        />
-                    </mesh>
+                rowPoints.map((cp, col) => (
+                    <group key={`curves-${row}-${col}`}>
+                        {/* Horizontal curve */}
+                        {col < gridSize && (
+                            <Line
+                                points={getBezierPoints(cp.position, cp.handleRight || { x: 0, y: 0 }, rowPoints[col + 1].handleLeft || { x: 0, y: 0 }, rowPoints[col + 1].position) as any}
+                                color="#06b6d4"
+                                lineWidth={1}
+                                transparent
+                                opacity={0.5}
+                            />
+                        )}
+                        {/* Vertical curve */}
+                        {row < gridSize && (
+                            <Line
+                                points={getBezierPoints(cp.position, cp.handleBottom || { x: 0, y: 0 }, controlPoints[row + 1][col].handleTop || { x: 0, y: 0 }, controlPoints[row + 1][col].position) as any}
+                                color="#06b6d4"
+                                lineWidth={1}
+                                transparent
+                                opacity={0.5}
+                            />
+                        )}
+                    </group>
                 ))
+            )}
+
+            {/* Draw control points and tangent handles */}
+            {controlPoints.map((rowPoints, row) =>
+                rowPoints.map((cp, col) => {
+                    const isSelected = draggingPoint?.row === row && draggingPoint?.col === col;
+
+                    return (
+                        <group key={`point-${row}-${col}`}>
+                            {/* Main Pos Handle */}
+                            <mesh
+                                position={[cp.position.x, cp.position.y, 0]}
+                                onPointerDown={(e) => handleDrag(row, col, "pos", e)}
+                                scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
+                            >
+                                <circleGeometry args={[0.03, 16]} />
+                                <meshBasicMaterial color={isSelected && draggingPoint.type === "pos" ? "#ffffff" : "#06b6d4"} depthTest={false} />
+                            </mesh>
+
+                            {/* Tangent Handles (only if point is selected or being dragged) */}
+                            {isSelected && (
+                                <>
+                                    {["handleLeft", "handleRight", "handleTop", "handleBottom"].map((type) => {
+                                        const h = (cp as any)[type];
+                                        if (!h) return null;
+                                        const hx = cp.position.x + h.x;
+                                        const hy = cp.position.y + h.y;
+                                        return (
+                                            <group key={type}>
+                                                <Line
+                                                    points={[[cp.position.x, cp.position.y, 0], [hx, hy, 0]]}
+                                                    color="#06b6d4"
+                                                    lineWidth={0.5}
+                                                    transparent
+                                                    opacity={0.6}
+                                                />
+                                                <mesh
+                                                    position={[hx, hy, 0]}
+                                                    onPointerDown={(e) => handleDrag(row, col, type as any, e)}
+                                                    scale={[1 / surface.scale.x, 1 / surface.scale.y, 1]}
+                                                >
+                                                    <circleGeometry args={[0.02, 16]} />
+                                                    <meshBasicMaterial color={draggingPoint.type === type ? "#ffffff" : "#06b6d4"} depthTest={false} />
+                                                </mesh>
+                                            </group>
+                                        );
+                                    })}
+                                </>
+                            )}
+                        </group>
+                    );
+                })
             )}
         </group>
     );

@@ -76,20 +76,38 @@ vec4 rgbShift(sampler2D tex, vec2 uv, float amount) {
   return vec4(r, g, b, 1.0);
 }
 
+// Texture transformation
+uniform mat3 uTextureMatrix;
+
+// ... (previous code)
+
 void main() {
   vec4 texColor;
   
-  // Apply effects
+  // Transform UVs
+  vec2 transformedUv = (uTextureMatrix * vec3(vUv, 1.0)).xy;
+
+  // Apply effects using transformed UVs
   if (uBlurAmount > 0.0) {
-    texColor = blur(uTexture, vUv, uBlurAmount);
+    texColor = blur(uTexture, transformedUv, uBlurAmount);
   } else if (uChromaticAberration > 0.0) {
-    texColor = chromaticAberration(uTexture, vUv, uChromaticAberration);
+    texColor = chromaticAberration(uTexture, transformedUv, uChromaticAberration);
   } else if (uRGBShift > 0.0) {
-    texColor = rgbShift(uTexture, vUv, uRGBShift);
+    texColor = rgbShift(uTexture, transformedUv, uRGBShift);
   } else {
-    texColor = texture2D(uTexture, vUv);
+    texColor = texture2D(uTexture, transformedUv);
   }
   
+  // Check if UV is out of bounds [0, 1] for "contain" mode (optional, but good for "contain")
+  // For now, let's rely on texture clamping/repeating settings in Three.js, but standard video textures usually clamp to edge.
+  // If we want transparency outside, we can discard or set alpha to 0.
+  if (transformedUv.x < 0.0 || transformedUv.x > 1.0 || transformedUv.y < 0.0 || transformedUv.y > 1.0) {
+      // For "contain", we might want transparent borders. 
+      // But let's stick to simple texture sampling first. 
+      // Actually, standard behavior for "contain" with RepeatWrapping is repeat, ClampToEdge is streak.
+      // We'll handle wrapping in Surface.tsx
+  }
+
   // Apply brightness
   texColor.rgb += uBrightness;
   
@@ -111,12 +129,13 @@ void main() {
   // Apply opacity
   texColor.a *= uOpacity;
   
-  // Apply edge blending
+  // Apply edge blending (using original vUv or transformed? Usually original surface UVs)
   float leftBlend = 1.0;
   float rightBlend = 1.0;
   float topBlend = 1.0;
   float bottomBlend = 1.0;
   
+  // Blending should be based on the physical surface edges, so keep vUv
   if (uBlendZones.x > 0.0 && vUv.x < uBlendZones.x) {
     leftBlend = pow(smoothstep(0.0, 1.0, vUv.x / uBlendZones.x), uBlendGamma);
   }

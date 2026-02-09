@@ -20,6 +20,8 @@ import { useState } from "react";
 import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon, Pen } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+import { WarpControlBar } from "@/components/canvas/WarpControlBar";
+
 export default function Home() {
     const setToolMode = useUIStore((state) => state.setToolMode);
     const toolMode = useUIStore((state) => state.toolMode);
@@ -34,8 +36,20 @@ export default function Home() {
     const [showSettings, setShowSettings] = useState(false);
 
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
+    const surfaces = useProjectStore((state) => state.surfaces);
+    const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const deselectAll = useProjectStore((state) => state.deselectAll);
+
+    const handleMeshWarpClick = () => {
+        if (selectedIds.length > 0) {
+            const surface = surfaces.find(s => s.id === selectedIds[0]);
+            if (surface && !surface.meshWarp) {
+                initializeMeshWarp(surface.id);
+            }
+        }
+        setToolMode("mesh-warp");
+    };
 
     const undo = useProjectStore((state) => state.undo);
     const redo = useProjectStore((state) => state.redo);
@@ -165,7 +179,7 @@ export default function Home() {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <button
-                                        onClick={() => setToolMode("mesh-warp")}
+                                        onClick={handleMeshWarpClick}
                                         className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "mesh-warp"
                                             ? "bg-zinc-800 text-white shadow-sm"
                                             : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
@@ -246,6 +260,7 @@ export default function Home() {
                             {/* Centered canvas container with padding for "Artboard" feel */}
                             <div className="absolute inset-4 bg-black border border-white/5 shadow-2xl rounded-sm overflow-hidden">
                                 <ProjectionCanvas />
+                                <WarpControlBar />
                             </div>
 
                             {/* Performance Monitor Overlay */}

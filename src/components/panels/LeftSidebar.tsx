@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, Image, Plus, Type, Video, Monitor, Scan } from "lucide-react";
+import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { MediaLibrary } from "./MediaLibrary";
 import { useProjectStore } from "@/store/project-store";
@@ -16,15 +16,15 @@ export function LeftSidebar() {
     const addSurface = useProjectStore((state) => state.addSurface);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
 
+    const toolMode = useUIStore((state) => state.toolMode);
+    const setToolMode = useUIStore((state) => state.setToolMode);
+
     const handleCreateSurface = () => {
-        const mediaId = generateId();
-        addMediaAsset({
-            id: mediaId,
-            name: "Gray Fill",
-            type: "color",
-            color: "#808080", // Neutral gray default
-        });
-        addSurface(mediaId);
+        if (toolMode === "surface") {
+            setToolMode("select");
+        } else {
+            setToolMode("surface");
+        }
     };
 
     const handleCreateText = () => {
@@ -87,7 +87,10 @@ export function LeftSidebar() {
                         <div className="p-3 grid grid-cols-2 gap-2 border-b border-white/5 bg-zinc-900/50">
                             <button
                                 onClick={handleCreateSurface}
-                                className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
+                                className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors border ${toolMode === "surface"
+                                    ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
+                                    : "bg-zinc-800 border-white/5 hover:bg-zinc-700 text-zinc-100"
+                                    }`}
                                 data-tour="add-surface"
                             >
                                 <Plus className="w-3 h-3" />

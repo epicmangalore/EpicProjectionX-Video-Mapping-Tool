@@ -15,11 +15,9 @@ import { useTimelineStore } from "@/store/timeline-store";
 import vertexShader from "@/shaders/surface.vert.glsl";
 import fragmentShader from "@/shaders/surface.frag.glsl";
 import { getPerspectiveTransform } from "@/lib/matrix";
-import { TransformControls } from "./TransformControls";
 import { useUIStore } from "@/store/ui-store";
 import { useOutputStore } from "@/store/output-store";
 import { ResizeHandles } from "./ResizeHandles";
-import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { SurfaceBorder } from "./SurfaceBorder";
@@ -295,6 +293,97 @@ export function Surface({ surface }: SurfaceProps) {
         return geometry;
     }, [surface.corners, isQuad, surface.meshWarp]);
 
+    // Calculate texture matrix
+    const textureMatrix = useMemo(() => {
+        const matrix = new THREE.Matrix3();
+        if (!mediaAsset || !surface.corners || surface.corners.length < 3) return matrix;
+
+        // Default settings
+        const settings = surface.textureSettings || {
+            fit: "stretch",
+            scale: { x: 1, y: 1 },
+            offset: { x: 0, y: 0 },
+            rotation: 0,
+            flipX: false,
+            flipY: false
+        };
+
+        // 1. Get Surface Aspect Ratio
+        // Simplify: use bounding box of corners for aspect ratio
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        surface.corners.forEach(p => {
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        });
+        const surfaceWidth = maxX - minX;
+        const surfaceHeight = maxY - minY;
+        const surfaceAspect = surfaceWidth / surfaceHeight;
+
+        // 2. Get Media Aspect Ratio
+        let mediaAspect = 1;
+        if (mediaAsset.width && mediaAsset.height) {
+            mediaAspect = mediaAsset.width / mediaAsset.height;
+        }
+
+        // 3. Calculate Scale based on Fit Mode
+        let sx = 1;
+        let sy = 1;
+
+        if (settings.fit === "cover") {
+            if (surfaceAspect > mediaAspect) {
+                // Surface is wider than media: Fit to width, crop height
+                // scale Y needs to be > 1
+                // surfaceAspect / mediaAspect > 1
+                sy = surfaceAspect / mediaAspect;
+            } else {
+                // Surface is taller than media: Fit to height, crop width
+                sx = mediaAspect / surfaceAspect;
+            }
+        } else if (settings.fit === "contain") {
+            if (surfaceAspect > mediaAspect) {
+                // Surface is wider: Fit to height, letterbox width
+                // sx needs to be > 1 to "shrink" the texture (make it cover less UV space? No)
+                // To "contain", we see the whole image. 
+                // UV space 0..1 covers the whole image.
+                // If we want to show image in center, we scale UVs UP?
+                // Wait. UV 0..1 maps to Image 0..1.
+                // If we multiply UV by 2, we sample Image at 2. 
+                // To ZOOM OUT (contain), we need to multiply UVs by > 1.
+                sx = surfaceAspect / mediaAspect;
+            } else {
+                sy = mediaAspect / surfaceAspect;
+            }
+        }
+
+        // 4. Apply Manual Transforms
+        sx /= settings.scale?.x || 1;
+        sy /= settings.scale?.y || 1;
+
+        // Flip
+        if (settings.flipX) sx *= -1;
+        if (settings.flipY) sy *= -1;
+
+        // Center correction for scaling/rotation
+        matrix.translate(-0.5, -0.5);
+
+        // Rotation
+        const rot = (settings.rotation || 0) * (Math.PI / 180);
+        matrix.rotate(-rot); // Rotate UVs opposite to image rotation
+
+        // Scale
+        matrix.scale(sx, sy);
+
+        // Offset (Move UVs opposite to desired image movement)
+        matrix.translate(-(settings.offset?.x || 0), -(settings.offset?.y || 0));
+
+        // Restore center
+        matrix.translate(0.5, 0.5);
+
+        return matrix;
+    }, [surface.corners, mediaAsset, surface.textureSettings]);
+
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;
@@ -304,6 +393,7 @@ export function Surface({ surface }: SurfaceProps) {
             fragmentShader,
             uniforms: {
                 uTexture: { value: texture },
+                uTextureMatrix: { value: textureMatrix },
                 uOpacity: { value: surface.opacity },
                 uBrightness: { value: effects.brightness },
                 uContrast: { value: effects.contrast },
@@ -342,15 +432,77 @@ export function Surface({ surface }: SurfaceProps) {
     }, [texture]); // Only recreate if texture changes
 
     // Update mesh geometry for MeshWarp
+    // Helper for cubic bezier interpolation
+    const bezier = (p0: Vector2, c0: Vector2, c1: Vector2, p1: Vector2, t: number): Vector2 => {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        const mt = 1 - t;
+        const mt2 = mt * mt;
+        const mt3 = mt2 * mt;
+        return {
+            x: mt3 * p0.x + 3 * mt2 * t * c0.x + 3 * mt * t2 * c1.x + t3 * p1.x,
+            y: mt3 * p0.y + 3 * mt2 * t * c0.y + 3 * mt * t2 * c1.y + t3 * p1.y,
+        };
+    };
+
+    const calculateWarpAtUV = (u: number, v: number, gridSize: number, controlPoints: any[][]): Vector2 => {
+        // Find which cell we are in
+        const gu = Math.max(0, Math.min(gridSize - 0.0001, u * gridSize));
+        const gv = Math.max(0, Math.min(gridSize - 0.0001, v * gridSize));
+        const ix = Math.floor(gu);
+        const iy = Math.floor(gridSize - 1 - gv); // Flip V for grid array (row 0 is top)
+        const tu = gu - ix;
+        const tv = 1 - (gv - (gridSize - 1 - iy)); // Back to local V in [0, 1] top-to-bottom
+
+        const p00 = controlPoints[iy][ix];
+        const p10 = controlPoints[iy][ix + 1];
+        const p01 = controlPoints[iy + 1][ix];
+        const p11 = controlPoints[iy + 1][ix + 1];
+
+        // Edge curves
+        const top = bezier(p00.position,
+            { x: p00.position.x + (p00.handleRight?.x || 0), y: p00.position.y + (p00.handleRight?.y || 0) },
+            { x: p10.position.x + (p10.handleLeft?.x || 0), y: p10.position.y + (p10.handleLeft?.y || 0) },
+            p10.position, tu);
+
+        const bottom = bezier(p01.position,
+            { x: p01.position.x + (p01.handleRight?.x || 0), y: p01.position.y + (p01.handleRight?.y || 0) },
+            { x: p11.position.x + (p11.handleLeft?.x || 0), y: p11.position.y + (p11.handleLeft?.y || 0) },
+            p11.position, tu);
+
+        const left = bezier(p00.position,
+            { x: p00.position.x + (p00.handleBottom?.x || 0), y: p00.position.y + (p00.handleBottom?.y || 0) },
+            { x: p01.position.x + (p01.handleTop?.x || 0), y: p01.position.y + (p01.handleTop?.y || 0) },
+            p01.position, tv);
+
+        const right = bezier(p10.position,
+            { x: p10.position.x + (p10.handleBottom?.x || 0), y: p10.position.y + (p10.handleBottom?.y || 0) },
+            { x: p11.position.x + (p11.handleTop?.x || 0), y: p11.position.y + (p11.handleTop?.y || 0) },
+            p11.position, tv);
+
+        // Bilinear interpolation of corners
+        const bX = (1 - tu) * (1 - tv) * p00.position.x + tu * (1 - tv) * p10.position.x +
+            (1 - tu) * tv * p01.position.x + tu * tv * p11.position.x;
+        const bY = (1 - tu) * (1 - tv) * p00.position.y + tu * (1 - tv) * p10.position.y +
+            (1 - tu) * tv * p01.position.y + tu * tv * p11.position.y;
+
+        // Coons Patch Formula
+        return {
+            x: (1 - tv) * top.x + tv * bottom.x + (1 - tu) * left.x + tu * right.x - bX,
+            y: (1 - tv) * top.y + tv * bottom.y + (1 - tu) * left.y + tu * right.y - bY
+        };
+    };
+
     useEffect(() => {
         if (!meshRef.current || !surface.meshWarp) return;
 
         const geometry = meshRef.current.geometry as THREE.PlaneGeometry;
         const { gridSize, controlPoints } = surface.meshWarp;
 
-        // Check if geometry segments match gridSize
-        if (geometry.parameters.widthSegments !== gridSize || geometry.parameters.heightSegments !== gridSize) {
-            meshRef.current.geometry = new THREE.PlaneGeometry(1, 1, gridSize, gridSize);
+        const res = 24; // High res for smooth bezier curves
+
+        if (geometry.parameters.widthSegments !== res || geometry.parameters.heightSegments !== res) {
+            meshRef.current.geometry = new THREE.PlaneGeometry(1, 1, res, res);
             return;
         }
 
@@ -358,15 +510,14 @@ export function Surface({ surface }: SurfaceProps) {
         const count = positions.count;
 
         for (let i = 0; i < count; i++) {
-            // PlaneGeometry vertices are ordered TL to BR
-            // Calculate row and col for the vertex
-            const xIdx = i % (gridSize + 1);
-            const yIdx = Math.floor(i / (gridSize + 1));
+            const xIdx = i % (res + 1);
+            const yIdx = Math.floor(i / (res + 1));
 
-            const point = controlPoints[yIdx][xIdx];
-            if (point) {
-                positions.setXY(i, point.x, point.y);
-            }
+            const u = xIdx / res;
+            const v = 1 - yIdx / res;
+
+            const pos = calculateWarpAtUV(u, v, gridSize, controlPoints);
+            positions.setXY(i, pos.x, pos.y);
         }
         positions.needsUpdate = true;
     }, [surface.meshWarp, surface.id]);
@@ -602,47 +753,25 @@ export function Surface({ surface }: SurfaceProps) {
                         </lineSegments>
                     </mesh>
 
-                    {isSelected && toolMode !== "pen" && toolMode !== "corner-pin" && toolMode !== "mesh-warp" && (
-                        <>
-                            {/* Brighter border for highlighted selection */}
-                            <mesh position={[0, 0, 0.03]}>
-                                <lineSegments>
-                                    <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                                    <lineBasicMaterial color="#a78bfa" linewidth={3} depthTest={false} transparent opacity={0.8} />
-                                </lineSegments>
-                            </mesh>
-
-                            {/* Resize Handles (Local Space) */}
-                            {toolMode === "select" && <ResizeHandles surface={surface} />}
-
-                            {/* Transform Controller Gizmos */}
-                            {toolMode === "transform" && (
-                                <TransformControls surface={surface} meshRef={meshRef} />
-                            )}
-                        </>
-                    )}
-
-                    {/* Corner Pin Mode */}
-                    {isSelected && toolMode === "corner-pin" && (
-                        <group position={[0, 0, 0.05]}>
-                            <CornerPin surface={surface} />
-                        </group>
-                    )}
-
-                    {/* Mesh Warp Mode */}
-                    {isSelected && toolMode === "mesh-warp" && (
-                        <group position={[0, 0, 0.05]}>
-                            <MeshWarp surface={surface} />
-                        </group>
-                    )}
-
-                    {/* Pen Tool Mode */}
-                    {isSelected && toolMode === "pen" && (
-                        <group position={[0, 0, 0.05]}>
-                            <PenTool surface={surface} />
-                        </group>
+                    {/* Unified Transform Handles (Local Space) */}
+                    {(toolMode === "select" || toolMode === "transform" || toolMode === "corner-pin") && (
+                        <ResizeHandles surface={surface} />
                     )}
                 </>
+            )}
+
+            {/* Mesh Warp Mode */}
+            {isSelected && toolMode === "mesh-warp" && (
+                <group position={[0, 0, 0.05]}>
+                    <MeshWarp surface={surface} />
+                </group>
+            )}
+
+            {/* Pen Tool Mode */}
+            {isSelected && toolMode === "pen" && (
+                <group position={[0, 0, 0.05]}>
+                    <PenTool surface={surface} />
+                </group>
             )}
         </group>
     );

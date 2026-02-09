@@ -33,6 +33,17 @@ export interface Surface {
         width: number;
         opacity: number;
         glow: number;
+        style: "solid" | "dashed" | "dotted";
+        animation: "none" | "march" | "pulse" | "breathe" | "flicker";
+        animationSpeed: number; // 0-10
+    };
+    textureSettings?: {
+        fit: "cover" | "contain" | "stretch";
+        scale: Vector2;
+        offset: Vector2;
+        rotation: number;
+        flipX?: boolean;
+        flipY?: boolean;
     };
 }
 
@@ -45,9 +56,17 @@ export interface AudioMapping {
     enabled: boolean;
 }
 
+export interface ControlPoint {
+    position: Vector2;
+    handleLeft?: Vector2; // Relative to position
+    handleRight?: Vector2;
+    handleTop?: Vector2;
+    handleBottom?: Vector2;
+}
+
 export interface MeshWarpData {
-    gridSize: number; // NxN grid
-    controlPoints: Vector2[][]; // 2D array of control points
+    gridSize: number; // NxN grid of squares
+    controlPoints: ControlPoint[][]; // (N+1)x(N+1) control points
 }
 
 export interface Effect {
@@ -165,6 +184,7 @@ interface ProjectStore {
     addCorner: (surfaceId: string, index: number, point: Vector2) => void;
     removeCorner: (surfaceId: string, index: number) => void;
     resetCorners: (surfaceId: string) => void;
+    initializeMeshWarp: (surfaceId: string, gridSize?: number) => void;
     resetProject: () => void;
 
     // History
@@ -613,6 +633,46 @@ export const useProjectStore = create<ProjectStore>()(
                             ],
                         };
                     }),
+                }));
+            },
+
+            initializeMeshWarp: (surfaceId, gridSize = 3) => {
+                get().saveHistory();
+                set((state) => ({
+                    surfaces: state.surfaces.map((s) => {
+                        if (s.id !== surfaceId) return s;
+
+                        const controlPoints: ControlPoint[][] = [];
+                        for (let row = 0; row <= gridSize; row++) {
+                            const rowPoints: ControlPoint[] = [];
+                            for (let col = 0; col <= gridSize; col++) {
+                                // Linear interpolation between initial corners
+                                const tx = col / gridSize;
+                                const ty = 1 - row / gridSize;
+
+                                const x = -0.5 + tx;
+                                const y = -0.5 + ty;
+
+                                // Initial tangent handles (Photoshop style)
+                                // We'll set them to ~1/3 of the segment length
+                                const handleLength = 1 / gridSize / 3;
+
+                                rowPoints.push({
+                                    position: { x, y },
+                                    handleLeft: { x: -handleLength, y: 0 },
+                                    handleRight: { x: handleLength, y: 0 },
+                                    handleTop: { x: 0, y: handleLength },
+                                    handleBottom: { x: 0, y: -handleLength },
+                                });
+                            }
+                            controlPoints.push(rowPoints);
+                        }
+
+                        return {
+                            ...s,
+                            meshWarp: { gridSize, controlPoints }
+                        };
+                    })
                 }));
             },
 

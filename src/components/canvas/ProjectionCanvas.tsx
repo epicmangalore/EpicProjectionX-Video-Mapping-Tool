@@ -11,6 +11,7 @@ import { PenTool } from "./PenTool";
 import { CanvasFrame } from "./CanvasFrame";
 import { SpacebarPan } from "./SpacebarPan";
 
+import { SurfaceTool } from "./SurfaceTool";
 import { useOutputStore } from "@/store/output-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useFrame } from "@react-three/fiber";
@@ -80,6 +81,9 @@ export function ProjectionCanvas() {
 
             {/* Marquee Selection Box */}
             {!isOutput && <SelectionBox />}
+
+            {/* Surface Creation Tool */}
+            {!isOutput && <SurfaceTool />}
 
             {/* Render all surfaces */}
             {surfaces.map((surface) => (
