@@ -756,7 +756,15 @@ export function SurfaceProperties() {
                             <button
                                 onClick={() => updateSurface(selectedSurface.id, {
                                     border: {
-                                        ...selectedSurface.border || { color: "#00ff00", width: 2, opacity: 1, glow: 0.5 },
+                                        ...selectedSurface.border || {
+                                            color: "#00ff00",
+                                            width: 2,
+                                            opacity: 1,
+                                            glow: 0.5,
+                                            style: "solid",
+                                            animation: "none",
+                                            animationSpeed: 1
+                                        },
                                         enabled: !selectedSurface.border?.enabled
                                     }
                                 })}
