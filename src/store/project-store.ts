@@ -280,7 +280,10 @@ export const useProjectStore = create<ProjectStore>()(
                         color: "#00ff00",
                         width: 2,
                         opacity: 1,
-                        glow: 0.5
+                        glow: 0.5,
+                        style: "solid" as const,
+                        animation: "none" as const,
+                        animationSpeed: 1
                     },
                 };
                 set((state) => ({
