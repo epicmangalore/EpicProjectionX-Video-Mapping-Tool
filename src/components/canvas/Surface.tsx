@@ -10,6 +10,8 @@ import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useTimelineStore } from "@/store/timeline-store";
+import { useGroupStore } from "@/store/group-store";
+import { useGroupVideo } from "@/hooks/useGroupVideo";
 
 // Import shaders and utils
 import vertexShader from "@/shaders/surface.vert.glsl";
@@ -44,6 +46,11 @@ export function Surface({ surface }: SurfaceProps) {
     const isOutput = useOutputStore((state) => state.isOutput);
     const { prepareSnap, checkSnap, clearSnap } = useSnapping();
 
+    // Surface group support
+    const group = useGroupStore((state) =>
+        surface.groupId ? state.groups.find((g) => g.id === surface.groupId) : undefined
+    );
+
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
 
@@ -54,8 +61,14 @@ export function Surface({ surface }: SurfaceProps) {
     }, [surface.mediaId, mediaAssets]);
 
     // Manage Video/Webcam elements
-    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+    const [ownVideoElement, setOwnVideoElement] = useState<HTMLVideoElement | null>(null);
     const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined);
+
+    // Shared group video element (must be after resolvedUrl declaration)
+    const groupVideoElement = useGroupVideo(surface.groupId, resolvedUrl);
+
+    // Effective video element: use group shared element when grouped, own otherwise
+    const videoElement = groupVideoElement ?? ownVideoElement;
 
     const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
 
@@ -92,6 +105,10 @@ export function Surface({ surface }: SurfaceProps) {
             console.log("No media or URL:", { mediaAsset: mediaAsset?.name, resolvedUrl });
             return;
         }
+
+        // Skip individual video creation when surface is in a group
+        // (the shared group video element is provided by useGroupVideo)
+        if (surface.groupId) return;
 
         if (mediaAsset.type === "video") {
             console.log("Creating video element for:", mediaAsset.name, "URL:", resolvedUrl);
@@ -136,7 +153,7 @@ export function Surface({ surface }: SurfaceProps) {
             video.addEventListener("playing", onPlaying);
             video.addEventListener("waiting", onWaiting);
 
-            setVideoElement(video);
+            setOwnVideoElement(video);
             videoRef.current = video;
 
             return () => {
@@ -150,7 +167,7 @@ export function Surface({ surface }: SurfaceProps) {
                 video.pause();
                 video.src = "";
                 video.load(); // Release memory
-                setVideoElement(null);
+                setOwnVideoElement(null);
             };
         }
 
@@ -167,7 +184,7 @@ export function Surface({ surface }: SurfaceProps) {
                     video.muted = true;
                     await video.play().catch(e => console.warn("Video play failed", e));
 
-                    setVideoElement(video);
+                    setOwnVideoElement(video);
                     videoRef.current = video;
                     streamRef.current = stream;
                 } catch (e) {
@@ -180,17 +197,30 @@ export function Surface({ surface }: SurfaceProps) {
                     streamRef.current.getTracks().forEach(t => t.stop());
                     streamRef.current = null;
                 }
-                setVideoElement(null);
+                setOwnVideoElement(null);
             };
         }
-    }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl]);
+    }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl, surface.groupId]);
+
+    // Keep videoRef in sync with effective video element (for grouped surfaces)
+    useEffect(() => {
+        if (groupVideoElement) {
+            videoRef.current = groupVideoElement;
+        }
+    }, [groupVideoElement]);
 
     // Separate effect to handle play/pause based on global playback state
     useEffect(() => {
-        if (!videoRef.current) return;
+        const video = videoElement ?? videoRef.current;
+        if (!video) return;
 
-        const video = videoRef.current;
         console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name);
+
+        // Apply group playback rate if applicable
+        if (group) {
+            video.playbackRate = group.playbackRate;
+            video.loop = group.loop;
+        }
 
         if (isPlayingGlobal) {
             if (video.readyState >= 3) {
@@ -203,7 +233,7 @@ export function Surface({ surface }: SurfaceProps) {
         } else {
             video.pause();
         }
-    }, [isPlayingGlobal, mediaAsset?.name]);
+    }, [isPlayingGlobal, mediaAsset?.name, group?.playbackRate, group?.loop, videoElement]);
 
     // Create texture from media
     const texture = useMemo(() => {
@@ -643,8 +673,11 @@ export function Surface({ surface }: SurfaceProps) {
             }
         }
 
+        // Apply group opacity multiplier
+        const groupOpacity = group ? group.opacity : 1;
+
         // Apply audio mappings if enabled (Throttled or simplified)
-        let reactiveOpacity = surface.opacity;
+        let reactiveOpacity = surface.opacity * groupOpacity;
         let reactiveBlur = effects.blur;
         let reactiveChromatic = effects.chromaticAberration;
 

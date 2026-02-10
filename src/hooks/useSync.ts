@@ -52,7 +52,7 @@ export function useSync() {
                     const projectData = {
                         surfaces: useProjectStore.getState().surfaces,
                         mediaAssets: useProjectStore.getState().mediaAssets,
-                        cues: useProjectStore.getState().cues,
+                        scenes: useProjectStore.getState().scenes,
                         projectSettings: useProjectStore.getState().projectSettings,
                         selectedSurfaceIds: [], // Don't sync selection to output
                         currentProjectId: useProjectStore.getState().currentProjectId
@@ -89,7 +89,7 @@ export function useSync() {
                 const projectData = {
                     surfaces: projectState.surfaces,
                     mediaAssets: projectState.mediaAssets,
-                    cues: projectState.cues,
+                    scenes: projectState.scenes,
                     projectSettings: projectState.projectSettings,
                     selectedSurfaceIds: [], // Don't sync selection
                     currentProjectId: projectState.currentProjectId

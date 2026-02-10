@@ -5,11 +5,6 @@ import { useTimelineStore } from "@/store/timeline-store";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import {
-    Play,
-    Pause,
-    Square,
-    SkipBack,
-    SkipForward,
     Plus,
     Trash2,
 } from "lucide-react";
@@ -20,7 +15,6 @@ export function TimelinePanel() {
     const currentTime = useTimelineStore((state) => state.currentTime);
     const duration = useTimelineStore((state) => state.duration);
     const isPlaying = useTimelineStore((state) => state.isPlaying);
-    const loop = useTimelineStore((state) => state.loop);
     const keyframes = useTimelineStore((state) => state.keyframes);
     const snapToGrid = useTimelineStore((state) => state.snapToGrid);
 
@@ -29,9 +23,7 @@ export function TimelinePanel() {
 
     const play = useTimelineStore((state) => state.play);
     const pause = useTimelineStore((state) => state.pause);
-    const stop = useTimelineStore((state) => state.stop);
     const seek = useTimelineStore((state) => state.seek);
-    const setLoop = useTimelineStore((state) => state.setLoop);
     const setSnapToGrid = useTimelineStore((state) => state.setSnapToGrid);
     const setDuration = useTimelineStore((state) => state.setDuration);
     const initTimeline = useTimelineStore((state) => state.initTimeline);
@@ -218,26 +210,9 @@ export function TimelinePanel() {
             <div className="flex-1 flex overflow-hidden">
 
                 {/* Fixed Sidebar (Track Labels) */}
-                <div className="w-48 border-r border-white/5 flex flex-col bg-zinc-950 shrink-0">
-                    <div className="h-10 border-b border-white/5 flex items-center px-2 gap-1.5 bg-zinc-900/50">
-                        <button
-                            onClick={isPlaying ? pause : play}
-                            className={`w-7 h-7 flex items-center justify-center rounded transition-all active:scale-90 ${isPlaying ? 'bg-electric-cyan text-zinc-950' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
-                        >
-                            {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current translate-x-0.5" />}
-                        </button>
-                        <button
-                            onClick={stop}
-                            className="w-7 h-7 flex items-center justify-center bg-zinc-800 text-zinc-400 hover:text-white rounded transition-all active:scale-90"
-                        >
-                            <Square className="w-3.5 h-3.5 fill-current" />
-                        </button>
-                        <button
-                            onClick={() => setLoop(!loop)}
-                            className={`w-7 h-7 flex items-center justify-center rounded text-[10px] font-bold transition-all ${loop ? 'text-electric-purple' : 'text-zinc-600 hover:text-zinc-400'}`}
-                        >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                        </button>
+                <div className="w-32 border-r border-white/5 flex flex-col bg-zinc-950 shrink-0">
+                    <div className="h-10 border-b border-white/5 flex items-center px-3 bg-zinc-900/50">
+                        <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Tracks</span>
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
@@ -308,10 +283,3 @@ export function TimelinePanel() {
         </div>
     );
 }
-
-const RotateCcw = ({ className }: { className?: string }) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
-        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-        <path d="M3 3v5h5" />
-    </svg>
-);

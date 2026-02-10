@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,16 +12,17 @@ const jetbrainsMono = JetBrains_Mono({
     variable: "--font-jetbrains-mono",
 });
 
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    themeColor: "#0a0a0f",
+};
+
 export const metadata: Metadata = {
     title: "ProjectionX - Web-Based Projection Mapping",
     description: "Full-featured projection mapping application as a Progressive Web App",
     manifest: "/manifest.json",
-    themeColor: "#0a0a0f",
-    viewport: {
-        width: "device-width",
-        initialScale: 1,
-        maximumScale: 1,
-    },
 };
 
 export default function RootLayout({

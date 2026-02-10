@@ -28,6 +28,7 @@ export interface Surface {
     aspectRatioLocked?: boolean;
     audioMappings: AudioMapping[];
     useComposition?: boolean;
+    groupId?: string;
     border?: {
         enabled: boolean;
         color: string;
@@ -113,9 +114,13 @@ export interface MediaAsset {
     letterSpacing?: number;
     textColor?: string;
     textAlign?: "left" | "right" | "center" | "start" | "end";
+    // Shader effects
+    shaderSource?: string;
+    effectId?: string;
+    uniforms?: Record<string, number | number[]>;
 }
 
-export interface Cue {
+export interface Scene {
     id: string;
     name: string;
     hotkey?: string;
@@ -143,7 +148,7 @@ interface ProjectStore {
     // State
     surfaces: Surface[];
     mediaAssets: MediaAsset[];
-    cues: Cue[];
+    scenes: Scene[];
     projectSettings: ProjectSettings;
     selectedSurfaceIds: string[];
     currentProjectId: number | null;
@@ -175,10 +180,10 @@ interface ProjectStore {
     updateMediaAsset: (id: string, updates: Partial<MediaAsset>) => void;
     removeMediaAsset: (id: string) => void;
 
-    // Cue actions
-    addCue: (name: string) => void;
-    triggerCue: (id: string) => void;
-    deleteCue: (id: string) => void;
+    // Scene actions
+    addScene: (name: string) => void;
+    triggerScene: (id: string) => void;
+    deleteScene: (id: string) => void;
 
     // Project actions
     updateProjectSettings: (settings: Partial<ProjectSettings>) => void;
@@ -223,7 +228,7 @@ export const useProjectStore = create<ProjectStore>()(
             // Initial state
             surfaces: [],
             mediaAssets: [],
-            cues: [],
+            scenes: [],
             projectSettings: defaultProjectSettings,
             selectedSurfaceIds: [],
             currentProjectId: null,
@@ -475,30 +480,30 @@ export const useProjectStore = create<ProjectStore>()(
                 }));
             },
 
-            // Cue actions
-            addCue: (name) => {
-                const newCue: Cue = {
+            // Scene actions
+            addScene: (name) => {
+                const newScene: Scene = {
                     id: generateId(),
                     name,
                     surfaces: JSON.parse(JSON.stringify(get().surfaces)), // Deep clone
                     timelinePosition: 0,
                 };
                 set((state) => ({
-                    cues: [...state.cues, newCue],
+                    scenes: [...state.scenes, newScene],
                 }));
             },
 
-            triggerCue: (id) => {
-                const cue = get().cues.find((c) => c.id === id);
-                if (!cue) return;
+            triggerScene: (id) => {
+                const scene = get().scenes.find((s) => s.id === id);
+                if (!scene) return;
 
-                // Restore surfaces from cue
-                set({ surfaces: JSON.parse(JSON.stringify(cue.surfaces)) });
+                // Restore surfaces from scene
+                set({ surfaces: JSON.parse(JSON.stringify(scene.surfaces)) });
             },
 
-            deleteCue: (id) => {
+            deleteScene: (id) => {
                 set((state) => ({
-                    cues: state.cues.filter((c) => c.id !== id),
+                    scenes: state.scenes.filter((s) => s.id !== id),
                 }));
             },
 
@@ -684,7 +689,7 @@ export const useProjectStore = create<ProjectStore>()(
                 set({
                     surfaces: [],
                     mediaAssets: [],
-                    cues: [],
+                    scenes: [],
                     projectSettings: defaultProjectSettings,
                     selectedSurfaceIds: [],
                 });
@@ -749,7 +754,7 @@ export const useProjectStore = create<ProjectStore>()(
             partialize: (state) => ({
                 surfaces: state.surfaces,
                 mediaAssets: state.mediaAssets,
-                cues: state.cues,
+                scenes: state.scenes,
                 projectSettings: state.projectSettings,
             }),
             merge: (persistedState, currentState) => {

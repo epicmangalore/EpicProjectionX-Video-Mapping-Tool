@@ -90,14 +90,14 @@ export const APP_HOTKEYS = {
     FULLSCREEN: "f11",
     Recursive_Expand: { key: "Enter", alt: true }, // Alt+Enter to expand/collapse recursive
 
-    // Cues (1-9)
-    CUE_1: "1",
-    CUE_2: "2",
-    CUE_3: "3",
-    CUE_4: "4",
-    CUE_5: "5",
-    CUE_6: "6",
-    CUE_7: "7",
-    CUE_8: "8",
-    CUE_9: "9",
+    // Scenes (1-9)
+    SCENE_1: "1",
+    SCENE_2: "2",
+    SCENE_3: "3",
+    SCENE_4: "4",
+    SCENE_5: "5",
+    SCENE_6: "6",
+    SCENE_7: "7",
+    SCENE_8: "8",
+    SCENE_9: "9",
 };

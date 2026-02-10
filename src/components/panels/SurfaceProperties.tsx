@@ -1,20 +1,379 @@
 "use client";
 
-import { useProjectStore } from "@/store/project-store";
+import { useProjectStore, type BlendMode } from "@/store/project-store";
 import React, { useRef } from "react";
-import { useUIStore } from "@/store/ui-store"; // Added import
+import { useUIStore } from "@/store/ui-store";
+import { useGroupStore, type SurfaceGroup } from "@/store/group-store";
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers } from "lucide-react";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, FolderMinus, Palette } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
 import { generateId, truncateMiddle } from "@/lib/utils";
 
-// ... (existing imports)
+// ── Group Info Section ───────────────────────────────────────────────
 
-// ...
+function GroupSection({
+    surfaceId,
+    groupId,
+}: {
+    surfaceId: string;
+    groupId?: string;
+}) {
+    const group = useGroupStore((state) =>
+        groupId ? state.groups.find((g) => g.id === groupId) : undefined
+    );
+    const setGroupOpacity = useGroupStore((state) => state.setGroupOpacity);
+    const setGroupBlendMode = useGroupStore((state) => state.setGroupBlendMode);
+    const setGroupPlaybackRate = useGroupStore(
+        (state) => state.setGroupPlaybackRate
+    );
+    const setGroupLoop = useGroupStore((state) => state.setGroupLoop);
+    const removeSurfaceFromGroup = useGroupStore(
+        (state) => state.removeSurfaceFromGroup
+    );
+
+    if (!group) return null;
+
+    return (
+        <div className="p-3 bg-zinc-900/50 rounded-lg border border-white/5 space-y-3">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: group.color }}
+                    />
+                    <span className="text-xs font-bold text-zinc-200 uppercase tracking-wider">
+                        {group.name}
+                    </span>
+                    <span className="text-[9px] text-zinc-500">
+                        {group.surfaceIds.length} surfaces
+                    </span>
+                </div>
+                <button
+                    onClick={() =>
+                        removeSurfaceFromGroup(group.id, surfaceId)
+                    }
+                    className="p-1 hover:bg-red-500/10 rounded text-zinc-500 hover:text-red-400 transition-colors"
+                    title="Remove from group"
+                >
+                    <FolderMinus className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            {/* Group Opacity */}
+            <div>
+                <label className="text-[10px] text-zinc-500 mb-1 block">
+                    Group Opacity
+                </label>
+                <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={group.opacity}
+                    onChange={(e) =>
+                        setGroupOpacity(group.id, parseFloat(e.target.value))
+                    }
+                    className="w-full accent-electric-cyan"
+                />
+            </div>
+
+            {/* Group Blend Mode */}
+            <div>
+                <label className="text-[10px] text-zinc-500 mb-1 block">
+                    Group Blend
+                </label>
+                <select
+                    value={group.blendMode}
+                    onChange={(e) =>
+                        setGroupBlendMode(
+                            group.id,
+                            e.target.value as BlendMode
+                        )
+                    }
+                    className="w-full px-2 py-1 bg-zinc-800 border border-white/10 rounded text-xs text-zinc-300"
+                >
+                    <option value="normal">Normal</option>
+                    <option value="multiply">Multiply</option>
+                    <option value="screen">Screen</option>
+                    <option value="overlay">Overlay</option>
+                    <option value="additive">Additive</option>
+                </select>
+            </div>
+
+            {/* Group Playback Rate */}
+            <div>
+                <label className="text-[10px] text-zinc-500 mb-1 block">
+                    Speed: {group.playbackRate.toFixed(2)}x
+                </label>
+                <input
+                    type="range"
+                    min={0.25}
+                    max={4}
+                    step={0.25}
+                    value={group.playbackRate}
+                    onChange={(e) =>
+                        setGroupPlaybackRate(
+                            group.id,
+                            parseFloat(e.target.value)
+                        )
+                    }
+                    className="w-full accent-electric-cyan"
+                />
+            </div>
+
+            {/* Group Loop */}
+            <label className="flex items-center gap-2 text-[10px] text-zinc-400 cursor-pointer">
+                <input
+                    type="checkbox"
+                    checked={group.loop}
+                    onChange={(e) =>
+                        setGroupLoop(group.id, e.target.checked)
+                    }
+                    className="accent-electric-cyan"
+                />
+                Loop Video
+            </label>
+        </div>
+    );
+}
+
+// ── Group Properties Panel ───────────────────────────────────────────
+
+function GroupPropertiesPanel({ group }: { group: SurfaceGroup }) {
+    const surfaces = useProjectStore((state) => state.surfaces);
+    const mediaAssets = useProjectStore((state) => state.mediaAssets);
+    const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
+    const selectSurface = useProjectStore((state) => state.selectSurface);
+
+    const renameGroup = useGroupStore((state) => state.renameGroup);
+    const deleteGroup = useGroupStore((state) => state.deleteGroup);
+    const setGroupColor = useGroupStore((state) => state.setGroupColor);
+    const setGroupOpacity = useGroupStore((state) => state.setGroupOpacity);
+    const setGroupBlendMode = useGroupStore((state) => state.setGroupBlendMode);
+    const setGroupPlaybackRate = useGroupStore((state) => state.setGroupPlaybackRate);
+    const setGroupLoop = useGroupStore((state) => state.setGroupLoop);
+    const setGroupMedia = useGroupStore((state) => state.setGroupMedia);
+    const removeSurfaceFromGroup = useGroupStore((state) => state.removeSurfaceFromGroup);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const memberSurfaces = surfaces.filter((s) => group.surfaceIds.includes(s.id));
+
+    const colorOptions = [
+        "#ef4444", "#f97316", "#eab308", "#22c55e",
+        "#06b6d4", "#8b5cf6", "#ec4899",
+    ];
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const mediaId = await processFile(file, addMediaAsset);
+            setGroupMedia(group.id, mediaId);
+        }
+    };
+
+    return (
+        <aside className="w-80 h-full bg-zinc-950 border-l border-white/5 flex flex-col font-sans">
+            <div className="panel-header">
+                Group Properties
+                <button
+                    onClick={() => deleteGroup(group.id)}
+                    className="p-1.5 hover:bg-red-500/10 rounded text-zinc-400 hover:text-red-400 transition-colors"
+                    title="Delete Group"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+                {/* Group Name */}
+                <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Group Name</label>
+                    <input
+                        type="text"
+                        value={group.name}
+                        onChange={(e) => renameGroup(group.id, e.target.value)}
+                        className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                    />
+                </div>
+
+                {/* Group Color */}
+                <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Group Color</label>
+                    <div className="flex gap-1.5">
+                        {colorOptions.map((c) => (
+                            <button
+                                key={c}
+                                onClick={() => setGroupColor(group.id, c)}
+                                className={`w-6 h-6 rounded-full border-2 transition-all ${c === group.color
+                                        ? "border-white scale-110"
+                                        : "border-transparent hover:border-white/30"
+                                    }`}
+                                style={{ backgroundColor: c }}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                {/* Group Media */}
+                <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Shared Media</label>
+                    <div className="flex gap-2">
+                        <select
+                            value={group.mediaId || ""}
+                            onChange={(e) => setGroupMedia(group.id, e.target.value || null)}
+                            className="flex-1 min-w-0 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                        >
+                            <option value="">None</option>
+                            <optgroup label="Assets">
+                                {mediaAssets
+                                    .filter((asset) => asset.type !== "shader" && asset.type !== "webcam")
+                                    .map((asset) => (
+                                        <option key={asset.id} value={asset.id}>
+                                            {truncateMiddle(asset.name, 25)}
+                                        </option>
+                                    ))}
+                            </optgroup>
+                        </select>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="p-2 aspect-square glass glass-hover rounded-md flex items-center justify-center text-zinc-400 hover:text-electric-cyan transition-colors"
+                            title="Upload New Asset"
+                        >
+                            <Upload className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                    />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/5 pt-4 space-y-4">
+                    <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Playback</h3>
+
+                    {/* Group Opacity */}
+                    <div>
+                        <label className="text-[10px] text-zinc-500 mb-1 flex justify-between">
+                            <span>Group Opacity</span>
+                            <span className="text-zinc-400 font-mono">{Math.round(group.opacity * 100)}%</span>
+                        </label>
+                        <input
+                            type="range"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={group.opacity}
+                            onChange={(e) => setGroupOpacity(group.id, parseFloat(e.target.value))}
+                            className="w-full accent-electric-cyan"
+                        />
+                    </div>
+
+                    {/* Group Blend Mode */}
+                    <div>
+                        <label className="text-[10px] text-zinc-500 mb-1 block">Blend Mode</label>
+                        <select
+                            value={group.blendMode}
+                            onChange={(e) => setGroupBlendMode(group.id, e.target.value as BlendMode)}
+                            className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                        >
+                            <option value="normal">Normal</option>
+                            <option value="multiply">Multiply</option>
+                            <option value="screen">Screen</option>
+                            <option value="overlay">Overlay</option>
+                            <option value="additive">Additive</option>
+                        </select>
+                    </div>
+
+                    {/* Group Playback Rate */}
+                    <div>
+                        <label className="text-[10px] text-zinc-500 mb-1 flex justify-between">
+                            <span>Playback Speed</span>
+                            <span className="text-zinc-400 font-mono">{group.playbackRate.toFixed(2)}x</span>
+                        </label>
+                        <input
+                            type="range"
+                            min={0.25}
+                            max={4}
+                            step={0.25}
+                            value={group.playbackRate}
+                            onChange={(e) => setGroupPlaybackRate(group.id, parseFloat(e.target.value))}
+                            className="w-full accent-electric-cyan"
+                        />
+                    </div>
+
+                    {/* Group Loop */}
+                    <label className="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={group.loop}
+                            onChange={(e) => setGroupLoop(group.id, e.target.checked)}
+                            className="accent-electric-cyan"
+                        />
+                        Loop Video
+                    </label>
+                </div>
+
+                {/* Member Surfaces */}
+                <div className="border-t border-white/5 pt-4 space-y-2">
+                    <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">
+                        Members ({memberSurfaces.length})
+                    </h3>
+                    {memberSurfaces.length === 0 ? (
+                        <p className="text-[10px] text-zinc-600">No surfaces in this group</p>
+                    ) : (
+                        <div className="space-y-1">
+                            {memberSurfaces.map((s) => (
+                                <div
+                                    key={s.id}
+                                    className="flex items-center gap-2 px-2 py-1.5 rounded bg-zinc-900/50 border border-white/5 hover:border-white/10 transition-colors group"
+                                >
+                                    <span
+                                        className="w-2 h-2 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: group.color }}
+                                    />
+                                    <button
+                                        onClick={() => selectSurface(s.id, false)}
+                                        className="flex-1 text-left text-[11px] text-zinc-300 hover:text-white transition-colors truncate"
+                                    >
+                                        {s.name}
+                                    </button>
+                                    <button
+                                        onClick={() => removeSurfaceFromGroup(group.id, s.id)}
+                                        className="p-0.5 opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-red-400 transition-all"
+                                        title="Remove from group"
+                                    >
+                                        <FolderMinus className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Delete Group Button */}
+                <div className="border-t border-white/5 pt-4">
+                    <button
+                        onClick={() => deleteGroup(group.id)}
+                        className="w-full px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/20"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                        Delete Group
+                    </button>
+                </div>
+            </div>
+        </aside>
+    );
+}
 
 export function SurfaceProperties() {
     const surfaces = useProjectStore((state) => state.surfaces);
@@ -31,15 +390,37 @@ export function SurfaceProperties() {
     const setToolMode = useUIStore((state) => state.setToolMode);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const getGroupForSurface = useGroupStore((state) => state.getGroupForSurface);
+    const setGroupMedia = useGroupStore((state) => state.setGroupMedia);
+    const selectedGroupId = useGroupStore((state) => state.selectedGroupId);
+    const selectedGroup = useGroupStore((state) =>
+        state.selectedGroupId ? state.groups.find((g) => g.id === state.selectedGroupId) : undefined
+    );
+
+    const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
+
+    // Helper: apply media to a surface, propagating to entire group if grouped
+    const applyMedia = (surfaceId: string, mediaId: string | null) => {
+        const group = getGroupForSurface(surfaceId);
+        if (group) {
+            setGroupMedia(group.id, mediaId);
+        } else {
+            updateSurface(surfaceId, { mediaId });
+        }
+    };
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && selectedSurface) {
             const mediaId = await processFile(file, addMediaAsset);
-            updateSurface(selectedSurface.id, { mediaId });
+            applyMedia(selectedSurface.id, mediaId);
         }
     };
 
-    const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
+    // Show group properties when a group is selected and no surface is selected
+    if (!selectedSurface && selectedGroup) {
+        return <GroupPropertiesPanel group={selectedGroup} />;
+    }
 
     if (!selectedSurface) {
         return (
@@ -82,6 +463,9 @@ export function SurfaceProperties() {
             </div>
 
             <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+                {/* ── Group Section ── */}
+                <GroupSection surfaceId={selectedSurface.id} groupId={selectedSurface.groupId} />
+
                 {/* Surface Name */}
                 <div>
                     <label className="text-xs text-muted-foreground mb-1 block">Name</label>
@@ -113,14 +497,12 @@ export function SurfaceProperties() {
                                             name: "Webcam Input",
                                             type: "webcam",
                                         });
-                                        updateSurface(selectedSurface.id, { mediaId: newId });
+                                        applyMedia(selectedSurface.id, newId);
                                     } else {
-                                        updateSurface(selectedSurface.id, { mediaId: webcamAsset.id });
+                                        applyMedia(selectedSurface.id, webcamAsset.id);
                                     }
                                 } else {
-                                    updateSurface(selectedSurface.id, {
-                                        mediaId: val || null
-                                    });
+                                    applyMedia(selectedSurface.id, val || null);
                                 }
                             }}
                             className="flex-1 min-w-0 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"

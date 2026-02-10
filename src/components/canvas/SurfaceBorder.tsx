@@ -2,6 +2,7 @@ import { Line } from "@react-three/drei";
 import { useMemo, useRef } from "react";
 import type { Surface as SurfaceType } from "@/store/project-store";
 import { useFrame } from "@react-three/fiber";
+import { useGroupStore } from "@/store/group-store";
 
 interface SurfaceBorderProps {
     surface: SurfaceType;
@@ -10,6 +11,13 @@ interface SurfaceBorderProps {
 export function SurfaceBorder({ surface }: SurfaceBorderProps) {
     const lineRef = useRef<any>(null);
     const glowRef = useRef<any>(null);
+
+    // Group visual indicator
+    const group = useGroupStore((state) =>
+        surface.groupId
+            ? state.groups.find((g) => g.id === surface.groupId)
+            : undefined
+    );
 
     const borderPoints = useMemo(() => {
         // Map corners to 3D points
@@ -77,44 +85,66 @@ export function SurfaceBorder({ surface }: SurfaceBorderProps) {
         }
     });
 
-    if (!surface.border?.enabled) return null;
+    if (!surface.border?.enabled && !group) return null;
 
-    const { style, width, color, opacity, glow } = surface.border;
-    const dashed = style === "dashed" || style === "dotted" || surface.border.animation === "march";
-    // For dotted, we use a different dash ratio, or just small dashes
-    const dashSize = style === "dotted" ? width * 0.1 : width * 2; // Dotted = small squares roughly
-    const gapSize = style === "dotted" ? width * 2 : width;
+    const hasBorder = surface.border?.enabled;
+    const borderStyle = hasBorder ? surface.border!.style : "solid";
+    const borderWidth = hasBorder ? surface.border!.width : 0;
+    const borderColor = hasBorder ? surface.border!.color : "#ffffff";
+    const borderOpacity = hasBorder ? surface.border!.opacity : 1;
+    const borderGlow = hasBorder ? surface.border!.glow : 0;
+    const dashed = borderStyle === "dashed" || borderStyle === "dotted" || (hasBorder && surface.border!.animation === "march");
+    const dashSize = borderStyle === "dotted" ? borderWidth * 0.1 : borderWidth * 2;
+    const gapSize = borderStyle === "dotted" ? borderWidth * 2 : borderWidth;
 
     return (
         <>
-            <Line
-                ref={lineRef}
-                points={borderPoints}
-                color={color}
-                lineWidth={width}
-                transparent
-                opacity={opacity}
-                dashed={dashed}
-                dashScale={1}
-                dashSize={dashSize}
-                gapSize={gapSize}
-                toneMapped={false}
-            />
-            {/* Inner Glow Layer */}
-            {glow > 0 && (
+            {/* User-defined border */}
+            {hasBorder && (
+                <>
+                    <Line
+                        ref={lineRef}
+                        points={borderPoints}
+                        color={borderColor}
+                        lineWidth={borderWidth}
+                        transparent
+                        opacity={borderOpacity}
+                        dashed={dashed}
+                        dashScale={1}
+                        dashSize={dashSize}
+                        gapSize={gapSize}
+                        toneMapped={false}
+                    />
+                    {/* Inner Glow Layer */}
+                    {borderGlow > 0 && (
+                        <Line
+                            ref={glowRef}
+                            points={borderPoints}
+                            color={borderColor}
+                            lineWidth={borderWidth * 2}
+                            transparent
+                            opacity={borderOpacity * 0.3 * borderGlow}
+                            dashed={dashed}
+                            dashScale={1}
+                            dashSize={dashSize}
+                            gapSize={gapSize}
+                            toneMapped={false}
+                            depthTest={false}
+                        />
+                    )}
+                </>
+            )}
+
+            {/* Group color outline */}
+            {group && (
                 <Line
-                    ref={glowRef}
                     points={borderPoints}
-                    color={color}
-                    lineWidth={width * 2}
+                    color={group.color}
+                    lineWidth={1.5}
                     transparent
-                    opacity={opacity * 0.3 * glow}
-                    dashed={dashed}
-                    dashScale={1}
-                    dashSize={dashSize}
-                    gapSize={gapSize}
+                    opacity={0.6}
                     toneMapped={false}
-                    depthTest={false} // Draw on top
+                    depthTest={false}
                 />
             )}
         </>

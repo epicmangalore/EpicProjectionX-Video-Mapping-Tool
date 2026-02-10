@@ -7,32 +7,39 @@ import { useProjectStore } from "@/store/project-store";
 export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: string, surfaceName: string, keyframes: Keyframe[] }) {
     const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
+    const selectSurface = useProjectStore(state => state.selectSurface);
     const selectedSurfaceIds = useProjectStore(state => state.selectedSurfaceIds);
     const isSelected = selectedSurfaceIds.includes(surfaceId);
 
     if (!surface) return null;
 
+    const handleClick = (e: React.MouseEvent) => {
+        selectSurface(surfaceId, e.metaKey || e.ctrlKey);
+    };
+
     return (
-        <div className={`flex h-12 items-center border-b border-white/5 px-3 gap-3 shrink-0 group transition-colors ${isSelected
+        <div
+            className={`flex h-12 items-center border-b border-white/5 px-2 gap-1.5 shrink-0 group transition-colors cursor-pointer ${isSelected
                 ? 'bg-electric-cyan/10 border-l-2 border-l-electric-cyan'
-                : 'bg-zinc-900/30'
-            }`}>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                : 'bg-zinc-900/30 hover:bg-zinc-800/40'
+                }`}
+            onClick={handleClick}
+        >
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
-                    onClick={() => updateSurface(surfaceId, { opacity: surface.visible === false ? 1 : 0, visible: surface.visible === false })}
-                    className="p-1 text-zinc-500 hover:text-white transition-colors"
+                    onClick={(e) => { e.stopPropagation(); updateSurface(surfaceId, { opacity: surface.visible === false ? 1 : 0, visible: surface.visible === false }); }}
+                    className="p-0.5 text-zinc-500 hover:text-white transition-colors"
                 >
-                    {surface.visible === false ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {surface.visible === false ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 </button>
                 <button
-                    onClick={() => updateSurface(surfaceId, { locked: !surface.locked })}
-                    className="p-1 text-zinc-500 hover:text-white transition-colors"
+                    onClick={(e) => { e.stopPropagation(); updateSurface(surfaceId, { locked: !surface.locked }); }}
+                    className="p-0.5 text-zinc-500 hover:text-white transition-colors"
                 >
-                    {surface.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                    {surface.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
                 </button>
             </div>
-            <span className={`text-xs font-medium truncate select-none ${isSelected ? 'text-electric-cyan' : 'text-zinc-300'
-                }`}>{surfaceName}</span>
+            <div className={`w-2 h-2 rounded-full shrink-0 ${isSelected ? 'bg-electric-cyan' : 'bg-zinc-600'}`} />
         </div>
     );
 }
@@ -42,6 +49,7 @@ import { useRef, useState, useEffect } from "react";
 export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfaceId: string, keyframes: Keyframe[], duration: number }) {
     const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
+    const selectSurface = useProjectStore(state => state.selectSurface);
     const saveHistory = useProjectStore((state) => state.saveHistory);
     const selectedSurfaceIds = useProjectStore(state => state.selectedSurfaceIds);
     const isSelected = selectedSurfaceIds.includes(surfaceId);
@@ -65,6 +73,9 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
     const handleInteractionStart = (e: React.MouseEvent, type: "start" | "end" | "move") => {
         e.stopPropagation();
         if (!surface) return;
+
+        // Select the surface on interaction
+        selectSurface(surfaceId, e.metaKey || e.ctrlKey);
 
         saveHistory();
         setInteraction(type);
@@ -116,9 +127,20 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
     const leftPercent = (surface.startTime / duration) * 100;
     const widthPercent = (surface.duration / duration) * 100;
 
+    const handleTrackClick = (e: React.MouseEvent) => {
+        // Only select if clicking the track background (not the clip bar)
+        if (e.target === e.currentTarget) {
+            selectSurface(surfaceId, e.metaKey || e.ctrlKey);
+        }
+    };
+
     return (
-        <div className={`h-12 border-b border-white/5 relative flex items-center px-1 transition-colors ${isSelected ? 'bg-electric-cyan/5 hover:bg-electric-cyan/10' : 'bg-zinc-900/10 hover:bg-zinc-900/20'
-            }`} ref={trackRef}>
+        <div
+            className={`h-12 border-b border-white/5 relative flex items-center px-1 transition-colors cursor-pointer ${isSelected ? 'bg-electric-cyan/5 hover:bg-electric-cyan/10' : 'bg-zinc-900/10 hover:bg-zinc-900/20'
+                }`}
+            ref={trackRef}
+            onClick={handleTrackClick}
+        >
             {/* Render clip bar based on start/duration */}
             <div
                 className={`h-8 rounded ${trackColor} border relative overflow-hidden group absolute cursor-grab active:cursor-grabbing`}
@@ -137,10 +159,6 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
 
                 <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
-                {/* Clip Label */}
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-white/70 font-medium truncate px-1 pointer-events-none">
-                    {surface.name}
-                </div>
             </div>
 
             {/* Keyframes - Rendered relative to the track, not the clip, for simplicity with absolute times */}

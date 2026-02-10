@@ -1,49 +1,52 @@
 import { create } from "zustand";
 import type { Surface } from "./project-store";
 import type { EffectSettings } from "./effects-store";
+import type { Keyframe } from "./timeline-store";
 
-export interface CueSnapshot {
+export interface SceneSnapshot {
     surfaces: Surface[];
     effects: Record<string, EffectSettings>;
+    keyframes: Keyframe[];
+    timelineDuration: number;
     timestamp: number;
 }
 
-export interface Cue {
+export interface Scene {
     id: string;
     name: string;
     hotkey?: number; // 1-9
-    snapshot: CueSnapshot;
+    snapshot: SceneSnapshot;
     transitionDuration: number; // in seconds
     createdAt: number;
 }
 
-interface CueState {
-    cues: Cue[];
-    activeCueId: string | null;
+interface SceneState {
+    scenes: Scene[];
+    activeSceneId: string | null;
     isTransitioning: boolean;
 
     // Actions
-    addCue: (name: string, hotkey?: number) => void;
-    updateCue: (id: string, updates: Partial<Cue>) => void;
-    deleteCue: (id: string) => void;
-    triggerCue: (id: string) => void;
-    triggerCueByHotkey: (hotkey: number) => void;
-    captureSnapshot: () => CueSnapshot;
-    restoreSnapshot: (snapshot: CueSnapshot, duration?: number) => void;
+    addScene: (name: string, hotkey?: number) => void;
+    updateScene: (id: string, updates: Partial<Scene>) => void;
+    deleteScene: (id: string) => void;
+    triggerScene: (id: string) => void;
+    triggerSceneByHotkey: (hotkey: number) => void;
+    captureSnapshot: () => SceneSnapshot;
+    restoreSnapshot: (snapshot: SceneSnapshot, duration?: number) => void;
 }
 
-export const useCueStore = create<CueState>((set, get) => ({
-    cues: [],
-    activeCueId: null,
+export const useSceneStore = create<SceneState>((set, get) => ({
+    scenes: [],
+    activeSceneId: null,
     isTransitioning: false,
 
-    addCue: (name, hotkey) => {
+    addScene: (name, hotkey) => {
         const snapshot = get().captureSnapshot();
-        const id = `cue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const id = `scene_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         set((state) => ({
-            cues: [
-                ...state.cues,
+            scenes: [
+                ...state.scenes,
                 {
                     id,
                     name,
@@ -56,53 +59,69 @@ export const useCueStore = create<CueState>((set, get) => ({
         }));
     },
 
-    updateCue: (id, updates) => {
+    updateScene: (id, updates) => {
         set((state) => ({
-            cues: state.cues.map((cue) =>
-                cue.id === id ? { ...cue, ...updates } : cue
+            scenes: state.scenes.map((scene) =>
+                scene.id === id ? { ...scene, ...updates } : scene
             ),
         }));
     },
 
-    deleteCue: (id) => {
+    deleteScene: (id) => {
         set((state) => ({
-            cues: state.cues.filter((cue) => cue.id !== id),
-            activeCueId: state.activeCueId === id ? null : state.activeCueId,
+            scenes: state.scenes.filter((scene) => scene.id !== id),
+            activeSceneId: state.activeSceneId === id ? null : state.activeSceneId,
         }));
     },
 
-    triggerCue: (id) => {
-        const cue = get().cues.find((c) => c.id === id);
-        if (!cue) return;
+    triggerScene: (id) => {
+        const scene = get().scenes.find((s) => s.id === id);
+        if (!scene) return;
 
-        set({ activeCueId: id, isTransitioning: true });
-        get().restoreSnapshot(cue.snapshot, cue.transitionDuration);
+        set({ activeSceneId: id, isTransitioning: true });
+        get().restoreSnapshot(scene.snapshot, scene.transitionDuration);
 
         setTimeout(() => {
             set({ isTransitioning: false });
-        }, cue.transitionDuration * 1000);
+        }, scene.transitionDuration * 1000);
     },
 
-    triggerCueByHotkey: (hotkey) => {
-        const cue = get().cues.find((c) => c.hotkey === hotkey);
-        if (cue) {
-            get().triggerCue(cue.id);
+    triggerSceneByHotkey: (hotkey) => {
+        const scene = get().scenes.find((s) => s.hotkey === hotkey);
+        if (scene) {
+            get().triggerScene(scene.id);
         }
     },
 
     captureSnapshot: () => {
-        // This will be populated by the component that uses this store
-        // We need access to project-store and effects-store
+        // Import stores dynamically to capture current state
+        const { useProjectStore } = require("./project-store");
+        const { useTimelineStore } = require("./timeline-store");
+        const projectState = useProjectStore.getState();
+        const timelineState = useTimelineStore.getState();
+
         return {
-            surfaces: [],
+            surfaces: JSON.parse(JSON.stringify(projectState.surfaces)),
             effects: {},
+            keyframes: JSON.parse(JSON.stringify(timelineState.keyframes)),
+            timelineDuration: timelineState.duration,
             timestamp: Date.now(),
         };
     },
 
     restoreSnapshot: (snapshot, duration = 0) => {
-        // This will be implemented by the component
-        // It needs to update project-store and effects-store
-        console.log("Restoring snapshot with duration:", duration);
+        const { useProjectStore } = require("./project-store");
+        const { useTimelineStore } = require("./timeline-store");
+
+        // Restore surfaces
+        useProjectStore.setState({
+            surfaces: JSON.parse(JSON.stringify(snapshot.surfaces)),
+        });
+
+        // Restore timeline keyframes and duration
+        useTimelineStore.setState({
+            keyframes: JSON.parse(JSON.stringify(snapshot.keyframes || [])),
+            duration: snapshot.timelineDuration || 30,
+        });
     },
 }));
