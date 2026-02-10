@@ -39,6 +39,7 @@ export function Surface({ surface }: SurfaceProps) {
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
     const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
     const toolMode = useUIStore((state) => state.toolMode);
+    const penSubMode = useUIStore((state) => state.penSubMode);
     const projectSettings = useProjectStore((state) => state.projectSettings);
     const isOutput = useOutputStore((state) => state.isOutput);
     const { prepareSnap, checkSnap, clearSnap } = useSnapping();
@@ -667,6 +668,7 @@ export function Surface({ surface }: SurfaceProps) {
             const uniforms = shaderMaterial.uniforms;
 
             // Allow for optimized updates by modifying uniform values directly
+            if (uniforms.uTextureMatrix) uniforms.uTextureMatrix.value.copy(textureMatrix);
             if (uniforms.uWarpMatrix) uniforms.uWarpMatrix.value.copy(warpMatrix);
             if (uniforms.uOpacity) uniforms.uOpacity.value = reactiveOpacity;
             if (uniforms.uBrightness) uniforms.uBrightness.value = effects.brightness;
@@ -883,8 +885,8 @@ export function Surface({ surface }: SurfaceProps) {
                 </group>
             )}
 
-            {/* Pen Tool Mode */}
-            {isSelected && toolMode === "pen" && (
+            {/* Pen Tool Mode (Edit only) */}
+            {isSelected && toolMode === "pen" && penSubMode === "edit" && (
                 <group position={[0, 0, 0.05]}>
                     <PenTool surface={surface} />
                 </group>

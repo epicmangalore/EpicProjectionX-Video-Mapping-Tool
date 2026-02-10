@@ -7,11 +7,16 @@ import { useProjectStore } from "@/store/project-store";
 export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: string, surfaceName: string, keyframes: Keyframe[] }) {
     const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
+    const selectedSurfaceIds = useProjectStore(state => state.selectedSurfaceIds);
+    const isSelected = selectedSurfaceIds.includes(surfaceId);
 
     if (!surface) return null;
 
     return (
-        <div className="flex h-12 items-center border-b border-white/5 bg-zinc-900/30 px-3 gap-3 shrink-0 group">
+        <div className={`flex h-12 items-center border-b border-white/5 px-3 gap-3 shrink-0 group transition-colors ${isSelected
+                ? 'bg-electric-cyan/10 border-l-2 border-l-electric-cyan'
+                : 'bg-zinc-900/30'
+            }`}>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                     onClick={() => updateSurface(surfaceId, { opacity: surface.visible === false ? 1 : 0, visible: surface.visible === false })}
@@ -26,7 +31,8 @@ export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: st
                     {surface.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                 </button>
             </div>
-            <span className="text-xs font-medium text-zinc-300 truncate select-none">{surfaceName}</span>
+            <span className={`text-xs font-medium truncate select-none ${isSelected ? 'text-electric-cyan' : 'text-zinc-300'
+                }`}>{surfaceName}</span>
         </div>
     );
 }
@@ -37,6 +43,8 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
     const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
     const saveHistory = useProjectStore((state) => state.saveHistory);
+    const selectedSurfaceIds = useProjectStore(state => state.selectedSurfaceIds);
+    const isSelected = selectedSurfaceIds.includes(surfaceId);
 
     // Resize/Move state
     const [interaction, setInteraction] = useState<"start" | "end" | "move" | null>(null);
@@ -45,12 +53,14 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
     const initialDurationRef = useRef<number>(0);
     const trackRef = useRef<HTMLDivElement>(null);
 
-    // Determine track color based on type
+    // Determine track color based on type and selection
     const isImage = surface?.mediaId?.startsWith("image");
     const isVideo = surface?.mediaId?.startsWith("video");
-    const trackColor = isVideo ? "bg-blue-500/20 border-blue-500/40" :
-        isImage ? "bg-purple-500/20 border-purple-500/40" :
-            "bg-zinc-700/40 border-zinc-600/40";
+    const trackColor = isSelected
+        ? "bg-electric-cyan/30 border-electric-cyan/60"
+        : isVideo ? "bg-blue-500/20 border-blue-500/40" :
+            isImage ? "bg-purple-500/20 border-purple-500/40" :
+                "bg-zinc-700/40 border-zinc-600/40";
 
     const handleInteractionStart = (e: React.MouseEvent, type: "start" | "end" | "move") => {
         e.stopPropagation();
@@ -107,7 +117,8 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
     const widthPercent = (surface.duration / duration) * 100;
 
     return (
-        <div className="h-12 border-b border-white/5 relative bg-zinc-900/10 hover:bg-zinc-900/20 transition-colors flex items-center px-1" ref={trackRef}>
+        <div className={`h-12 border-b border-white/5 relative flex items-center px-1 transition-colors ${isSelected ? 'bg-electric-cyan/5 hover:bg-electric-cyan/10' : 'bg-zinc-900/10 hover:bg-zinc-900/20'
+            }`} ref={trackRef}>
             {/* Render clip bar based on start/duration */}
             <div
                 className={`h-8 rounded ${trackColor} border relative overflow-hidden group absolute cursor-grab active:cursor-grabbing`}

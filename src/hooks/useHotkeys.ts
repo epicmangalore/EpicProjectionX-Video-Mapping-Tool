@@ -60,6 +60,8 @@ export const APP_HOTKEYS = {
     CORNER_PIN_MODE: "c",
     MESH_WARP_MODE: "m",
     PEN_MODE: "p",
+    PEN_DRAW: { key: "f", ctrl: true },   // Cmd+F
+    PEN_EDIT: { key: "e", ctrl: true },   // Cmd+E
     HAND_MODE: "h",
 
     // Actions

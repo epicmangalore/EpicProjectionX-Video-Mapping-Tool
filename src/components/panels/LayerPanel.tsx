@@ -81,6 +81,7 @@ export function LayerPanel() {
                                     max={1}
                                     step={0.01}
                                     color="#00f0ff"
+                                    defaultValue={1}
                                     formatValue={(v) => `${Math.round(v * 100)}%`}
                                     onChange={(val) => updateLayer(layer.id, { opacity: val })}
                                     size={40}
@@ -107,6 +108,7 @@ export function LayerPanel() {
                                     max={4}
                                     step={0.1}
                                     color="#ff9900"
+                                    defaultValue={1}
                                     formatValue={(v) => `${v.toFixed(1)}x`}
                                     onChange={(val) => updateLayer(layer.id, { speed: val })}
                                     size={40}

@@ -6,7 +6,7 @@ import { useUIStore } from "@/store/ui-store"; // Added import
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioReactivity } from "./AudioReactivity";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Eye, Settings2, Plus, Minus, RotateCcw, Type, Bold, Italic, AlignLeft, AlignCenter, AlignRight, AlignJustify, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Pen, Grid3x3, ArrowLeftRight, ArrowUpDown, Layers } from "lucide-react";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
@@ -25,9 +25,6 @@ export function SurfaceProperties() {
     const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
     const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
-    const addCorner = useProjectStore((state) => state.addCorner);
-    const removeCorner = useProjectStore((state) => state.removeCorner);
-    const resetCorners = useProjectStore((state) => state.resetCorners);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
     const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const toolMode = useUIStore((state) => state.toolMode);
@@ -129,16 +126,12 @@ export function SurfaceProperties() {
                             className="flex-1 min-w-0 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
                         >
                             <option value="">None</option>
-                            <option value="webcam-builtin">📷 Webcam</option>
+                            <option value="webcam-builtin">Webcam</option>
                             <optgroup label="Assets">
                                 {mediaAssets
                                     .filter((asset) => asset.type !== "shader" && asset.type !== "webcam")
                                     .map((asset) => (
                                         <option key={asset.id} value={asset.id}>
-                                            {asset.type === "image" && "🖼️ "}
-                                            {asset.type === "video" && "🎬 "}
-                                            {asset.type === "color" && "🎨 "}
-                                            {asset.type === "text" && "📝 "}
                                             {truncateMiddle(asset.name, 25)}
                                         </option>
                                     ))}
@@ -232,6 +225,7 @@ export function SurfaceProperties() {
                                 max={5}
                                 step={0.1}
                                 color="#00f0ff"
+                                defaultValue={1}
                                 onChange={(val) => {
                                     const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, x: val } };
                                     if (selectedSurface.aspectRatioLocked) {
@@ -261,6 +255,7 @@ export function SurfaceProperties() {
                                 max={5}
                                 step={0.1}
                                 color="#00f0ff"
+                                defaultValue={1}
                                 onChange={(val) => {
                                     const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, y: val } };
                                     if (selectedSurface.aspectRatioLocked) {
@@ -281,6 +276,7 @@ export function SurfaceProperties() {
                                 max={Math.PI}
                                 step={0.05}
                                 color="#ff9900"
+                                defaultValue={0}
                                 formatValue={(v) => `${Math.round(v * (180 / Math.PI))}°`}
                                 onChange={(val) => updateSurface(selectedSurface.id, { rotation: val })}
                             />
@@ -289,31 +285,6 @@ export function SurfaceProperties() {
 
 
                     <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
-                        {/* Vertical Alignment */}
-                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
-                            <button
-                                onClick={() => alignSurfaces("top")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Top"
-                            >
-                                <AlignStartVertical className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => alignSurfaces("middle")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Middle"
-                            >
-                                <AlignCenterVertical className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => alignSurfaces("bottom")}
-                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
-                                title="Align Bottom"
-                            >
-                                <AlignEndVertical className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
                         {/* Horizontal Alignment */}
                         <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
                             <button
@@ -321,19 +292,44 @@ export function SurfaceProperties() {
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Left"
                             >
-                                <AlignStartHorizontal className="w-3.5 h-3.5" />
+                                <AlignStartVertical className="w-3.5 h-3.5" />
                             </button>
                             <button
                                 onClick={() => alignSurfaces("center")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Center"
                             >
-                                <AlignCenterHorizontal className="w-3.5 h-3.5" />
+                                <AlignCenterVertical className="w-3.5 h-3.5" />
                             </button>
                             <button
                                 onClick={() => alignSurfaces("right")}
                                 className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
                                 title="Align Right"
+                            >
+                                <AlignEndVertical className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Vertical Alignment */}
+                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
+                            <button
+                                onClick={() => alignSurfaces("top")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Top"
+                            >
+                                <AlignStartHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("middle")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Middle"
+                            >
+                                <AlignCenterHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("bottom")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Bottom"
                             >
                                 <AlignEndHorizontal className="w-3.5 h-3.5" />
                             </button>
@@ -482,6 +478,7 @@ export function SurfaceProperties() {
                             max={1}
                             step={0.01}
                             color="#b400ff"
+                            defaultValue={1}
                             formatValue={(v) => `${Math.round(v * 100)}%`}
                             onChange={(val) => updateSurface(selectedSurface.id, { opacity: val })}
                         />
@@ -533,83 +530,10 @@ export function SurfaceProperties() {
                     </p>
                 </div>
 
-                {/* Polygon Mapping */}
-                <div className="border-t border-white/5 pt-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold">Polygon Mapping</h3>
-                        <div className="flex gap-1">
-                            <button
-                                onClick={() => {
-                                    const sumX = selectedSurface.corners.reduce((sum, p) => sum + p.x, 0);
-                                    const sumY = selectedSurface.corners.reduce((sum, p) => sum + p.y, 0);
-                                    const avgX = sumX / selectedSurface.corners.length;
-                                    const avgY = sumY / selectedSurface.corners.length;
-                                    addCorner(selectedSurface.id, selectedSurface.corners.length, { x: avgX, y: avgY });
-                                }}
-                                className="p-1.5 rounded bg-white/5 hover:bg-electric-purple/20 text-white/60 hover:text-electric-purple transition-all"
-                                title="Add Corner"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => removeCorner(selectedSurface.id, selectedSurface.corners.length - 1)}
-                                disabled={selectedSurface.corners.length <= 3}
-                                className="p-1.5 rounded bg-white/5 hover:bg-red-500/20 text-white/60 hover:text-red-500 transition-all disabled:opacity-30 disabled:hover:bg-white/5"
-                                title="Remove Last Corner"
-                            >
-                                <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => resetCorners(selectedSurface.id)}
-                                className="p-1.5 rounded bg-white/5 hover:bg-electric-cyan/20 text-white/60 hover:text-electric-cyan transition-all"
-                                title="Reset to Quad"
-                            >
-                                <RotateCcw className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Tool Selection */}
-                    <div className="grid grid-cols-3 gap-1 mb-3 bg-zinc-900/50 border border-white/5 rounded p-0.5">
-                        <button
-                            onClick={() => setToolMode("select")}
-                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "select" ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"}`}
-                            title="Select / Transform"
-                        >
-                            <MousePointer2 className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-bold">Select</span>
-                        </button>
-                        <button
-                            onClick={() => setToolMode("pen")}
-                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "pen" ? "bg-electric-purple/20 text-electric-purple border border-electric-purple/30" : "text-zinc-500 hover:text-zinc-300"}`}
-                            title="Pen Tool (Add Points)"
-                        >
-                            <Pen className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-bold">Pen</span>
-                        </button>
-                        <button
-                            onClick={() => {
-                                if (toolMode === "mesh-warp") {
-                                    setToolMode("select");
-                                } else {
-                                    if (!selectedSurface.meshWarp) {
-                                        // Initialize default mesh warp
-                                        initializeMeshWarp(selectedSurface.id);
-                                    }
-                                    setToolMode("mesh-warp");
-                                }
-                            }}
-                            className={`p-1.5 rounded text-xs flex items-center justify-center gap-2 transition-all ${toolMode === "mesh-warp" ? "bg-electric-cyan/20 text-electric-cyan border border-electric-cyan/30" : "text-zinc-500 hover:text-zinc-300"}`}
-                            title="Mesh Warp"
-                        >
-                            <Grid3x3 className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-bold">Warp</span>
-                        </button>
-                    </div>
-
-                    {/* Mesh Warp Settings */}
-                    {toolMode === "mesh-warp" && selectedSurface.meshWarp && (
-                        <div className="mb-3 px-2 py-2 bg-electric-cyan/5 border border-electric-cyan/20 rounded">
+                {/* Mesh Warp Settings (only visible when mesh warp tool is active) */}
+                {toolMode === "mesh-warp" && selectedSurface.meshWarp && (
+                    <div className="border-t border-white/5 pt-4">
+                        <div className="px-2 py-2 bg-electric-cyan/5 border border-electric-cyan/20 rounded">
                             <div className="flex items-center justify-between mb-2">
                                 <label className="text-[9px] text-electric-cyan font-bold uppercase">Grid Density</label>
                                 <span className="text-[9px] text-electric-cyan/70 font-mono">{selectedSurface.meshWarp.gridSize} x {selectedSurface.meshWarp.gridSize}</span>
@@ -621,9 +545,7 @@ export function SurfaceProperties() {
                                 step="1"
                                 value={selectedSurface.meshWarp.gridSize}
                                 onChange={(e) => {
-                                    const newSize = parseInt(e.target.value);
-                                    // Use the store action to properly initialize mesh warp
-                                    initializeMeshWarp(selectedSurface.id, newSize);
+                                    initializeMeshWarp(selectedSurface.id, parseInt(e.target.value));
                                 }}
                                 className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
                             />
@@ -637,48 +559,8 @@ export function SurfaceProperties() {
                                 Reset / Remove Warp
                             </button>
                         </div>
-                    )}
-
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                        {selectedSurface.corners.map((corner, idx) => (
-                            <div key={idx} className="flex items-center gap-2 group">
-                                <span className="text-[10px] text-muted-foreground w-4 font-mono">{idx}</span>
-                                <div className="grid grid-cols-2 gap-2 flex-1">
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-dark-800 border border-white/5 rounded">
-                                        <span className="text-[10px] text-white/30 font-mono">X</span>
-                                        <input
-                                            type="number"
-                                            value={corner.x.toFixed(3)}
-                                            onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                const newCorners = [...selectedSurface.corners];
-                                                newCorners[idx] = { ...newCorners[idx], x: val };
-                                                updateSurface(selectedSurface.id, { corners: newCorners });
-                                            }}
-                                            step="0.001"
-                                            className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-1 bg-dark-800 border border-white/5 rounded">
-                                        <span className="text-[10px] text-white/30 font-mono">Y</span>
-                                        <input
-                                            type="number"
-                                            value={corner.y.toFixed(3)}
-                                            onChange={(e) => {
-                                                const val = parseFloat(e.target.value) || 0;
-                                                const newCorners = [...selectedSurface.corners];
-                                                newCorners[idx] = { ...newCorners[idx], y: val };
-                                                updateSurface(selectedSurface.id, { corners: newCorners });
-                                            }}
-                                            step="0.001"
-                                            className="w-full bg-transparent border-none text-[10px] font-mono focus:outline-none p-0"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
                     </div>
-                </div>
+                )}
 
                 {/* Border & Glow Deck */}
                 <div className="bg-zinc-900/30 border border-white/5 rounded-lg overflow-hidden">
@@ -737,6 +619,7 @@ export function SurfaceProperties() {
                                     max={20}
                                     step={0.5}
                                     color={selectedSurface.border.color}
+                                    defaultValue={2}
                                     onChange={(val) => updateSurface(selectedSurface.id, {
                                         border: { ...selectedSurface.border!, width: val }
                                     })}
@@ -748,6 +631,7 @@ export function SurfaceProperties() {
                                     max={1}
                                     step={0.05}
                                     color={selectedSurface.border.color}
+                                    defaultValue={1}
                                     formatValue={(v) => `${Math.round(v * 100)}%`}
                                     onChange={(val) => updateSurface(selectedSurface.id, {
                                         border: { ...selectedSurface.border!, opacity: val }

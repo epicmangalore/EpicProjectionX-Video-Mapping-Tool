@@ -106,26 +106,66 @@ export function LayerCompositor() {
 
     const videoElements = useRef<{ [key: string]: HTMLVideoElement }>({});
     const videoTextures = useRef<{ [key: string]: THREE.VideoTexture }>({});
+    const webcamStreams = useRef<{ [key: string]: MediaStream }>({});
 
-    // Asset hydration
+    // Asset hydration — handle both URL-based video and webcam MediaStream sources
     useEffect(() => {
-        layers.forEach((layer) => {
-            if (layer.activeClipId) {
-                const asset = mediaAssets.find((a) => a.id === layer.activeClipId);
-                if (asset && (asset.type === "video" || asset.type === "webcam") && asset.url) {
-                    if (!videoElements.current[layer.activeClipId]) {
-                        const video = document.createElement("video");
-                        video.src = asset.url;
-                        video.crossOrigin = "anonymous";
-                        video.loop = true;
-                        video.muted = true;
-                        video.playsInline = true;
-                        video.play().catch(() => { }); // Handle autoplay blocks
-                        videoElements.current[layer.activeClipId] = video;
+        const activeClipIds = new Set<string>();
 
-                        const tex = new THREE.VideoTexture(video);
-                        videoTextures.current[layer.activeClipId] = tex;
-                    }
+        layers.forEach((layer) => {
+            if (!layer.activeClipId) return;
+            activeClipIds.add(layer.activeClipId);
+
+            const asset = mediaAssets.find((a) => a.id === layer.activeClipId);
+            if (!asset || videoElements.current[layer.activeClipId]) return;
+
+            if (asset.type === "video" && asset.url) {
+                const video = document.createElement("video");
+                video.src = asset.url;
+                video.crossOrigin = "anonymous";
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                video.play().catch(() => {});
+                videoElements.current[layer.activeClipId] = video;
+
+                const tex = new THREE.VideoTexture(video);
+                videoTextures.current[layer.activeClipId] = tex;
+            } else if (asset.type === "webcam") {
+                const clipId = layer.activeClipId;
+                navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+                }).then((stream) => {
+                    const video = document.createElement("video");
+                    video.srcObject = stream;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    video.muted = true;
+                    video.play().catch(() => {});
+                    videoElements.current[clipId] = video;
+                    webcamStreams.current[clipId] = stream;
+
+                    const tex = new THREE.VideoTexture(video);
+                    videoTextures.current[clipId] = tex;
+                }).catch((e) => console.error("Compositor webcam failed:", e));
+            }
+        });
+
+        // Clean up elements for clips that are no longer active
+        Object.keys(videoElements.current).forEach((clipId) => {
+            if (!activeClipIds.has(clipId)) {
+                const video = videoElements.current[clipId];
+                video.pause();
+                video.src = "";
+                video.srcObject = null;
+                delete videoElements.current[clipId];
+                if (videoTextures.current[clipId]) {
+                    videoTextures.current[clipId].dispose();
+                    delete videoTextures.current[clipId];
+                }
+                if (webcamStreams.current[clipId]) {
+                    webcamStreams.current[clipId].getTracks().forEach(t => t.stop());
+                    delete webcamStreams.current[clipId];
                 }
             }
         });
@@ -147,9 +187,11 @@ export function LayerCompositor() {
             const videoTex = videoTextures.current[layer.activeClipId];
             if (!videoTex) return;
 
-            // Sync speed
+            // Sync speed (only for non-webcam video — webcams are always real-time)
             const video = videoElements.current[layer.activeClipId];
-            if (video) video.playbackRate = layer.speed;
+            if (video && !webcamStreams.current[layer.activeClipId]) {
+                video.playbackRate = layer.speed;
+            }
 
             // Prepare shader for this layer
             material.uniforms.tBase.value = currentRead.texture;
