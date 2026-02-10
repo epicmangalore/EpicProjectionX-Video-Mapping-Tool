@@ -107,11 +107,16 @@ export function LayerCompositor() {
     const videoElements = useRef<{ [key: string]: HTMLVideoElement }>({});
     const videoTextures = useRef<{ [key: string]: THREE.VideoTexture }>({});
 
-    // Asset hydration
+    // Asset hydration with cleanup
     useEffect(() => {
+        // Track which clips are currently active
+        const activeClips = new Set<string>();
+
         layers.forEach((layer) => {
             if (layer.activeClipId) {
+                activeClips.add(layer.activeClipId);
                 const asset = mediaAssets.find((a) => a.id === layer.activeClipId);
+
                 if (asset && (asset.type === "video" || asset.type === "webcam") && asset.url) {
                     if (!videoElements.current[layer.activeClipId]) {
                         const video = document.createElement("video");
@@ -120,16 +125,62 @@ export function LayerCompositor() {
                         video.loop = true;
                         video.muted = true;
                         video.playsInline = true;
-                        video.play().catch(() => { }); // Handle autoplay blocks
+
+                        // Error handling
+                        video.onerror = (e) => {
+                            console.error(`Error loading video for layer ${layer.name}:`, e);
+                        };
+
+                        video.play().catch((e) => {
+                            if (e.name !== "AbortError") console.warn("Video autoplay failed:", e);
+                        });
+
                         videoElements.current[layer.activeClipId] = video;
 
                         const tex = new THREE.VideoTexture(video);
+                        tex.minFilter = THREE.LinearFilter;
+                        tex.magFilter = THREE.LinearFilter;
+                        tex.format = THREE.RGBAFormat;
                         videoTextures.current[layer.activeClipId] = tex;
                     }
                 }
             }
         });
+
+        // Cleanup inactive clips
+        Object.keys(videoElements.current).forEach((clipId) => {
+            if (!activeClips.has(clipId)) {
+                // Remove video element
+                const video = videoElements.current[clipId];
+                video.pause();
+                video.src = "";
+                video.load();
+                delete videoElements.current[clipId];
+
+                // Dispose texture
+                const tex = videoTextures.current[clipId];
+                if (tex) {
+                    tex.dispose();
+                    delete videoTextures.current[clipId];
+                }
+            }
+        });
+
     }, [layers, mediaAssets]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            Object.values(videoElements.current).forEach(video => {
+                video.pause();
+                video.src = "";
+                video.load();
+            });
+            Object.values(videoTextures.current).forEach(tex => tex.dispose());
+            targetA.dispose();
+            targetB.dispose();
+        };
+    }, [targetA, targetB]);
 
     // Main compositing frame loop
     useFrame(({ gl }) => {

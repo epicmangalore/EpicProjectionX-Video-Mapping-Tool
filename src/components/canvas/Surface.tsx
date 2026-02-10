@@ -606,6 +606,13 @@ export function Surface({ surface }: SurfaceProps) {
         const timelineState = useTimelineStore.getState();
         const currentTime = timelineState.currentTime;
 
+        // CRITICAL: Update composition texture every frame
+        // The compositor pings-pongs between two targets, so the texture instance changes every frame.
+        // We must update the uniform to point to the latest 'read' texture.
+        if (surface.useComposition && (window as any).compositionTexture && shaderMaterial) {
+            shaderMaterial.uniforms.uTexture.value = (window as any).compositionTexture;
+        }
+
         // CRITICAL: Update video texture only when playing or seeking + sync with timeline
         if (texture && texture instanceof THREE.VideoTexture && videoElement) {
             // Only force texture update if video is actually playing or seeking to save massive GPU bandwidth
