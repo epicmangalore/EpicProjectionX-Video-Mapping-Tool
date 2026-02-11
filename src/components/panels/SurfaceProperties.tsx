@@ -752,8 +752,12 @@ export function SurfaceProperties() {
                 </div>
 
                 <EdgeBlendingControls surfaceId={selectedSurface.id} />
-                <EffectsPanel />
-                <AudioMappingPanel />
+                <div data-tour="effects-panel">
+                    <EffectsPanel />
+                </div>
+                <div data-tour="audio-panel">
+                    <AudioMappingPanel />
+                </div>
             </div>
 
             {/* Global Master Controls */}

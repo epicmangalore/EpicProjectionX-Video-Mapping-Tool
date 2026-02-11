@@ -171,6 +171,7 @@ export function ProjectMenu() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="px-3 py-1.5 text-sm glass glass-hover rounded-md flex items-center gap-2"
+                data-tour="export-menu"
             >
                 <FileText className="w-4 h-4" />
                 File

@@ -155,7 +155,7 @@ export function TimelinePanel() {
     const step = getRulerSteps();
 
     return (
-        <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300">
+        <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300" data-tour="timeline-panel">
             {/* Deck Header */}
             <div className="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-zinc-900 shrink-0">
                 <div className="flex items-center gap-6">
@@ -197,6 +197,7 @@ export function TimelinePanel() {
                         onClick={() => usePlaybackStore.getState().syncAllVideos()}
                         className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-bold uppercase transition-all active:scale-95 bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-electric-cyan/30 hover:text-electric-cyan hover:bg-electric-cyan/10"
                         title="Sync all videos to current timeline position"
+                        data-tour="video-sync"
                     >
                         <RefreshCw className="h-3 w-3" />
                         Sync Videos

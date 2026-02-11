@@ -117,6 +117,7 @@ export function LeftSidebar() {
                             <button
                                 onClick={() => setShowShapeLibrary(true)}
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
+                                data-tour="shape-library"
                             >
                                 <Shapes className="w-3 h-3" />
                                 Shapes
