@@ -4,30 +4,33 @@
 
 /* Subtle Scrollbar */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #3f3f46; /* zinc-700 */
-    border-radius: 3px;
+  background: #3f3f46;
+  /* zinc-700 */
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #52525b; /* zinc-600 */
+  background: #52525b;
+  /* zinc-600 */
 }
 
 /* Utility to hide scrollbar but keep functionality */
 .no-scrollbar::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
+
 .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @layer base {
@@ -64,6 +67,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-dark-900 text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -74,7 +78,7 @@
   .glass {
     @apply bg-zinc-900/40 backdrop-blur-md border border-white/5;
   }
-  
+
   .glass-hover {
     @apply hover:bg-white/5 hover:border-white/10 transition-all duration-200;
   }
@@ -82,4 +86,25 @@
   .panel-header {
     @apply px-4 py-3 border-b border-white/5 bg-zinc-900/50 backdrop-blur-sm text-xs font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between;
   }
+}
+
+/* LightBeamButton animation */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes border-spin {
+  from {
+    --gradient-angle: 0deg;
+  }
+
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+.animate-border-spin {
+  animation: border-spin 2s linear infinite;
 }

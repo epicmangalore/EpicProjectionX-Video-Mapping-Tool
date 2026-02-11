@@ -16,6 +16,7 @@ export function PenTool({ surface }: PenToolProps) {
     const addCorner = useProjectStore((state) => state.addCorner);
     const saveHistory = useProjectStore((state) => state.saveHistory);
     const toolMode = useUIStore((state) => state.toolMode);
+    const penSubMode = useUIStore((state) => state.penSubMode);
     const [hoveredEdge, setHoveredEdge] = useState<number | null>(null);
     const [draggingCorner, setDraggingCorner] = useState<number | null>(null);
     const { camera, gl } = useThree();
@@ -53,7 +54,7 @@ export function PenTool({ surface }: PenToolProps) {
         return new Float32Array(pts);
     }, [activeCorners]);
 
-    if (toolMode !== "pen" || surface.locked) return null;
+    if (toolMode !== "pen" || penSubMode !== "edit" || surface.locked) return null;
 
     // Find nearest edge to a point
     const findNearestEdge = (point: { x: number; y: number }): number | null => {

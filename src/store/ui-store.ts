@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 export type ToolMode = "select" | "corner-pin" | "mesh-warp" | "transform" | "pen" | "hand" | "surface";
+export type PenSubMode = "draw" | "edit";
 
 export interface SnapLine {
     id: string; // "x-100" or "y-500"
@@ -11,6 +12,7 @@ export interface SnapLine {
 interface UIStore {
     // UI state
     toolMode: ToolMode;
+    penSubMode: PenSubMode;
     showGrid: boolean;
     showRulers: boolean;
     showPerformanceMonitor: boolean;
@@ -21,6 +23,7 @@ interface UIStore {
     isCanvasHovered: boolean;
     // Actions
     setToolMode: (mode: ToolMode) => void;
+    setPenSubMode: (mode: PenSubMode) => void;
     toggleGrid: () => void;
     toggleRulers: () => void;
     togglePerformanceMonitor: () => void;
@@ -34,6 +37,7 @@ interface UIStore {
 export const useUIStore = create<UIStore>((set) => ({
     // Initial state
     toolMode: "select",
+    penSubMode: "draw" as PenSubMode,
     showGrid: false,
     showRulers: false,
     showPerformanceMonitor: false,
@@ -45,6 +49,7 @@ export const useUIStore = create<UIStore>((set) => ({
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
+    setPenSubMode: (mode) => set({ penSubMode: mode, toolMode: "pen" }),
     toggleGrid: () => set((state) => ({ showGrid: !state.showGrid })),
     toggleRulers: () => set((state) => ({ showRulers: !state.showRulers })),
     togglePerformanceMonitor: () =>

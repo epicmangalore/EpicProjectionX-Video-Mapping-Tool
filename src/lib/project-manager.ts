@@ -2,14 +2,14 @@ import { db, type DBProject } from "./db";
 import { useProjectStore } from "@/store/project-store";
 import { useEffectsStore } from "@/store/effects-store";
 import { useTimelineStore } from "@/store/timeline-store";
-import { useCueStore } from "@/store/cue-store";
+import { useSceneStore } from "@/store/cue-store";
 
 export interface ProjectData {
     version: string;
     project: ReturnType<typeof useProjectStore.getState>;
     effects: ReturnType<typeof useEffectsStore.getState>;
     timeline: ReturnType<typeof useTimelineStore.getState>;
-    cues: ReturnType<typeof useCueStore.getState>;
+    scenes: ReturnType<typeof useSceneStore.getState>;
 }
 
 export class ProjectManager {
@@ -30,7 +30,7 @@ export class ProjectManager {
             project: useProjectStore.getState(),
             effects: useEffectsStore.getState(),
             timeline: useTimelineStore.getState(),
-            cues: useCueStore.getState(),
+            scenes: useSceneStore.getState(),
         };
 
         const dbProject: DBProject = {
@@ -61,7 +61,7 @@ export class ProjectManager {
         useProjectStore.setState(projectData.project);
         useEffectsStore.setState(projectData.effects);
         useTimelineStore.setState(projectData.timeline);
-        useCueStore.setState(projectData.cues);
+        useSceneStore.setState(projectData.scenes);
     }
 
     async deleteProject(id: number): Promise<void> {
@@ -118,7 +118,7 @@ export class ProjectManager {
             },
         });
         useTimelineStore.getState().stop();
-        useCueStore.setState({ cues: [], activeCueId: null, isTransitioning: false });
+        useSceneStore.setState({ scenes: [], activeSceneId: null, isTransitioning: false });
 
         // Update project name
         useProjectStore.getState().updateProjectSettings({ name });

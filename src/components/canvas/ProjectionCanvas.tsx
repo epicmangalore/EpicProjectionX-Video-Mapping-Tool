@@ -13,6 +13,7 @@ import { CanvasFrame } from "./CanvasFrame";
 import { SpacebarPan } from "./SpacebarPan";
 
 import { SurfaceTool } from "./SurfaceTool";
+import { PenDrawTool } from "./PenDrawTool";
 import { useOutputStore } from "@/store/output-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useFrame } from "@react-three/fiber";
@@ -96,6 +97,9 @@ export function ProjectionCanvas() {
 
                 {/* Surface Creation Tool */}
                 {!isOutput && <SurfaceTool />}
+
+                {/* Pen Draw Tool (polygon surface creation) */}
+                {!isOutput && <PenDrawTool />}
 
                 {/* Layer Compositor (Global Mix) */}
                 <LayerCompositor />

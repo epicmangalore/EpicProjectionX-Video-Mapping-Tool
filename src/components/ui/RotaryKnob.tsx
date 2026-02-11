@@ -10,6 +10,7 @@ interface RotaryKnobProps {
     size?: number;
     color?: string;
     formatValue?: (val: number) => string;
+    defaultValue?: number;
 }
 
 export function RotaryKnob({
@@ -21,7 +22,8 @@ export function RotaryKnob({
     onChange,
     size = 64,
     color = "#00f0ff", // electric-cyan default
-    formatValue
+    formatValue,
+    defaultValue
 }: RotaryKnobProps) {
     const [isDragging, setIsDragging] = useState(false);
     const startY = useRef<number>(0);
@@ -119,6 +121,9 @@ export function RotaryKnob({
                 className="relative cursor-ns-resize"
                 style={{ width: size, height: size }}
                 onMouseDown={handleMouseDown}
+                onDoubleClick={() => {
+                    if (defaultValue !== undefined) onChange(defaultValue);
+                }}
             >
                 <svg width={size} height={size} className="overflow-visible">
                     {/* Tick Marks Ring (Decorative) */}
