@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import Meyda from "meyda";
 
 interface AudioState {
     isEnabled: boolean;
@@ -13,6 +14,11 @@ interface AudioState {
         mid: number;
         treble: number;
         volume: number;
+        energy: number;
+        spectralCentroid: number;
+        spectralRolloff: number;
+        zcr: number;
+        rms: number;
     };
 
     initAudio: () => Promise<void>;
@@ -32,6 +38,11 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         mid: 0,
         treble: 0,
         volume: 0,
+        energy: 0,
+        spectralCentroid: 0,
+        spectralRolloff: 0,
+        zcr: 0,
+        rms: 0,
     },
 
     initAudio: async () => {
@@ -39,6 +50,7 @@ export const useAudioStore = create<AudioState>((set, get) => ({
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
             const analyser = audioContext.createAnalyser();
             const source = audioContext.createMediaStreamSource(stream);
@@ -75,7 +87,17 @@ export const useAudioStore = create<AudioState>((set, get) => ({
             analyser: null,
             source: null,
             dataArray: null,
-            levels: { bass: 0, mid: 0, treble: 0, volume: 0 },
+            levels: {
+                bass: 0,
+                mid: 0,
+                treble: 0,
+                volume: 0,
+                energy: 0,
+                spectralCentroid: 0,
+                spectralRolloff: 0,
+                zcr: 0,
+                rms: 0,
+            },
         });
     },
 
@@ -83,6 +105,8 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         const { analyser, dataArray } = get();
         if (!analyser || !dataArray) return;
 
+        // Get frequency data for band analysis
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         analyser.getByteFrequencyData(dataArray as any);
 
         // Simple frequency bands analysis
@@ -109,9 +133,71 @@ export const useAudioStore = create<AudioState>((set, get) => ({
         for (let i = 0; i < bufferLength; i++) total += dataArray[i];
         const volume = total / (bufferLength * 255);
 
-        set({
-            levels: { bass, mid, treble, volume }
-        });
+        // Get time domain data for Meyda analysis
+        const timeDomainData = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(timeDomainData);
+
+        // Extract Meyda features
+        try {
+            const features = Meyda.extract(
+                ['rms', 'energy', 'spectralCentroid', 'spectralRolloff', 'zcr'],
+                timeDomainData
+            );
+
+            if (features && typeof features === 'object' && !Array.isArray(features)) {
+                // Normalize values to 0-1 range
+                const energy = Math.min(features.energy || 0, 1);
+                const spectralCentroid = Math.min((features.spectralCentroid || 0) / 22050, 1);
+                const spectralRolloff = Math.min((features.spectralRolloff || 0) / 22050, 1);
+                const zcr = Math.min((features.zcr || 0) / 1000, 1);
+                const rms = Math.min(features.rms || 0, 1);
+
+                set({
+                    levels: {
+                        bass,
+                        mid,
+                        treble,
+                        volume,
+                        energy,
+                        spectralCentroid,
+                        spectralRolloff,
+                        zcr,
+                        rms,
+                    }
+                });
+            } else {
+                // Fallback if Meyda returns unexpected format
+                set({
+                    levels: {
+                        bass,
+                        mid,
+                        treble,
+                        volume,
+                        energy: 0,
+                        spectralCentroid: 0,
+                        spectralRolloff: 0,
+                        zcr: 0,
+                        rms: 0,
+                    }
+                });
+            }
+        } catch (error) {
+            // If Meyda fails, just use basic features
+            console.warn('Meyda analysis failed:', error);
+            set({
+                levels: {
+                    bass,
+                    mid,
+                    treble,
+                    volume,
+                    energy: 0,
+                    spectralCentroid: 0,
+                    spectralRolloff: 0,
+                    zcr: 0,
+                    rms: 0,
+                }
+            });
+        }
     },
 
     setLevels: (levels) => set({ levels }),

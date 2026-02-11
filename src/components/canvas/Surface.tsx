@@ -2,7 +2,6 @@
 
 import { useRef, useMemo, useEffect, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Line } from "@react-three/drei";
 import * as THREE from "three";
 import type { Surface as SurfaceType } from "@/store/project-store";
 import { useProjectStore, type Vector2 } from "@/store/project-store";
@@ -39,6 +38,7 @@ export function Surface({ surface }: SurfaceProps) {
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
     const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
     const toolMode = useUIStore((state) => state.toolMode);
+    const penSubMode = useUIStore((state) => state.penSubMode);
     const projectSettings = useProjectStore((state) => state.projectSettings);
     const isOutput = useOutputStore((state) => state.isOutput);
     const { prepareSnap, checkSnap, clearSnap } = useSnapping();
@@ -51,6 +51,14 @@ export function Surface({ surface }: SurfaceProps) {
         if (!surface.mediaId) return null;
         return mediaAssets.find((a) => a.id === surface.mediaId);
     }, [surface.mediaId, mediaAssets]);
+
+    // Get shader effects if any
+    const shaderEffects = useMemo(() => {
+        if (!surface.shaderEffectIds || surface.shaderEffectIds.length === 0) return [];
+        return surface.shaderEffectIds
+            .map(id => mediaAssets.find(a => a.id === id))
+            .filter((a): a is NonNullable<typeof a> => a !== undefined && a.type === "shader");
+    }, [surface.shaderEffectIds, mediaAssets]);
 
     // Manage Video/Webcam elements
     const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
@@ -84,7 +92,7 @@ export function Surface({ surface }: SurfaceProps) {
             console.log("✅ Using HTTP/HTTPS URL directly:", url);
             setResolvedUrl(url);
         }
-    }, [mediaAsset, updateMediaAsset]);
+    }, [mediaAsset, updateMediaAsset]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!mediaAsset || !resolvedUrl) {
@@ -112,6 +120,7 @@ export function Surface({ surface }: SurfaceProps) {
                 console.log("✓ Video can play:", mediaAsset.name);
             };
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const onError = (e: any) => {
                 console.error("✗ Video error for", mediaAsset.name, ":", video.error, e);
             };
@@ -182,13 +191,13 @@ export function Surface({ surface }: SurfaceProps) {
                 setVideoElement(null);
             };
         }
-    }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl]);
+    }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Separate effect to handle play/pause based on global playback state
     useEffect(() => {
-        if (!videoRef.current) return;
+        const video = videoElement ?? videoRef.current;
+        if (!video) return;
 
-        const video = videoRef.current;
         console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name);
 
         if (isPlayingGlobal) {
@@ -202,7 +211,36 @@ export function Surface({ surface }: SurfaceProps) {
         } else {
             video.pause();
         }
-    }, [isPlayingGlobal, mediaAsset?.name]);
+    }, [isPlayingGlobal, mediaAsset?.name, videoElement]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Handle force video sync event
+    useEffect(() => {
+        const video = videoElement ?? videoRef.current;
+        if (!video || mediaAsset?.type !== "video") return;
+
+        const handleForceSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{ time: number }>;
+            const targetTime = customEvent.detail.time;
+
+            console.log("Force syncing video:", mediaAsset?.name, "to time:", targetTime);
+
+            // Set video time
+            video.currentTime = targetTime;
+
+            // If should be playing, ensure it's playing
+            if (isPlayingGlobal && video.paused) {
+                video.play().catch(err => {
+                    console.warn("Play failed during sync:", err);
+                });
+            }
+        };
+
+        window.addEventListener("force-video-sync", handleForceSync);
+
+        return () => {
+            window.removeEventListener("force-video-sync", handleForceSync);
+        };
+    }, [mediaAsset?.type, mediaAsset?.name, videoElement, isPlayingGlobal]);
 
     // Create texture from media
     const texture = useMemo(() => {
@@ -246,8 +284,8 @@ export function Surface({ surface }: SurfaceProps) {
             return tex;
         }
 
-        if (surface.useComposition && (window as any).compositionTexture) {
-            return (window as any).compositionTexture;
+        if (surface.useComposition && (window as any).compositionTexture) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            return (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
         }
 
         if (mediaAsset.type === "text") {
@@ -262,8 +300,7 @@ export function Surface({ surface }: SurfaceProps) {
                 const fontWeight = mediaAsset.fontWeight || "normal";
                 const fontStyle = mediaAsset.fontStyle || "normal";
                 const lineHeight = mediaAsset.lineHeight || 1.2;
-                // @ts-ignore - letterSpacing is supported in modern browsers/types
-                if (mediaAsset.letterSpacing) ctx.letterSpacing = `${mediaAsset.letterSpacing}px`;
+                if (mediaAsset.letterSpacing) (ctx as any).letterSpacing = `${mediaAsset.letterSpacing}px`; // eslint-disable-line @typescript-eslint/no-explicit-any
 
                 ctx.fillStyle = mediaAsset.textColor || "#ffffff";
                 ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
@@ -287,7 +324,7 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         return null;
-    }, [mediaAsset, videoElement, resolvedUrl]);
+    }, [mediaAsset, videoElement, resolvedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate warping matrix or polygon geometry
     const isQuad = surface.corners.length === 4;
@@ -367,7 +404,7 @@ export function Surface({ surface }: SurfaceProps) {
         uvAttribute.needsUpdate = true;
 
         return geometry;
-    }, [surface.corners, isQuad, surface.meshWarp]);
+    }, [surface.corners, isQuad, surface.meshWarp]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate texture matrix
     const textureMatrix = useMemo(() => {
@@ -459,48 +496,89 @@ export function Surface({ surface }: SurfaceProps) {
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;
 
+        // Check if we should use a shader effect instead
+        // For now, we only apply the first effect (full compositing TODO)
+        let effectShader = fragmentShader;
+        const effectUniforms: Record<string, { value: number | THREE.Vector2 | THREE.Vector3 | THREE.Texture }> = {};
+
+        if (shaderEffects.length > 0) {
+            const firstEffect = shaderEffects[0];
+            if (firstEffect.shaderSource && firstEffect.uniforms) {
+                // Use the effect's shader
+                effectShader = firstEffect.shaderSource;
+
+                // Convert effect uniforms to THREE.js uniform format
+                Object.entries(firstEffect.uniforms).forEach(([key, value]) => {
+                    if (Array.isArray(value)) {
+                        if (value.length === 2) {
+                            effectUniforms[key] = { value: new THREE.Vector2(value[0], value[1]) };
+                        } else if (value.length === 3) {
+                            effectUniforms[key] = { value: new THREE.Vector3(value[0], value[1], value[2]) };
+                        }
+                    } else {
+                        effectUniforms[key] = { value };
+                    }
+                });
+
+                // Add texture uniform for the effect to use
+                effectUniforms.uTexture = { value: texture };
+                effectUniforms.uTime = { value: 0 }; // For animated effects
+            }
+        }
+
+        // Always include all standard uniforms, plus any effect-specific ones
+        const allUniforms = {
+            uTexture: { value: texture },
+            uTextureMatrix: { value: textureMatrix },
+            uOpacity: { value: surface.opacity },
+            uBrightness: { value: effects.brightness },
+            uContrast: { value: effects.contrast },
+            uSaturation: { value: effects.saturation },
+            uHue: { value: effects.hue },
+            uColorTint: {
+                value: new THREE.Vector3(
+                    effects.colorTint.r,
+                    effects.colorTint.g,
+                    effects.colorTint.b
+                )
+            },
+            uBlurAmount: { value: effects.blur },
+            uChromaticAberration: { value: effects.chromaticAberration },
+            uRGBShift: { value: effects.rgbShift },
+            uWarpMatrix: { value: warpMatrix },
+            uBlendZones: {
+                value: new THREE.Vector4(
+                    effects.blendLeft,
+                    effects.blendRight,
+                    effects.blendTop,
+                    effects.blendBottom
+                )
+            },
+            uBlendFeather: { value: effects.blendFeather },
+            uBlendGamma: { value: effects.blendGamma },
+            uMasterOpacity: { value: projectSettings.masterOpacity },
+            uMasterBrightness: { value: projectSettings.masterBrightness },
+            uBlackout: { value: projectSettings.blackout ? 1.0 : 0.0 },
+            uMappingMode: { value: surface.compositionMapping === "global" ? 1 : 0 },
+            uProjectResolution: {
+                value: new THREE.Vector2(
+                    projectSettings.resolution.width,
+                    projectSettings.resolution.height
+                )
+            },
+            ...effectUniforms, // Effect-specific uniforms override if present
+        };
+
         const mat = new THREE.ShaderMaterial({
             vertexShader,
-            fragmentShader,
-            uniforms: {
-                uTexture: { value: texture },
-                uTextureMatrix: { value: textureMatrix },
-                uOpacity: { value: surface.opacity },
-                uBrightness: { value: effects.brightness },
-                uContrast: { value: effects.contrast },
-                uSaturation: { value: effects.saturation },
-                uHue: { value: effects.hue },
-                uColorTint: {
-                    value: new THREE.Vector3(
-                        effects.colorTint.r,
-                        effects.colorTint.g,
-                        effects.colorTint.b
-                    )
-                },
-                uBlurAmount: { value: effects.blur },
-                uChromaticAberration: { value: effects.chromaticAberration },
-                uRGBShift: { value: effects.rgbShift },
-                uWarpMatrix: { value: warpMatrix },
-                uBlendZones: {
-                    value: new THREE.Vector4(
-                        effects.blendLeft,
-                        effects.blendRight,
-                        effects.blendTop,
-                        effects.blendBottom
-                    )
-                },
-                uBlendFeather: { value: effects.blendFeather },
-                uBlendGamma: { value: effects.blendGamma },
-                uMasterOpacity: { value: projectSettings.masterOpacity },
-                uMasterBrightness: { value: projectSettings.masterBrightness },
-                uBlackout: { value: projectSettings.blackout ? 1.0 : 0.0 },
-            },
+            fragmentShader: effectShader,
+            uniforms: allUniforms,
             transparent: true,
             side: THREE.DoubleSide,
         });
 
         return mat;
-    }, [texture]); // Only recreate if texture changes
+    }, [texture, surface.compositionMapping, projectSettings.resolution, shaderEffects]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update mesh geometry for MeshWarp
     // Helper for cubic bezier interpolation
@@ -516,6 +594,7 @@ export function Surface({ surface }: SurfaceProps) {
         };
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calculateWarpAtUV = (u: number, v: number, gridSize: number, controlPoints: any[][]): Vector2 => {
         // Find which cell we are in
         const gu = Math.max(0, Math.min(gridSize - 0.0001, u * gridSize));
@@ -591,14 +670,10 @@ export function Surface({ surface }: SurfaceProps) {
             positions.setXY(i, pos.x, pos.y);
         }
         positions.needsUpdate = true;
-    }, [surface.meshWarp, surface.id]);
-
-    const [hovered, setHovered] = useState(false);
-    const bounceRef = useRef(1.0);
-    const audioReactiveScale = useRef(1.0);
+    }, [surface.meshWarp, surface.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update mesh transform and uniforms
-    useFrame((state) => {
+    useFrame(() => {
         if (!meshRef.current) return;
 
 
@@ -609,8 +684,8 @@ export function Surface({ surface }: SurfaceProps) {
         // CRITICAL: Update composition texture every frame
         // The compositor pings-pongs between two targets, so the texture instance changes every frame.
         // We must update the uniform to point to the latest 'read' texture.
-        if (surface.useComposition && (window as any).compositionTexture && shaderMaterial) {
-            shaderMaterial.uniforms.uTexture.value = (window as any).compositionTexture;
+        if (surface.useComposition && (window as any).compositionTexture && shaderMaterial) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            shaderMaterial.uniforms.uTexture.value = (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
         }
 
         // CRITICAL: Update video texture only when playing or seeking + sync with timeline
@@ -653,20 +728,64 @@ export function Surface({ surface }: SurfaceProps) {
         let reactiveOpacity = surface.opacity;
         let reactiveBlur = effects.blur;
         let reactiveChromatic = effects.chromaticAberration;
+        let reactiveBrightness = effects.brightness;
+        let reactiveContrast = effects.contrast;
+        let reactiveSaturation = effects.saturation;
+        let reactiveHue = effects.hue;
+        let reactiveRgbShift = effects.rgbShift;
+        let reactiveColorTintR = effects.colorTint.r;
+        let reactiveColorTintG = effects.colorTint.g;
+        let reactiveColorTintB = effects.colorTint.b;
+        let reactiveScaleX = 1;
+        let reactiveScaleY = 1;
+        let reactiveRotation = 0;
+        let reactivePositionX = 0;
+        let reactivePositionY = 0;
 
         if (surface.audioMappings.length > 0) {
             const audioState = useAudioStore.getState();
-            const levels = audioState.levels as any;
+            const levels = audioState.levels as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
             surface.audioMappings.forEach(mapping => {
                 if (!mapping.enabled) return;
                 const level = levels[mapping.band] || 0;
                 const value = mapping.min + (mapping.max - mapping.min) * level;
 
+                // Existing properties
                 if (mapping.property === "opacity") reactiveOpacity = value;
                 if (mapping.property === "blur") reactiveBlur = value;
                 if (mapping.property === "chromatic") reactiveChromatic = value;
+
+                // New shader-based properties
+                if (mapping.property === "brightness") reactiveBrightness = value;
+                if (mapping.property === "contrast") reactiveContrast = value;
+                if (mapping.property === "saturation") reactiveSaturation = value;
+                if (mapping.property === "hue") reactiveHue = value;
+                if (mapping.property === "rgbShift") reactiveRgbShift = value;
+
+                // Color tint channels
+                if (mapping.property === "colorTint.r") reactiveColorTintR = value;
+                if (mapping.property === "colorTint.g") reactiveColorTintG = value;
+                if (mapping.property === "colorTint.b") reactiveColorTintB = value;
+
+                // Transform-based properties (additive)
+                if (mapping.property === "scale") {
+                    reactiveScaleX = value;
+                    reactiveScaleY = value;
+                }
+                if (mapping.property === "scale.x") reactiveScaleX = value;
+                if (mapping.property === "scale.y") reactiveScaleY = value;
+                if (mapping.property === "rotation") reactiveRotation += value; // Additive rotation
+                if (mapping.property === "position.x") reactivePositionX += value; // Additive position
+                if (mapping.property === "position.y") reactivePositionY += value;
             });
+        }
+
+        // Apply transform-based audio reactivity to group
+        if (groupRef.current && (reactiveScaleX !== 1 || reactiveScaleY !== 1 || reactiveRotation !== 0 || reactivePositionX !== 0 || reactivePositionY !== 0)) {
+            groupRef.current.scale.set(surface.scale.x * reactiveScaleX, surface.scale.y * reactiveScaleY, 1);
+            groupRef.current.rotation.z = surface.rotation + reactiveRotation;
+            groupRef.current.position.set(surface.position.x + reactivePositionX, surface.position.y + reactivePositionY, 0);
         }
 
         if (shaderMaterial) {
@@ -674,24 +793,25 @@ export function Surface({ surface }: SurfaceProps) {
             const uniforms = shaderMaterial.uniforms;
 
             // Allow for optimized updates by modifying uniform values directly
+            if (uniforms.uTextureMatrix) uniforms.uTextureMatrix.value.copy(textureMatrix);
             if (uniforms.uWarpMatrix) uniforms.uWarpMatrix.value.copy(warpMatrix);
             if (uniforms.uOpacity) uniforms.uOpacity.value = reactiveOpacity;
-            if (uniforms.uBrightness) uniforms.uBrightness.value = effects.brightness;
-            if (uniforms.uContrast) uniforms.uContrast.value = effects.contrast;
-            if (uniforms.uSaturation) uniforms.uSaturation.value = effects.saturation;
-            if (uniforms.uHue) uniforms.uHue.value = effects.hue;
+            if (uniforms.uBrightness) uniforms.uBrightness.value = reactiveBrightness;
+            if (uniforms.uContrast) uniforms.uContrast.value = reactiveContrast;
+            if (uniforms.uSaturation) uniforms.uSaturation.value = reactiveSaturation;
+            if (uniforms.uHue) uniforms.uHue.value = reactiveHue;
 
             if (uniforms.uColorTint) {
                 uniforms.uColorTint.value.set(
-                    effects.colorTint.r,
-                    effects.colorTint.g,
-                    effects.colorTint.b
+                    reactiveColorTintR,
+                    reactiveColorTintG,
+                    reactiveColorTintB
                 );
             }
 
             if (uniforms.uBlurAmount) uniforms.uBlurAmount.value = reactiveBlur;
             if (uniforms.uChromaticAberration) uniforms.uChromaticAberration.value = reactiveChromatic;
-            if (uniforms.uRGBShift) uniforms.uRGBShift.value = effects.rgbShift;
+            if (uniforms.uRGBShift) uniforms.uRGBShift.value = reactiveRgbShift;
 
             // Update Blend Uniforms
             if (uniforms.uBlendZones) {
@@ -708,14 +828,27 @@ export function Surface({ surface }: SurfaceProps) {
             // Global controls
             if (uniforms.uMasterOpacity) uniforms.uMasterOpacity.value = projectSettings.masterOpacity;
             if (uniforms.uMasterBrightness) uniforms.uMasterBrightness.value = projectSettings.masterBrightness;
+
+            // Update time for shader effects (animated effects)
+            if (uniforms.uTime) uniforms.uTime.value = currentTime;
             if (uniforms.uBlackout) uniforms.uBlackout.value = projectSettings.blackout ? 1.0 : 0.0;
+
+            // Mapping controls
+            if (uniforms.uMappingMode) uniforms.uMappingMode.value = (surface.compositionMapping === "global" ? 1 : 0);
+            if (uniforms.uProjectResolution) {
+                uniforms.uProjectResolution.value.set(
+                    projectSettings.resolution.width,
+                    projectSettings.resolution.height
+                );
+            }
         }
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleClick = (e: any) => {
         if (surface.locked) return;
         e.stopPropagation();
-        selectSurface(surface.id, e.nativeEvent?.shiftKey || false);
+        selectSurface(surface.id, e.nativeEvent?.metaKey || e.nativeEvent?.ctrlKey || false);
     };
 
     // Add drag functionality for select mode
@@ -723,6 +856,7 @@ export function Surface({ surface }: SurfaceProps) {
     const saveHistory = useProjectStore((state) => state.saveHistory);
     const { camera, gl } = useThree();
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handlePointerDown = (e: any) => {
         // If surface is locked, let event pass through (to background/deselect)
         if (surface.locked) return;
@@ -741,12 +875,13 @@ export function Surface({ surface }: SurfaceProps) {
             console.error("Failed to save history:", err);
         }
 
-        // If shift isn't pressed and this surface isn't already selected,
-        // we select ONLY this surface (standard Figma behavior).
+        // If Ctrl/Cmd isn't pressed and this surface isn't already selected,
+        // we select ONLY this surface (standard behavior).
         // If it IS already selected, we keep the selection to allow dragging the group.
-        if (!e.nativeEvent?.shiftKey && !isSelected) {
+        const isMultiSelect = e.nativeEvent?.metaKey || e.nativeEvent?.ctrlKey;
+        if (!isMultiSelect && !isSelected) {
             selectSurface(surface.id, false);
-        } else if (e.nativeEvent?.shiftKey) {
+        } else if (isMultiSelect) {
             selectSurface(surface.id, true);
         }
 
@@ -758,7 +893,8 @@ export function Surface({ surface }: SurfaceProps) {
         startVector.unproject(camera);
 
         // Snapshot of all selected surfaces' starting positions
-        const selectedSurfaces = useProjectStore.getState().surfaces.filter(s =>
+        const activeSurfaces = useProjectStore.getState().getActiveSurfaces();
+        const selectedSurfaces = activeSurfaces.filter(s =>
             useProjectStore.getState().selectedSurfaceIds.includes(s.id)
         );
 
@@ -842,8 +978,8 @@ export function Surface({ surface }: SurfaceProps) {
                 ref={meshRef}
                 onClick={handleClick}
                 onPointerDown={handlePointerDown}
-                onPointerOver={() => setHovered(true)}
-                onPointerOut={() => setHovered(false)}
+                onPointerOver={() => { }}
+                onPointerOut={() => { }}
             >
                 {polygonGeometry ? (
                     <primitive object={polygonGeometry} attach="geometry" />
@@ -890,8 +1026,8 @@ export function Surface({ surface }: SurfaceProps) {
                 </group>
             )}
 
-            {/* Pen Tool Mode */}
-            {isSelected && toolMode === "pen" && (
+            {/* Pen Tool Mode (Edit only) */}
+            {isSelected && toolMode === "pen" && penSubMode === "edit" && (
                 <group position={[0, 0, 0.05]}>
                     <PenTool surface={surface} />
                 </group>

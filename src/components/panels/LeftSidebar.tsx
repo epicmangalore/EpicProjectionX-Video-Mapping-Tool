@@ -1,19 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Layers, Image, Plus, Type, Video, Monitor, Scan, MousePointer2, Move, Maximize, Sparkles, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
+import { Layers, Image as ImageIcon, Plus, Type, Sparkles, Wand2, Shapes } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { MediaLibrary } from "./MediaLibrary";
-import { LayerPanel } from "./LayerPanel";
+import { EffectsBrowser } from "./EffectsBrowser";
 import { AutoDetectDialog } from "../dialogs/AutoDetectDialog";
+import { ShapeLibraryPanel } from "./ShapeLibraryPanel";
 import { useProjectStore } from "@/store/project-store";
 import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
 
 export function LeftSidebar() {
-    const [activeTab, setActiveTab] = useState<"layers" | "assets" | "mixer">("layers");
-    const [showScanner, setShowScanner] = useState(false);
+    const [activeTab, setActiveTab] = useState<"layers" | "assets" | "fx">("layers");
+
     const [showAutoDetect, setShowAutoDetect] = useState(false);
+    const [showShapeLibrary, setShowShapeLibrary] = useState(false);
 
     // Store hooks for creation actions
     const addSurface = useProjectStore((state) => state.addSurface);
@@ -42,15 +44,7 @@ export function LeftSidebar() {
         addSurface(mediaId);
     };
 
-    const handleWebcam = () => {
-        const mediaId = generateId();
-        addMediaAsset({
-            id: mediaId,
-            name: "Webcam Input",
-            type: "webcam",
-        });
-        addSurface(mediaId);
-    };
+
 
     return (
         <div className="w-80 h-full bg-zinc-900 border-r border-white/5 flex flex-col font-sans relative">
@@ -76,20 +70,21 @@ export function LeftSidebar() {
                         }`}
                     data-tour="assets-tab"
                 >
-                    <Image className="w-3.5 h-3.5" />
+                    <ImageIcon className="w-3.5 h-3.5" />
                     Assets
                     {activeTab === "assets" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
+
                 <button
-                    onClick={() => setActiveTab("mixer")}
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "mixer"
+                    onClick={() => setActiveTab("fx")}
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "fx"
                         ? "text-white"
                         : "text-zinc-500 hover:text-zinc-200 hover:text-zinc-300"
                         }`}
                 >
-                    <SlidersHorizontal className="w-3.5 h-3.5" />
-                    Mixer
-                    {activeTab === "mixer" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-400" />}
+                    <Wand2 className="w-3.5 h-3.5" />
+                    FX
+                    {activeTab === "fx" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
             </div>
 
@@ -120,6 +115,13 @@ export function LeftSidebar() {
                                 </button>
                             </div>
                             <button
+                                onClick={() => setShowShapeLibrary(true)}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border border-white/5"
+                            >
+                                <Shapes className="w-3 h-3" />
+                                Shapes
+                            </button>
+                            <button
                                 onClick={() => setShowAutoDetect(true)}
                                 className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded bg-gradient-to-r from-electric-cyan/20 to-electric-purple/20 hover:from-electric-cyan/30 hover:to-electric-purple/30 text-white text-xs transition-colors border border-electric-cyan/30"
                             >
@@ -143,11 +145,11 @@ export function LeftSidebar() {
                     </div>
                 )}
 
-                {activeTab === "mixer" && (
+
+
+                {activeTab === "fx" && (
                     <div className="absolute inset-0 flex flex-col">
-                        <div className="flex-1 overflow-hidden">
-                            <LayerPanel />
-                        </div>
+                        <EffectsBrowser />
                     </div>
                 )}
             </div>
@@ -156,6 +158,12 @@ export function LeftSidebar() {
             <AutoDetectDialog
                 isOpen={showAutoDetect}
                 onClose={() => setShowAutoDetect(false)}
+            />
+
+            {/* Shape Library Panel */}
+            <ShapeLibraryPanel
+                isOpen={showShapeLibrary}
+                onClose={() => setShowShapeLibrary(false)}
             />
         </div>
     );

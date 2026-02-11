@@ -19,6 +19,7 @@ interface PlaybackStore {
     setBPM: (bpm: number) => void;
     toggleBPMSync: () => void;
     tapTempo: () => void;
+    syncAllVideos: () => void;
 }
 
 let lastTapTime = 0;
@@ -84,5 +85,16 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
         }
 
         lastTapTime = now;
+    },
+
+    syncAllVideos: () => {
+        const { currentTime } = get();
+
+        // Dispatch custom event to force all video elements to sync
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent("force-video-sync", {
+                detail: { time: currentTime }
+            }));
+        }
     },
 }));
