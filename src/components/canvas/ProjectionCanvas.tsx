@@ -19,7 +19,6 @@ import { useAudioStore } from "@/store/audio-store";
 import { useFrame } from "@react-three/fiber";
 import { SelectionBox } from "./SelectionBox";
 import { SnapLines } from "./SnapLines";
-import { LayerCompositor } from "@/engine/LayerCompositor";
 
 function AudioManager() {
     const updateLevels = useAudioStore((state) => state.updateLevels);
@@ -100,9 +99,6 @@ export function ProjectionCanvas() {
 
                 {/* Pen Draw Tool (polygon surface creation) */}
                 {!isOutput && <PenDrawTool />}
-
-                {/* Layer Compositor (Global Mix) */}
-                <LayerCompositor />
 
                 {/* Render all surfaces */}
                 {surfaces.map((surface) => (
