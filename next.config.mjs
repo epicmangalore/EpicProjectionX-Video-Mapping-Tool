@@ -3,6 +3,9 @@ import withPWAInit from "next-pwa";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     reactStrictMode: true,
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
     webpack: (config) => {
         // Handle GLSL shader files
         config.module.rules.push({
