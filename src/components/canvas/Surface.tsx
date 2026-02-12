@@ -136,6 +136,7 @@ export function Surface({ surface }: SurfaceProps) {
             video.crossOrigin = "anonymous";
             video.loop = true;
             video.muted = true;
+            video.autoplay = true;
             video.playsInline = true;
 
             // Important for long videos: preload metadata
@@ -239,6 +240,20 @@ export function Surface({ surface }: SurfaceProps) {
                 });
             } else {
                 console.log("Video not ready yet, waiting for canplay event");
+
+                const handleCanPlayWhilePlaying = () => {
+                    video.play().catch(err => {
+                        console.warn("Play failed after canplay:", err);
+                    });
+                };
+
+                // If playback was requested before media became ready,
+                // start playback as soon as canplay fires.
+                video.addEventListener("canplay", handleCanPlayWhilePlaying, { once: true });
+
+                return () => {
+                    video.removeEventListener("canplay", handleCanPlayWhilePlaying);
+                };
             }
         } else {
             video.pause();
@@ -749,10 +764,28 @@ export function Surface({ surface }: SurfaceProps) {
                 const timelineJump = Math.abs(currentTime - lastTimelineTimeRef.current);
                 const isScrubbing = timelineJump > 0.5;
 
-                if (isScrubbing || absDrift > 0.5) {
-                    // Major drift or scrubbing: Hard seek is necessary
+                if (!isPlayingGlobal) {
+                    // When paused, maintain exact sync for still preview.
+                    if (absDrift > 0.01) {
+                        videoElement.currentTime = targetTime;
+                    }
+                    if (videoElement.playbackRate !== 1.0) {
+                        videoElement.playbackRate = 1.0;
+                    }
+                } else if (isScrubbing || absDrift > 2.0) {
+                    // While playing, only hard-seek on explicit scrubs or very large drift.
+                    // Frequent hard seeks can pin playback to the first frame.
                     videoElement.currentTime = targetTime;
                     videoElement.playbackRate = 1.0;
+                } else if (isPlayingGlobal && videoElement.paused) {
+                    // If playback got stuck/blocked, keep frame progression in sync
+                    // by seeking to timeline time and retrying play.
+                    if (absDrift > 0.01) {
+                        videoElement.currentTime = targetTime;
+                    }
+                    videoElement.play().catch(() => {
+                        // Ignore autoplay/runtime errors; timeline-seek fallback still updates frames.
+                    });
                 } else if (isPlayingGlobal && absDrift > 0.03) {
                     // Minor drift (> 30ms): Adjust playback rate to catch up smoothly
                     // This prevents the "stutter" or "stuck" feel caused by frequent seeking
@@ -763,9 +796,6 @@ export function Surface({ surface }: SurfaceProps) {
                         // Video is behind, speed up slightly
                         videoElement.playbackRate = 1.05;
                     }
-                } else if (!isPlayingGlobal && absDrift > 0.01) {
-                    // When paused, maintain exact sync for preview
-                    videoElement.currentTime = targetTime;
                 } else {
                     // In sync: Reset playback rate to normal
                     if (videoElement.playbackRate !== 1.0) {
