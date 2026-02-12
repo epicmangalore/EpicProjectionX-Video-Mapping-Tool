@@ -13,7 +13,7 @@ interface SnapResult {
 }
 
 export function useSnapping() {
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const setSnapLines = useUIStore((state) => state.setSnapLines);
 
     // Candidates arrays (values to snap TO)

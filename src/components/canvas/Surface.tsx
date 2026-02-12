@@ -885,12 +885,12 @@ export function Surface({ surface }: SurfaceProps) {
             selectSurface(surface.id, true);
         }
 
-        const rect = gl.domElement.getBoundingClientRect();
-        const startX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        const startY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        // Use R3F intersection point (world space) — e.clientX is not available on ThreeEvent
+        const startVector = e.point
+            ? new THREE.Vector3(e.point.x, e.point.y, 0)
+            : new THREE.Vector3(e.intersections?.[0]?.point.x ?? 0, e.intersections?.[0]?.point.y ?? 0, 0);
 
-        const startVector = new THREE.Vector3(startX, startY, 0.5);
-        startVector.unproject(camera);
+        const rect = gl.domElement.getBoundingClientRect();
 
         // Snapshot of all selected surfaces' starting positions
         const activeSurfaces = useProjectStore.getState().getActiveSurfaces();

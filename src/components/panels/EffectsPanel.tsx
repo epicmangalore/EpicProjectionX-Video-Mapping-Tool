@@ -5,7 +5,7 @@ import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { Wand2, RotateCcw } from "lucide-react";
 
 export function EffectsPanel() {
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
     const updateSurfaceEffect = useEffectsStore((state) => state.updateSurfaceEffect);

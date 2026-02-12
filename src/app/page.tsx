@@ -41,7 +41,7 @@ export default function Home() {
     const [showSettings, setShowSettings] = useState(false);
 
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const deselectAll = useProjectStore((state) => state.deselectAll);

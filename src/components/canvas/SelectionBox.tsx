@@ -10,7 +10,7 @@ export function SelectionBox() {
     const { camera, gl, scene } = useThree();
     const deselectedAll = useProjectStore((state) => state.deselectAll);
     const selectSurface = useProjectStore((state) => state.selectSurface);
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const toolMode = useUIStore((state) => state.toolMode);
 
     const [dragStart, setDragStart] = useState<THREE.Vector3 | null>(null);

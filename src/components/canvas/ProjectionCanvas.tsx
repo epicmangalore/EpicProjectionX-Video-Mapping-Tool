@@ -34,7 +34,7 @@ function AudioManager() {
 }
 
 export function ProjectionCanvas() {
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const projectSettings = useProjectStore((state) => state.projectSettings);
     const deselectAll = useProjectStore((state) => state.deselectAll);

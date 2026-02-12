@@ -333,9 +333,11 @@ export const useGroupStore = create<GroupStore>()(
 // Watch for surface deletions in project-store and clean up groups.
 
 useProjectStore.subscribe((state, prev) => {
-    if (state.surfaces === prev.surfaces) return;
+    const surfaces = state.getActiveSurfaces();
+    const prevSurfaces = prev.getActiveSurfaces();
+    if (surfaces === prevSurfaces) return;
 
-    const currentIds = new Set(state.surfaces.map((s) => s.id));
+    const currentIds = new Set(surfaces.map((s) => s.id));
     const groupState = useGroupStore.getState();
 
     groupState.groups.forEach((group) => {

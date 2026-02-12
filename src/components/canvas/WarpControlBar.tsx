@@ -9,7 +9,7 @@ export function WarpControlBar() {
     const toolMode = useUIStore((state) => state.toolMode);
     const setToolMode = useUIStore((state) => state.setToolMode);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const undo = useProjectStore((state) => state.undo);
 

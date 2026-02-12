@@ -279,11 +279,11 @@ export const useProjectStore = create<ProjectStore>()(
             addSurface: (mediaId) => {
                 const { activeSceneId, scenes } = get();
 
-                // Must have an active scene to add surfaces
-                if (!activeSceneId) {
-                    console.warn('Cannot add surface: No active scene');
-                    return;
-                }
+                // Resolve target scene robustly (active -> first existing)
+                const resolvedSceneId =
+                    activeSceneId && scenes.some((s) => s.id === activeSceneId)
+                        ? activeSceneId
+                        : scenes[0]?.id ?? null;
 
                 get().saveHistory();
 
@@ -300,7 +300,7 @@ export const useProjectStore = create<ProjectStore>()(
                     }
                 }
 
-                const activeScene = scenes.find(s => s.id === activeSceneId);
+                const activeScene = scenes.find(s => s.id === resolvedSceneId);
                 const surfaceCount = activeScene?.surfaces.length || 0;
 
                 const newSurface: Surface = {
@@ -346,14 +346,39 @@ export const useProjectStore = create<ProjectStore>()(
                     compositionMapping: "global" as const,
                 };
 
-                set((state) => ({
-                    scenes: state.scenes.map(scene =>
-                        scene.id === activeSceneId
-                            ? { ...scene, surfaces: [...scene.surfaces, newSurface], updatedAt: Date.now() }
-                            : scene
-                    ),
-                    selectedSurfaceIds: [newSurface.id],
-                }));
+                set((state) => {
+                    // If no scene exists yet, bootstrap one so surface creation always works.
+                    if (!resolvedSceneId) {
+                        const bootstrapScene: Scene = {
+                            id: generateId(),
+                            name: "Scene 1",
+                            surfaces: [newSurface],
+                            effects: {},
+                            keyframes: [],
+                            timelineDuration: 30,
+                            transitionDuration: 1.0,
+                            hotkey: undefined,
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                        };
+
+                        return {
+                            scenes: [...state.scenes, bootstrapScene],
+                            activeSceneId: bootstrapScene.id,
+                            selectedSurfaceIds: [newSurface.id],
+                        };
+                    }
+
+                    return {
+                        scenes: state.scenes.map(scene =>
+                            scene.id === resolvedSceneId
+                                ? { ...scene, surfaces: [...scene.surfaces, newSurface], updatedAt: Date.now() }
+                                : scene
+                        ),
+                        activeSceneId: resolvedSceneId,
+                        selectedSurfaceIds: [newSurface.id],
+                    };
+                });
             },
 
             addShapeFromPreset: (presetId, position) => {

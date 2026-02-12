@@ -5,7 +5,7 @@ import { Eye, EyeOff, Lock, Unlock } from "lucide-react";
 import { useProjectStore } from "@/store/project-store";
 
 export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: string, surfaceName: string, keyframes: Keyframe[] }) {
-    const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
+    const surface = useProjectStore(state => state.getActiveSurfaces().find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
     const selectSurface = useProjectStore(state => state.selectSurface);
     const selectedSurfaceIds = useProjectStore(state => state.selectedSurfaceIds);
@@ -47,7 +47,7 @@ export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: st
 import { useRef, useState, useEffect } from "react";
 
 export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfaceId: string, keyframes: Keyframe[], duration: number }) {
-    const surface = useProjectStore(state => state.surfaces.find(s => s.id === surfaceId));
+    const surface = useProjectStore(state => state.getActiveSurfaces().find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
     const selectSurface = useProjectStore(state => state.selectSurface);
     const saveHistory = useProjectStore((state) => state.saveHistory);

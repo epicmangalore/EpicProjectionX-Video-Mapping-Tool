@@ -464,7 +464,7 @@ function SortableLayerRow({
 // ── Main Outliner ────────────────────────────────────────────────────
 
 export function SurfaceOutliner() {
-    const surfaces = useProjectStore((state) => state.surfaces);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const selectSurface = useProjectStore((state) => state.selectSurface);
     const toggleVisibility = useProjectStore(

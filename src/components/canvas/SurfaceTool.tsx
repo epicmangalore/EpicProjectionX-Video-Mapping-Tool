@@ -108,7 +108,8 @@ export function SurfaceTool() {
                 // just wait for the next frame.
                 setTimeout(() => {
                     const state = useProjectStore.getState();
-                    const newSurface = state.surfaces[state.surfaces.length - 1];
+                    const activeSurfaces = state.getActiveSurfaces();
+                    const newSurface = activeSurfaces[activeSurfaces.length - 1];
                     if (newSurface) {
                         updateSurface(newSurface.id, {
                             position: { x: centerX, y: centerY },
