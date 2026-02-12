@@ -675,6 +675,12 @@ export const useProjectStore = create<ProjectStore>()(
 
                 if (newSurfaces.length === 0) return;
 
+                // 3. Calculate if we need to extend the timeline duration
+                let maxDuration = activeScene.timelineDuration;
+                newSurfaces.forEach(s => {
+                    maxDuration = Math.max(maxDuration, s.startTime + s.duration);
+                });
+
                 set((state) => ({
                     scenes: state.scenes.map(scene =>
                         scene.id === activeSceneId
@@ -682,12 +688,24 @@ export const useProjectStore = create<ProjectStore>()(
                                 ...scene,
                                 surfaces: [...scene.surfaces, ...newSurfaces],
                                 keyframes: [...(scene.keyframes || []), ...newKeyframes],
+                                timelineDuration: maxDuration,
                                 updatedAt: Date.now(),
                             }
                             : scene
                     ),
                     selectedSurfaceIds: newSurfaces.map(s => s.id),
                 }));
+
+                // 4. Update the timeline store immediately so the UI reflects the new duration and keyframes
+                import("./timeline-store").then(({ useTimelineStore }) => {
+                    const scene = get().scenes.find(s => s.id === activeSceneId);
+                    if (scene) {
+                        useTimelineStore.setState({
+                            duration: scene.timelineDuration,
+                            keyframes: JSON.parse(JSON.stringify(scene.keyframes || []))
+                        });
+                    }
+                });
             },
 
             copySurface: (id) => {
