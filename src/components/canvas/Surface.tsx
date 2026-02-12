@@ -132,10 +132,12 @@ export function Surface({ surface }: SurfaceProps) {
         if (mediaAsset.type === "video") {
             console.log("Creating video element for:", mediaAsset.name, "URL:", resolvedUrl);
             const video = document.createElement("video");
+            let recoveredFromDb = false;
             video.src = resolvedUrl;
             video.crossOrigin = "anonymous";
             video.loop = true;
             video.muted = true;
+            video.defaultMuted = true;
             video.autoplay = true;
             video.playsInline = true;
 
@@ -154,8 +156,30 @@ export function Surface({ surface }: SurfaceProps) {
             };
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const onError = (e: any) => {
+            const onError = async (e: any) => {
                 console.error("✗ Video error for", mediaAsset.name, ":", video.error, e);
+
+                // Blob URLs can become stale after reload/crash. Recover from IndexedDB once.
+                if (recoveredFromDb || !mediaAsset.id) return;
+                recoveredFromDb = true;
+
+                try {
+                    const { db } = await import("@/lib/db");
+                    const fileRecord = await db.files.get(mediaAsset.id);
+
+                    if (fileRecord?.blob) {
+                        const recoveredUrl = URL.createObjectURL(fileRecord.blob);
+                        console.log("↺ Recovered video URL from IndexedDB:", mediaAsset.name);
+                        updateMediaAsset(mediaAsset.id, { url: recoveredUrl });
+                        video.src = recoveredUrl;
+                        video.load();
+                        if (isPlayingGlobal) {
+                            video.play().catch(err => console.warn("Play failed after DB recovery:", err));
+                        }
+                    }
+                } catch (recoveryError) {
+                    console.warn("Video recovery from IndexedDB failed:", recoveryError);
+                }
             };
 
             const onLoadStart = () => {
@@ -176,6 +200,10 @@ export function Surface({ surface }: SurfaceProps) {
             video.addEventListener("loadstart", onLoadStart);
             video.addEventListener("playing", onPlaying);
             video.addEventListener("waiting", onWaiting);
+
+            // Explicitly start fetching media. Some environments delay loading
+            // unless load() is called after dynamic src assignment.
+            video.load();
 
             setVideoElement(video);
             videoRef.current = video;
@@ -234,7 +262,7 @@ export function Surface({ surface }: SurfaceProps) {
         console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name);
 
         if (isPlayingGlobal) {
-            if (video.readyState >= 3) {
+            if (video.readyState >= 2) {
                 video.play().catch(err => {
                     console.warn("Play failed:", err);
                 });
@@ -265,9 +293,16 @@ export function Surface({ surface }: SurfaceProps) {
         const video = videoElement ?? videoRef.current;
         if (!video || mediaAsset?.type !== "video") return;
 
+        const mapToVideoTime = (timelineTime: number) => {
+            const d = video.duration;
+            if (!Number.isFinite(d) || d <= 0) return Math.max(0, timelineTime);
+            // Keep timeline sync within valid media range.
+            return ((timelineTime % d) + d) % d;
+        };
+
         const handleForceSync = (e: Event) => {
             const customEvent = e as CustomEvent<{ time: number }>;
-            const targetTime = customEvent.detail.time;
+            const targetTime = mapToVideoTime(customEvent.detail.time);
 
             console.log("Force syncing video:", mediaAsset?.name, "to time:", targetTime);
 
@@ -326,8 +361,6 @@ export function Surface({ surface }: SurfaceProps) {
 
         if (mediaAsset.type === "text") {
             const canvas = document.createElement("canvas");
-            canvas.width = 1024;
-            canvas.height = 1024;
             const ctx = canvas.getContext("2d");
             if (ctx) {
                 const text = mediaAsset.text || mediaAsset.name || "Text";
@@ -336,24 +369,39 @@ export function Surface({ surface }: SurfaceProps) {
                 const fontWeight = mediaAsset.fontWeight || "normal";
                 const fontStyle = mediaAsset.fontStyle || "normal";
                 const lineHeight = mediaAsset.lineHeight || 1.2;
-                if (mediaAsset.letterSpacing) (ctx as any).letterSpacing = `${mediaAsset.letterSpacing}px`; // eslint-disable-line @typescript-eslint/no-explicit-any
+                const lineStep = fontSize * lineHeight;
+                const lines = text.split("\n");
 
+                // Measure text first and size the canvas to text bounds.
+                // This gives text layers a real intrinsic aspect ratio so Stretch/Fill/Fit behaves correctly.
+                ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+                const maxLineWidth = Math.max(1, ...lines.map((line) => ctx.measureText(line).width));
+                const paddingX = Math.max(16, fontSize * 0.75);
+                const paddingY = Math.max(16, fontSize * 0.75);
+                const textHeight = Math.max(lineStep, lines.length * lineStep);
+                const targetWidth = Math.ceil(maxLineWidth + paddingX * 2);
+                const targetHeight = Math.ceil(textHeight + paddingY * 2);
+                canvas.width = Math.max(2, Math.min(4096, targetWidth));
+                canvas.height = Math.max(2, Math.min(4096, targetHeight));
+
+                // Re-apply styles after resize (canvas reset behavior)
                 ctx.fillStyle = mediaAsset.textColor || "#ffffff";
                 ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
                 ctx.textBaseline = "middle";
+                if (mediaAsset.letterSpacing) (ctx as any).letterSpacing = `${mediaAsset.letterSpacing}px`; // eslint-disable-line @typescript-eslint/no-explicit-any
 
                 const textAlign = mediaAsset.textAlign || "center";
                 ctx.textAlign = textAlign;
 
-                const x = textAlign === "left" ? 50 : textAlign === "right" ? 974 : 512;
-                let y = 512;
+                const x = textAlign === "left"
+                    ? paddingX
+                    : textAlign === "right"
+                        ? canvas.width - paddingX
+                        : canvas.width / 2;
 
-                const lines = text.split('\n');
-                const totalHeight = lines.length * (fontSize * lineHeight);
-                y -= totalHeight / 2;
-
+                const startY = (canvas.height - textHeight) / 2 + lineStep / 2;
                 lines.forEach((line, i) => {
-                    ctx.fillText(line, x, y + i * (fontSize * lineHeight) + (fontSize * lineHeight) / 2);
+                    ctx.fillText(line, x, startY + i * lineStep);
                 });
             }
             const tex = new THREE.CanvasTexture(canvas);
@@ -475,6 +523,13 @@ export function Surface({ surface }: SurfaceProps) {
         let mediaAspect = 1;
         if (mediaAsset.width && mediaAsset.height) {
             mediaAspect = mediaAsset.width / mediaAsset.height;
+        } else {
+            const textureImage = texture?.image as { width?: number; height?: number; videoWidth?: number; videoHeight?: number } | undefined;
+            const textureWidth = textureImage?.videoWidth ?? textureImage?.width;
+            const textureHeight = textureImage?.videoHeight ?? textureImage?.height;
+            if (textureWidth && textureHeight) {
+                mediaAspect = textureWidth / textureHeight;
+            }
         }
 
         // 3. Calculate Scale based on Fit Mode
@@ -527,7 +582,7 @@ export function Surface({ surface }: SurfaceProps) {
         matrix.translate(0.5, 0.5);
 
         return matrix;
-    }, [surface.corners, mediaAsset, surface.textureSettings, surface.compositionMapping, surface.useComposition]);
+    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition]);
 
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
@@ -747,15 +802,19 @@ export function Surface({ surface }: SurfaceProps) {
 
         // CRITICAL: Update video texture only when playing or seeking + sync with timeline
         if (texture && texture instanceof THREE.VideoTexture && videoElement) {
-            // Only force texture update if video is actually playing or seeking to save massive GPU bandwidth
-            const isPlaying = !videoElement.paused && !videoElement.ended;
-            if (isPlaying || videoElement.seeking) {
+            // Always refresh once media has current frame data; this avoids black/frozen
+            // surfaces when play state transitions or timeline seeks happen between frames.
+            if (videoElement.readyState >= 2) {
                 texture.needsUpdate = true;
             }
 
             // Sync video currentTime with timeline position
             if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-                const targetTime = currentTime;
+                const timelineTargetTime = currentTime;
+                const d = videoElement.duration;
+                const targetTime = Number.isFinite(d) && d > 0
+                    ? ((timelineTargetTime % d) + d) % d
+                    : Math.max(0, timelineTargetTime);
                 const videoTime = videoElement.currentTime;
                 const drift = videoTime - targetTime;
                 const absDrift = Math.abs(drift);
@@ -777,6 +836,14 @@ export function Surface({ surface }: SurfaceProps) {
                     // Frequent hard seeks can pin playback to the first frame.
                     videoElement.currentTime = targetTime;
                     videoElement.playbackRate = 1.0;
+
+                    // IMPORTANT: if playback was requested while the element is paused,
+                    // large-drift correction alone can keep the video stuck.
+                    if (videoElement.paused) {
+                        videoElement.play().catch(() => {
+                            // Ignore autoplay/runtime errors; timeline-seek fallback still updates frames.
+                        });
+                    }
                 } else if (isPlayingGlobal && videoElement.paused) {
                     // If playback got stuck/blocked, keep frame progression in sync
                     // by seeking to timeline time and retrying play.
@@ -809,7 +876,14 @@ export function Surface({ surface }: SurfaceProps) {
         // Timeline Visibility Check
         if (groupRef.current) {
             const endTime = surface.startTime + surface.duration;
-            const isInTimeRange = currentTime >= surface.startTime && currentTime < endTime;
+
+            // Legacy surfaces default to start=0,duration=5 which unintentionally hides
+            // media once the timeline moves past 5s. Treat that default as "always visible"
+            // unless timing has been explicitly edited.
+            const hasCustomTiming = surface.startTime !== 0 || surface.duration !== 5;
+            const isInTimeRange = hasCustomTiming
+                ? (currentTime >= surface.startTime && currentTime < endTime)
+                : true;
 
             // Only override visibility if surface is "globally" visible (eye icon on)
             if (surface.visible) {

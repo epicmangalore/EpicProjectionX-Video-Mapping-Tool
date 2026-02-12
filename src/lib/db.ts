@@ -46,6 +46,14 @@ class ProjectionXDB extends Dexie {
             assets: '++id, projectId',
             settings: 'key'
         });
+        // Keep DB version ahead of legacy/dev schemas (e.g. existing version 12)
+        // to avoid VersionError: requested version < existing version.
+        this.version(13).stores({
+            files: 'id, timestamp',
+            projects: '++id, name, updatedAt',
+            assets: '++id, projectId',
+            settings: 'key'
+        });
     }
 }
 

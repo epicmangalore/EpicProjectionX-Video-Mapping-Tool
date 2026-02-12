@@ -4,6 +4,7 @@ import { useProjectStore } from "@/store/project-store";
 import { useTimelineStore } from "@/store/timeline-store";
 import { Plus, Play, Pause, Trash2, Edit2, Repeat } from "lucide-react";
 import { useState } from "react";
+import type { Scene } from "@/store/project-store";
 
 export function SceneList() {
     const scenes = useProjectStore((state) => state.scenes);
@@ -37,7 +38,7 @@ export function SceneList() {
         }
     };
 
-    const handleEditStart = (scene: any) => {
+    const handleEditStart = (scene: Scene) => {
         setEditingId(scene.id);
         setEditName(scene.name);
     };
@@ -141,11 +142,11 @@ export function SceneList() {
                             {/* Scene Playback Controls */}
                             <div className="flex items-center gap-1.5 px-3 pb-2">
                                 <button
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (activeSceneId === scene.id && isPlaying) {
                                             pause();
                                         } else {
-                                            triggerScene(scene.id);
+                                            await triggerScene(scene.id);
                                             play();
                                         }
                                     }}

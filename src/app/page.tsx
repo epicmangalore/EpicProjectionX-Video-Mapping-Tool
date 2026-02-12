@@ -22,6 +22,7 @@ import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as Setting
 import { LightBeamButton } from "@/components/ui/LightBeamButton";
 import { saveProjectFile } from "@/lib/project-file-manager";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProjectHydration } from "@/components/layout/ProjectHydration";
 
 import { WarpControlBar } from "@/components/canvas/WarpControlBar";
 
@@ -166,6 +167,7 @@ export default function Home() {
     return (
         <TooltipProvider>
             <main className="h-screen w-screen overflow-hidden bg-zinc-950 flex flex-col text-zinc-100 font-sans">
+                <ProjectHydration />
                 <OnboardingGuide />
                 {/* Top Toolbar - Pro Minimalist */}
                 <header className="h-12 bg-zinc-900 border-b border-white/5 flex items-center px-4 gap-4 z-50">

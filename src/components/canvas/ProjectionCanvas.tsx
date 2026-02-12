@@ -4,6 +4,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrthographicCamera, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { useProjectStore } from "@/store/project-store";
+import { useTimelineStore } from "@/store/timeline-store";
 import { useUIStore } from "@/store/ui-store";
 import { Surface } from "./Surface";
 import { CornerPin } from "./CornerPin";
@@ -38,6 +39,7 @@ export function ProjectionCanvas() {
     const surfaces = useProjectStore((state) => state.getActiveSurfaces());
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const projectSettings = useProjectStore((state) => state.projectSettings);
+    const isTimelinePlaying = useTimelineStore((state) => state.isPlaying);
     const deselectAll = useProjectStore((state) => state.deselectAll);
     const setCanvasHovered = useUIStore((state) => state.setCanvasHovered);
     const isOutput = useOutputStore((state) => state.isOutput);
@@ -49,7 +51,7 @@ export function ProjectionCanvas() {
             onPointerLeave={() => setCanvasHovered(false)}
         >
             <Canvas
-                frameloop={projectSettings.paused ? "never" : "always"}
+                frameloop={projectSettings.paused && !isTimelinePlaying ? "never" : "always"}
                 gl={{
                     antialias: true,
                     alpha: true,

@@ -84,7 +84,7 @@ vec4 rgbShift(sampler2D tex, vec2 uv, float amount) {
 // Texture transformation
 uniform mat3 uTextureMatrix;
 
-// ... (previous code)
+void main() {
 
   vec4 texColor;
   

@@ -12,6 +12,17 @@ import { TimelineTrackContent } from "./timeline/TimelineTrack";
 
 export const BASE_PPS = 40; // Base pixels per second
 
+const getNiceStep = (rawStep: number) => {
+    if (!Number.isFinite(rawStep) || rawStep <= 0) return 1;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+    const normalized = rawStep / magnitude;
+
+    if (normalized <= 1) return 1 * magnitude;
+    if (normalized <= 2) return 2 * magnitude;
+    if (normalized <= 5) return 5 * magnitude;
+    return 10 * magnitude;
+};
+
 export function TimelinePanel() {
     const hasMounted = useHasMounted();
     const currentTime = useTimelineStore((state) => state.currentTime);
@@ -76,14 +87,21 @@ export function TimelinePanel() {
     // Auto-fit logic
     const [hasManuallyZoomed, setHasManuallyZoomed] = useState(false);
 
+    const getMinZoomToFit = useCallback(() => {
+        if (!scrollContainerRef.current || duration <= 0) return 0.0001;
+        const containerWidth = scrollContainerRef.current.clientWidth;
+        if (containerWidth <= 0) return 0.0001;
+        return Math.max(0.0001, containerWidth / (duration * BASE_PPS));
+    }, [duration]);
+
     const fitToView = useCallback(() => {
         if (!scrollContainerRef.current) return;
         const containerWidth = scrollContainerRef.current.clientWidth;
         if (containerWidth > 50 && duration > 0) {
-            const idealZoom = containerWidth / (duration * BASE_PPS);
+            const idealZoom = Math.max(getMinZoomToFit(), containerWidth / (duration * BASE_PPS));
             setZoom(idealZoom);
         }
-    }, [duration, setZoom]);
+    }, [duration, setZoom, getMinZoomToFit]);
 
     // Initial fit and Resize handling
     useEffect(() => {
@@ -114,7 +132,8 @@ export function TimelinePanel() {
                 e.preventDefault();
                 setHasManuallyZoomed(true);
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
-                const newZoom = zoom * delta;
+                const minZoomToFit = getMinZoomToFit();
+                const newZoom = Math.max(minZoomToFit, Math.min(10, zoom * delta));
 
                 // Pivot zoom around mouse position
                 const rect = container.getBoundingClientRect();
@@ -124,15 +143,14 @@ export function TimelinePanel() {
                 setZoom(newZoom);
 
                 // Adjust scroll to keep time position under mouse
-                const currentZoom = Math.max(0.1, Math.min(10, newZoom));
-                const newMouseX = timeAtMouse * (BASE_PPS * currentZoom);
+                const newMouseX = timeAtMouse * (BASE_PPS * newZoom);
                 container.scrollLeft = newMouseX - (e.clientX - rect.left);
             }
         };
 
         container.addEventListener("wheel", handleWheel, { passive: false });
         return () => container.removeEventListener("wheel", handleWheel);
-    }, [zoom, setZoom]);
+    }, [zoom, setZoom, getMinZoomToFit]);
 
     // Format time as HH:MM:SS.mmm
     const formatTime = (seconds: number) => {
@@ -187,15 +205,18 @@ export function TimelinePanel() {
         };
     }, [isDragging, handleScrubberMove]);
 
-    // Ruler steps for dynamic pixel scale
-    const step = zoom > 2 ? 0.5 : zoom < 0.5 ? 5 : 1;
+    // Adaptive ruler steps to keep timeline labels readable at every zoom level
+    const majorLabelMinPx = 96;
+    const minorTickMinPx = 24;
+    const majorStep = getNiceStep(majorLabelMinPx / pixelsPerSecond);
+    const minorStep = getNiceStep(Math.max(minorTickMinPx / pixelsPerSecond, majorStep / 5));
     const totalWidth = duration * pixelsPerSecond;
 
     return (
         <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300" data-tour="timeline-panel">
             {/* Deck Header */}
-            <div className="h-10 px-4 border-b border-white/5 flex items-center justify-between bg-zinc-900 shrink-0">
-                <div className="flex items-center gap-6">
+            <div className="h-10 px-2 md:px-4 border-b border-white/5 flex items-center justify-between bg-zinc-900 shrink-0 gap-2 min-w-0">
+                <div className="flex items-center gap-2 md:gap-4 min-w-0 overflow-x-auto no-scrollbar">
                     <div className="flex items-center gap-3">
                         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest border border-zinc-700 px-1 rounded bg-zinc-800">TIMELINE</span>
                         <span className="text-sm font-mono text-electric-cyan tabular-nums w-24">{formatTime(currentTime)}</span>
@@ -203,7 +224,7 @@ export function TimelinePanel() {
 
                     <div className="h-4 w-px bg-white/10" />
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Duration</span>
                         <div className="flex items-center">
                             <input
@@ -214,7 +235,7 @@ export function TimelinePanel() {
                                     const mins = parseFloat(e.target.value) || 0.5;
                                     setDuration(Math.min(43200, Math.max(1, mins * 60)));
                                 }}
-                                className="w-14 h-5 bg-zinc-800 border border-zinc-700 rounded-l text-[10px] font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
+                                className="w-12 md:w-14 h-5 bg-zinc-800 border border-zinc-700 rounded-l text-[10px] font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
                                 title="Max 12 hours (720m)"
                             />
                             <span className="h-5 flex items-center px-1.5 bg-zinc-800 border border-l-0 border-zinc-700 rounded-r text-[9px] text-zinc-500 font-mono">m</span>
@@ -222,7 +243,7 @@ export function TimelinePanel() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 md:gap-4 shrink-0">
                     <button
                         onClick={() => setSnapToGrid(!snapToGrid)}
                         className={`px-3 py-1 rounded text-[9px] font-bold uppercase transition-all active:scale-95 ${snapToGrid ? 'bg-electric-cyan/20 text-electric-cyan border border-electric-cyan/30' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}
@@ -249,22 +270,13 @@ export function TimelinePanel() {
                     >
                         <RefreshCw className="h-3.5 w-3.5" />
                     </button>
-
-                    <div className="flex items-center gap-3 bg-black/20 px-3 py-1 rounded border border-white/5">
-                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-tighter">BPM 120</div>
-                        <div className="flex gap-1">
-                            {[0, 1, 2, 3].map(i => (
-                                <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-75 ${i === Math.floor(currentTime * 2) % 4 ? 'bg-electric-cyan shadow-[0_0_8px_rgba(0,240,255,0.8)]' : 'bg-zinc-800'}`} />
-                            ))}
-                        </div>
-                    </div>
                 </div>
             </div>
 
             {/* Main Timeline Scroll Area */}
             {hasMounted && (
                 <div
-                    className={`flex-1 flex flex-col overflow-y-hidden no-scrollbar timeline-scrollbar min-w-0 ${hasManuallyZoomed ? 'overflow-x-auto' : 'overflow-x-hidden'}`}
+                    className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden no-scrollbar timeline-scrollbar min-w-0"
                     ref={scrollContainerRef}
                 >
                     <div style={{ width: totalWidth, position: 'relative', minHeight: '100%' }} className="flex flex-col">
@@ -274,17 +286,24 @@ export function TimelinePanel() {
                             onMouseDown={handleScrubberMouseDown}
                             ref={timelineRef}
                         >
-                            {Array.from({ length: Math.floor(duration / step) + 1 }).map((_, i) => (
-                                <div
-                                    key={i}
-                                    className="absolute top-0 bottom-0 border-l border-white/5"
-                                    style={{ left: i * step * pixelsPerSecond }}
-                                >
-                                    <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 whitespace-nowrap">
-                                        {formatTime(i * step).split('.')[0]}
-                                    </span>
-                                </div>
-                            ))}
+                            {Array.from({ length: Math.floor(duration / minorStep) + 1 }).map((_, i) => {
+                                const time = i * minorStep;
+                                const isMajorTick = Math.abs((time / majorStep) - Math.round(time / majorStep)) < 0.0001;
+
+                                return (
+                                    <div
+                                        key={i}
+                                        className={`absolute top-0 bottom-0 border-l ${isMajorTick ? "border-white/12" : "border-white/5"}`}
+                                        style={{ left: time * pixelsPerSecond }}
+                                    >
+                                        {isMajorTick && (
+                                            <span className="absolute top-1 left-1 text-[9px] font-mono text-zinc-500 whitespace-nowrap">
+                                                {formatTime(time).split(".")[0]}
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })}
 
                             {/* Playhead Handle */}
                             <div

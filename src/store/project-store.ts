@@ -212,9 +212,9 @@ interface ProjectStore {
     // Scene actions
     addScene: (name: string) => void;
     updateScene: (id: string, updates: Partial<Scene>) => void;
-    triggerScene: (id: string) => void;
+    triggerScene: (id: string) => Promise<void>;
     deleteScene: (id: string) => void;
-    switchToScene: (id: string) => void;
+    switchToScene: (id: string) => Promise<void>;
 
     // FX actions
     addEffect: (surfaceId: string, type: EffectType) => void;
@@ -1026,8 +1026,8 @@ export const useProjectStore = create<ProjectStore>()(
                 }));
             },
 
-            triggerScene: (id) => {
-                get().switchToScene(id);
+            triggerScene: async (id) => {
+                await get().switchToScene(id);
             },
 
             deleteScene: (id) => {
