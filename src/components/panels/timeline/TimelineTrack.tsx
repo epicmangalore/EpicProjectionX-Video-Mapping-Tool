@@ -46,7 +46,17 @@ export function TimelineTrackSidebar({ surfaceId, surfaceName }: { surfaceId: st
 
 import { useRef, useState, useEffect } from "react";
 
-export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfaceId: string, keyframes: Keyframe[], duration: number }) {
+export function TimelineTrackContent({
+    surfaceId,
+    keyframes,
+    duration,
+    pixelsPerSecond
+}: {
+    surfaceId: string,
+    keyframes: Keyframe[],
+    duration: number,
+    pixelsPerSecond: number
+}) {
     const surface = useProjectStore(state => state.getActiveSurfaces().find(s => s.id === surfaceId));
     const updateSurface = useProjectStore(state => state.updateSurface);
     const selectSurface = useProjectStore(state => state.selectSurface);
@@ -88,15 +98,12 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
         if (!interaction) return;
 
         const handleMouseMove = (e: MouseEvent) => {
-            if (!trackRef.current || !surface) return;
-
-            const rect = trackRef.current.getBoundingClientRect();
+            if (!surface) return;
             const deltaX = e.clientX - startXRef.current;
-            const deltaTime = (deltaX / rect.width) * duration;
+            const deltaTime = deltaX / pixelsPerSecond;
 
             if (interaction === "move") {
                 const newStartTime = Math.max(0, initialTimeRef.current + deltaTime);
-                // Optional: Clamp to timeline end? const newStartTime = Math.max(0, Math.min(initialTimeRef.current + deltaTime, duration - initialDurationRef.current));
                 updateSurface(surfaceId, { startTime: newStartTime });
             } else if (interaction === "start") {
                 const newStartTime = Math.max(0, Math.min(initialTimeRef.current + deltaTime, initialTimeRef.current + initialDurationRef.current - 0.1));
@@ -119,13 +126,13 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
             window.removeEventListener("mousemove", handleMouseMove);
             window.removeEventListener("mouseup", handleMouseUp);
         };
-    }, [interaction, duration, surfaceId, updateSurface]);
+    }, [interaction, pixelsPerSecond, surfaceId, updateSurface, surface]);
 
     if (!surface) return null;
 
-    // Calculate position and width percentages
-    const leftPercent = (surface.startTime / duration) * 100;
-    const widthPercent = (surface.duration / duration) * 100;
+    // Calculate position and width pixels
+    const leftPx = surface.startTime * pixelsPerSecond;
+    const widthPx = surface.duration * pixelsPerSecond;
 
     const handleTrackClick = (e: React.MouseEvent) => {
         // Only select if clicking the track background (not the clip bar)
@@ -136,15 +143,16 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
 
     return (
         <div
-            className={`h-12 border-b border-white/5 relative flex items-center px-1 transition-colors cursor-pointer ${isSelected ? 'bg-electric-cyan/5 hover:bg-electric-cyan/10' : 'bg-zinc-900/10 hover:bg-zinc-900/20'
+            className={`h-12 border-b border-white/5 relative flex items-center transition-colors cursor-pointer ${isSelected ? 'bg-electric-cyan/5 hover:bg-electric-cyan/10' : 'bg-zinc-900/10 hover:bg-zinc-900/20'
                 }`}
+            style={{ width: duration * pixelsPerSecond }}
             ref={trackRef}
             onClick={handleTrackClick}
         >
-            {/* Render clip bar based on start/duration */}
+            {/* Render clip bar based on start/duration pixels */}
             <div
                 className={`h-8 rounded ${trackColor} border relative overflow-hidden group absolute cursor-grab active:cursor-grabbing`}
-                style={{ left: `${leftPercent}%`, width: `${widthPercent}%` }}
+                style={{ left: leftPx, width: widthPx }}
                 onMouseDown={(e) => handleInteractionStart(e, "move")}
             >
                 {/* Drag Handles */}
@@ -161,12 +169,12 @@ export function TimelineTrackContent({ surfaceId, keyframes, duration }: { surfa
 
             </div>
 
-            {/* Keyframes - Rendered relative to the track, not the clip, for simplicity with absolute times */}
+            {/* Keyframes - Rendered relative to the track using pixels */}
             {keyframes.filter(kf => kf.surfaceId === surfaceId).map(kf => (
                 <div
                     key={kf.id}
                     className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rotate-45 bg-white border border-black shadow-sm z-10 cursor-pointer hover:scale-125 transition-transform"
-                    style={{ left: `${(kf.time / duration) * 100}%` }}
+                    style={{ left: kf.time * pixelsPerSecond }}
                     title={`${kf.property}: ${kf.value}`}
                 />
             ))}

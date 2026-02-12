@@ -10,6 +10,8 @@ import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { TimelineTrackContent } from "./timeline/TimelineTrack";
 
+export const PIXELS_PER_SECOND = 40; // Increased fixed scale for better resolution
+
 export function TimelinePanel() {
     const hasMounted = useHasMounted();
     const currentTime = useTimelineStore((state) => state.currentTime);
@@ -29,27 +31,13 @@ export function TimelinePanel() {
     const updateTimeline = useTimelineStore((state) => state.updateTimeline);
 
     const timelineRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [containerWidth, setContainerWidth] = useState(1000); // Default fallback
 
     // Initialize timeline on mount
     useEffect(() => {
         initTimeline(updateSurface);
     }, [initTimeline, updateSurface]);
-
-    // Track container width for dynamic ruler
-    useEffect(() => {
-        if (!timelineRef.current) return;
-
-        const observer = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                setContainerWidth(entry.contentRect.width);
-            }
-        });
-
-        observer.observe(timelineRef.current);
-        return () => observer.disconnect();
-    }, []);
 
     // Update GSAP timeline when keyframes or duration changes
     useEffect(() => {
@@ -98,16 +86,15 @@ export function TimelinePanel() {
             .padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
     };
 
-    // Handle scrubber drag
-    // Memoize handleScrubberMove to stabilize dependency for useEffect
+    // Handle scrubber drag using fixed pixel unit
     const handleScrubberMove = useCallback((e: React.MouseEvent | MouseEvent) => {
         if (!timelineRef.current) return;
 
         const rect = timelineRef.current.getBoundingClientRect();
         const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-        const newTime = (x / rect.width) * duration;
+        const newTime = x / PIXELS_PER_SECOND;
         seek(newTime);
-    }, [duration, seek]);
+    }, [seek]);
 
     const handleScrubberMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
@@ -134,27 +121,10 @@ export function TimelinePanel() {
         };
     }, [isDragging, handleScrubberMove]);
 
-    // Dynamic ruler markers based on visual density
-    const getRulerSteps = () => {
-        if (!containerWidth || duration <= 0) return 1;
-
-        const pixelsPerSecond = containerWidth / duration;
-        const minLabelWidth = 60; // Approx px needed for a timestamp label (HH:MM:SS)
-
-        // Find the smallest step that gives enough space
-        // Possible steps: 0.1, 0.5, 1, 2, 5, 10, 15, 30, 60, 300, 900, 3600...
-        const steps = [
-            0.1, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600
-        ];
-
-        for (const s of steps) {
-            const labelWidth = s * pixelsPerSecond;
-            if (labelWidth >= minLabelWidth) return s;
-        }
-
-        return 3600; // Fallback for extremely cramped views
-    };
-    const step = getRulerSteps();
+    // Ruler steps for fixed pixel scale
+    // We want a marker every 1, 5, or 10 seconds depending on PIXELS_PER_SECOND
+    const step = 1; // 1 second markers
+    const totalWidth = duration * PIXELS_PER_SECOND;
 
     return (
         <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300" data-tour="timeline-panel">
@@ -216,59 +186,63 @@ export function TimelinePanel() {
                 </div>
             </div>
 
-            {/* Main Timeline Area */}
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <div
-                    className="h-10 border-b border-white/5 relative bg-zinc-900/30 cursor-crosshair group/ruler shrink-0 overflow-hidden"
-                    onMouseDown={handleScrubberMouseDown}
-                    ref={timelineRef}
-                >
-                    {Array.from({ length: Math.floor(duration / step) + 1 }).map((_, i) => (
+            {/* Main Timeline Scroll Area */}
+            {hasMounted && (
+                <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden timeline-scrollbar" ref={scrollContainerRef}>
+                    <div style={{ width: totalWidth, position: 'relative', minHeight: '100%' }} className="flex flex-col">
+                        {/* Ruler Area */}
                         <div
-                            key={i}
-                            className="absolute top-0 bottom-0 border-l border-white/5"
-                            style={{ left: `${((i * step) / duration) * 100}%` }}
+                            className="h-10 border-b border-white/5 relative bg-zinc-900/30 cursor-crosshair group/ruler shrink-0"
+                            onMouseDown={handleScrubberMouseDown}
+                            ref={timelineRef}
                         >
-                            <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 whitespace-nowrap">
-                                {formatTime(i * step).split('.')[0]}
-                            </span>
-                        </div>
-                    ))}
+                            {Array.from({ length: Math.floor(duration / step) + 1 }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="absolute top-0 bottom-0 border-l border-white/5"
+                                    style={{ left: i * step * PIXELS_PER_SECOND }}
+                                >
+                                    <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 whitespace-nowrap">
+                                        {formatTime(i * step).split('.')[0]}
+                                    </span>
+                                </div>
+                            ))}
 
-                    {/* Playhead Handle (Draggable via Ruler) */}
-                    <div
-                        className="absolute top-0 bottom-0 z-10 pointer-events-none"
-                        style={{ left: `${(currentTime / duration) * 100}%` }}
-                    >
-                        {/* Handle Shape */}
-                        <div className="absolute bottom-0 -translate-x-1/2 translate-y-1/2">
-                            <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5.5 12L0 6V0H11V6L5.5 12Z" fill="#06b6d4" />
-                            </svg>
+                            {/* Playhead Handle */}
+                            <div
+                                className="absolute top-0 bottom-0 z-50 pointer-events-none"
+                                style={{ left: currentTime * PIXELS_PER_SECOND }}
+                            >
+                                <div className="absolute bottom-0 -translate-x-1/2 translate-y-1/2">
+                                    <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M5.5 12L0 6V0H11V6L5.5 12Z" fill="#06b6d4" />
+                                    </svg>
+                                </div>
+                                <div className="absolute top-0 bottom-0 w-px bg-electric-cyan/50 -translate-x-[0.5px]" />
+                            </div>
                         </div>
-                        {/* Vertical Line in Ruler */}
-                        <div className="absolute top-0 bottom-0 w-px bg-electric-cyan/50 -translate-x-[0.5px]" />
+
+                        {/* Content Area with Surface Tracks */}
+                        <div className="flex-1 flex flex-col relative bg-zinc-950/20 overflow-y-auto">
+                            {surfaces.map((surface) => (
+                                <TimelineTrackContent
+                                    key={surface.id}
+                                    surfaceId={surface.id}
+                                    keyframes={keyframes}
+                                    duration={duration}
+                                    pixelsPerSecond={PIXELS_PER_SECOND}
+                                />
+                            ))}
+
+                            {/* Playhead Line */}
+                            <div
+                                className="absolute top-0 bottom-0 w-px bg-electric-cyan/40 z-30 pointer-events-none shadow-[0_0_8px_rgba(0,240,255,0.4)]"
+                                style={{ left: currentTime * PIXELS_PER_SECOND }}
+                            />
+                        </div>
                     </div>
                 </div>
-
-                {/* Content Area with Surface Tracks */}
-                <div className="flex-1 flex flex-col overflow-y-auto relative bg-zinc-950/20">
-                    {hasMounted && surfaces.map((surface) => (
-                        <TimelineTrackContent
-                            key={surface.id}
-                            surfaceId={surface.id}
-                            keyframes={keyframes}
-                            duration={duration}
-                        />
-                    ))}
-
-                    {/* Playhead Line */}
-                    <div
-                        className="absolute top-0 bottom-0 w-px bg-electric-cyan/40 z-30 pointer-events-none shadow-[0_0_8px_rgba(0,240,255,0.4)]"
-                        style={{ left: `${(currentTime / duration) * 100}%` }}
-                    />
-                </div>
-            </div>
+            )}
         </div>
     );
 }
