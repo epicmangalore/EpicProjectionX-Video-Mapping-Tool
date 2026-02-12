@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { Surface } from "@/store/project-store";
 import { useProjectStore } from "@/store/project-store";
-import { usePlaybackStore } from "@/store/playback-store";
+import { useTimelineStore } from "@/store/timeline-store";
 
 interface VideoSurfaceProps {
     surface: Surface;
@@ -19,7 +19,7 @@ export function VideoSurface({ surface }: VideoSurfaceProps) {
     const selectSurface = useProjectStore((state) => state.selectSurface);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
-    const isPlaying = usePlaybackStore((state) => state.isPlaying);
+    const isPlaying = useTimelineStore((state) => state.isPlaying);
 
     const isSelected = selectedIds.includes(surface.id);
     const mediaAsset = mediaAssets.find((a) => a.id === surface.mediaId);

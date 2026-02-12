@@ -89,7 +89,8 @@ export function SceneList() {
                     scenes.map((scene) => (
                         <div
                             key={scene.id}
-                            className={`rounded-md transition-colors ${activeSceneId === scene.id
+                            onClick={() => triggerScene(scene.id)}
+                            className={`rounded-md transition-colors cursor-pointer ${activeSceneId === scene.id
                                 ? "bg-electric-cyan/10 border border-electric-cyan/30"
                                 : "bg-zinc-900/50 border border-white/5 hover:border-white/10"
                                 }`}

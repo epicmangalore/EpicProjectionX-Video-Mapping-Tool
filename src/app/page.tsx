@@ -60,7 +60,7 @@ export default function Home() {
     const redo = useProjectStore((state) => state.redo);
     const copySurface = useProjectStore((state) => state.copySurface);
     const pasteSurface = useProjectStore((state) => state.pasteSurface);
-    const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
+    const duplicateSurfaces = useProjectStore((state) => state.duplicateSurfaces);
     const bringToFront = useProjectStore((state) => state.bringToFront);
     const sendToBack = useProjectStore((state) => state.sendToBack);
     // const groupSurfaces = useProjectStore((state) => state.groupSurfaces); // TODO: Implement grouping
@@ -87,7 +87,7 @@ export default function Home() {
         {
             key: APP_HOTKEYS.DUPLICATE.key,
             ctrl: APP_HOTKEYS.DUPLICATE.ctrl,
-            callback: () => selectedIds.forEach(id => duplicateSurface(id))
+            callback: () => duplicateSurfaces(selectedIds)
         },
         {
             key: APP_HOTKEYS.COPY.key,
@@ -125,9 +125,11 @@ export default function Home() {
         { key: APP_HOTKEYS.DESELECT_ALL, callback: () => deselectAll() },
 
         // Save
-        { key: APP_HOTKEYS.SAVE.key, ctrl: APP_HOTKEYS.SAVE.ctrl, callback: () => {
-            saveProjectFile().catch(err => console.error("Save failed:", err));
-        }},
+        {
+            key: APP_HOTKEYS.SAVE.key, ctrl: APP_HOTKEYS.SAVE.ctrl, callback: () => {
+                saveProjectFile().catch(err => console.error("Save failed:", err));
+            }
+        },
 
         // Misc
         { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI

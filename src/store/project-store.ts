@@ -179,7 +179,7 @@ interface ProjectStore {
     updateSurface: (id: string, updates: Partial<Surface>) => void;
     updateSurfaces: (ids: string[], updates: Partial<Surface>) => void;
     deleteSurface: (id: string) => void;
-    duplicateSurface: (id: string) => void;
+    duplicateSurfaces: (ids: string[]) => void;
     updateActiveSceneSurfaces: (surfaces: Surface[]) => void;
     copySurface: (id: string) => void;
     pasteSurface: () => void;
@@ -628,38 +628,65 @@ export const useProjectStore = create<ProjectStore>()(
                 }));
             },
 
-            duplicateSurface: (id) => {
+            duplicateSurfaces: (ids) => {
                 const { activeSceneId, scenes } = get();
-                if (!activeSceneId) return;
+                if (!activeSceneId || ids.length === 0) return;
 
                 get().saveHistory();
 
                 const activeScene = scenes.find(s => s.id === activeSceneId);
-                const surface = activeScene?.surfaces.find((s) => s.id === id);
-                if (!surface || !activeScene) return;
+                if (!activeScene) return;
 
-                const newSurface: Surface = {
-                    ...JSON.parse(JSON.stringify(surface)),
-                    id: generateId(),
-                    name: `${surface.name} (Copy)`,
-                    position: {
-                        x: surface.position.x + 0.1,
-                        y: surface.position.y + 0.1,
-                    },
-                    zIndex: activeScene.surfaces.length,
-                };
+                const newSurfaces: Surface[] = [];
+                const newKeyframes: Keyframe[] = [];
+                const surfaceIdMap = new Map<string, string>();
+
+                // 1. Create new surfaces
+                ids.forEach(id => {
+                    const surface = activeScene.surfaces.find((s) => s.id === id);
+                    if (surface) {
+                        const nextId = generateId();
+                        surfaceIdMap.set(id, nextId);
+
+                        const newSurface: Surface = {
+                            ...JSON.parse(JSON.stringify(surface)),
+                            id: nextId,
+                            name: `${surface.name} (Copy)`,
+                            startTime: surface.startTime + surface.duration,
+                            zIndex: activeScene.surfaces.length + newSurfaces.length,
+                        };
+                        newSurfaces.push(newSurface);
+
+                        // 2. Duplicate and shift keyframes for this surface
+                        const associatedKeyframes = (activeScene.keyframes || []).filter(
+                            kf => kf.surfaceId === id
+                        );
+
+                        associatedKeyframes.forEach(kf => {
+                            newKeyframes.push({
+                                ...JSON.parse(JSON.stringify(kf)),
+                                id: generateId(),
+                                surfaceId: nextId,
+                                time: kf.time + surface.duration
+                            });
+                        });
+                    }
+                });
+
+                if (newSurfaces.length === 0) return;
 
                 set((state) => ({
                     scenes: state.scenes.map(scene =>
                         scene.id === activeSceneId
                             ? {
                                 ...scene,
-                                surfaces: [...scene.surfaces, newSurface],
+                                surfaces: [...scene.surfaces, ...newSurfaces],
+                                keyframes: [...(scene.keyframes || []), ...newKeyframes],
                                 updatedAt: Date.now(),
                             }
                             : scene
                     ),
-                    selectedSurfaceIds: [newSurface.id],
+                    selectedSurfaceIds: newSurfaces.map(s => s.id),
                 }));
             },
 

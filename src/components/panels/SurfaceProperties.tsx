@@ -23,7 +23,7 @@ export function SurfaceProperties() {
     const alignSurfaces = useProjectStore((state) => state.alignSurfaces);
     const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
     const deleteSurface = useProjectStore((state) => state.deleteSurface);
-    const duplicateSurface = useProjectStore((state) => state.duplicateSurface);
+    const duplicateSurfaces = useProjectStore((state) => state.duplicateSurfaces);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
     const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const toolMode = useUIStore((state) => state.toolMode);
@@ -69,7 +69,7 @@ export function SurfaceProperties() {
                 Properties
                 <div className="flex gap-1">
                     <button
-                        onClick={() => duplicateSurface(selectedSurface.id)}
+                        onClick={() => duplicateSurfaces([selectedSurface.id])}
                         className="p-1.5 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
                         title="Duplicate"
                     >
@@ -159,7 +159,7 @@ export function SurfaceProperties() {
                 {/* Actions */}
                 <div className="flex gap-2">
                     <button
-                        onClick={() => duplicateSurface(selectedSurface.id)}
+                        onClick={() => duplicateSurfaces([selectedSurface.id])}
                         className="flex-1 px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2"
                     >
                         <Copy className="w-3 h-3" />

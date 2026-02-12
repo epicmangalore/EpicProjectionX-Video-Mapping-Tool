@@ -6,15 +6,14 @@ import * as THREE from "three";
 import type { Surface as SurfaceType } from "@/store/project-store";
 import { useProjectStore, type Vector2 } from "@/store/project-store";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
-import { usePlaybackStore } from "@/store/playback-store";
-import { useAudioStore } from "@/store/audio-store";
 import { useTimelineStore } from "@/store/timeline-store";
+import { useAudioStore } from "@/store/audio-store";
+import { useUIStore } from "@/store/ui-store";
 
 // Import shaders and utils
 import vertexShader from "@/shaders/surface.vert.glsl";
 import fragmentShader from "@/shaders/surface.frag.glsl";
 import { getPerspectiveTransform } from "@/lib/matrix";
-import { useUIStore } from "@/store/ui-store";
 import { useOutputStore } from "@/store/output-store";
 import { ResizeHandles } from "./ResizeHandles";
 import { MeshWarp } from "./MeshWarp";
@@ -31,12 +30,13 @@ export function Surface({ surface }: SurfaceProps) {
     const groupRef = useRef<THREE.Group>(null);
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const lastTimelineTimeRef = useRef(0);
 
     const selectSurface = useProjectStore((state) => state.selectSurface);
     const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
-    const isPlayingGlobal = usePlaybackStore((state) => state.isPlaying);
+    const isPlayingGlobal = useTimelineStore((state) => state.isPlaying);
     const toolMode = useUIStore((state) => state.toolMode);
     const penSubMode = useUIStore((state) => state.penSubMode);
     const projectSettings = useProjectStore((state) => state.projectSettings);
@@ -697,14 +697,41 @@ export function Surface({ surface }: SurfaceProps) {
             }
 
             // Sync video currentTime with timeline position
-            // Only seek if difference is significant (> 0.1s) to avoid jitter
             if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-                const timeDiff = Math.abs(videoElement.currentTime - currentTime);
+                const targetTime = currentTime;
+                const videoTime = videoElement.currentTime;
+                const drift = videoTime - targetTime;
+                const absDrift = Math.abs(drift);
 
-                if (timeDiff > 0.1) {
-                    videoElement.currentTime = currentTime;
+                // Detect massive jumps (scrubbing or loop)
+                const timelineJump = Math.abs(currentTime - lastTimelineTimeRef.current);
+                const isScrubbing = timelineJump > 0.5;
+
+                if (isScrubbing || absDrift > 0.5) {
+                    // Major drift or scrubbing: Hard seek is necessary
+                    videoElement.currentTime = targetTime;
+                    videoElement.playbackRate = 1.0;
+                } else if (isPlayingGlobal && absDrift > 0.03) {
+                    // Minor drift (> 30ms): Adjust playback rate to catch up smoothly
+                    // This prevents the "stutter" or "stuck" feel caused by frequent seeking
+                    if (drift > 0) {
+                        // Video is ahead, slow down slightly
+                        videoElement.playbackRate = 0.95;
+                    } else {
+                        // Video is behind, speed up slightly
+                        videoElement.playbackRate = 1.05;
+                    }
+                } else if (!isPlayingGlobal && absDrift > 0.01) {
+                    // When paused, maintain exact sync for preview
+                    videoElement.currentTime = targetTime;
+                } else {
+                    // In sync: Reset playback rate to normal
+                    if (videoElement.playbackRate !== 1.0) {
+                        videoElement.playbackRate = 1.0;
+                    }
                 }
             }
+            lastTimelineTimeRef.current = currentTime;
         }
 
         // Timeline Visibility Check
