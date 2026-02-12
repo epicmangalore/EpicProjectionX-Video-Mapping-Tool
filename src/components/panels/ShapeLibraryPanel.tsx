@@ -28,7 +28,8 @@ export function ShapeLibraryPanel({ isOpen, onClose }: ShapeLibraryPanelProps) {
     const handleShapeClick = (preset: ShapePreset) => {
         // Add shape to center of canvas
         addShapeFromPreset(preset.id, { x: 0, y: 0 });
-        // Don't close the panel so users can add multiple shapes
+        // Close after adding so the newly added layer is immediately visible in the outliner.
+        onClose();
     };
 
     return (

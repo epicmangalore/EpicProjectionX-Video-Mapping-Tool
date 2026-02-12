@@ -159,6 +159,8 @@ export interface ProjectSettings {
 interface ProjectStore {
     // State
     // NOTE: surfaces are now stored in scenes[].surfaces, not at root level
+    // Backward-compatible derived selector target for legacy callers.
+    surfaces: Surface[];
     mediaAssets: MediaAsset[];
     scenes: Scene[];
     activeSceneId: string | null; // Which scene is currently active
@@ -202,6 +204,7 @@ interface ProjectStore {
 
     // Scene actions
     addScene: (name: string) => void;
+    updateScene: (id: string, updates: Partial<Scene>) => void;
     triggerScene: (id: string) => void;
     deleteScene: (id: string) => void;
     switchToScene: (id: string) => void;
@@ -266,6 +269,11 @@ export const useProjectStore = create<ProjectStore>()(
             selectedSurfaceIds: [],
             currentProjectId: null,
             clipboard: null,
+            get surfaces() {
+                const { scenes, activeSceneId } = get();
+                const activeScene = scenes.find((scene) => scene.id === activeSceneId);
+                return activeScene?.surfaces || [];
+            },
 
             // Surface actions
             addSurface: (mediaId) => {
@@ -351,11 +359,12 @@ export const useProjectStore = create<ProjectStore>()(
             addShapeFromPreset: (presetId, position) => {
                 const { activeSceneId, scenes } = get();
 
-                // Must have an active scene to add surfaces
-                if (!activeSceneId) {
-                    console.warn('Cannot add shape: No active scene');
-                    return;
-                }
+                // Resolve target scene robustly (active -> first existing)
+                // This prevents silent failures when activeSceneId is temporarily null/invalid.
+                const resolvedSceneId =
+                    activeSceneId && scenes.some((s) => s.id === activeSceneId)
+                        ? activeSceneId
+                        : scenes[0]?.id ?? null;
 
                 // Get the shape preset
                 const preset = getShapePreset(presetId);
@@ -367,8 +376,15 @@ export const useProjectStore = create<ProjectStore>()(
 
                 get().saveHistory();
 
-                const activeScene = scenes.find(s => s.id === activeSceneId);
+                const activeScene = scenes.find(s => s.id === resolvedSceneId);
                 const surfaceCount = activeScene?.surfaces.length || 0;
+
+                // Shape presets were authored in px-like values (e.g. 200x200)
+                // while surfaces use world-space units (~1x1). Normalize for visibility.
+                const normalizedScale: Vector2 = {
+                    x: preset.defaultScale.x > 10 ? preset.defaultScale.x / 200 : preset.defaultScale.x,
+                    y: preset.defaultScale.y > 10 ? preset.defaultScale.y / 200 : preset.defaultScale.y,
+                };
 
                 // Calculate source corners from preset corners
                 const sourceCorners: Vector2[] = preset.corners.map((corner: Vector2) => ({
@@ -381,7 +397,7 @@ export const useProjectStore = create<ProjectStore>()(
                     name: preset.name,
                     position: position,
                     rotation: 0,
-                    scale: preset.defaultScale,
+                    scale: normalizedScale,
                     opacity: 1,
                     zIndex: surfaceCount,
                     mediaId: null,
@@ -409,14 +425,39 @@ export const useProjectStore = create<ProjectStore>()(
                     compositionMapping: "global" as const,
                 };
 
-                set((state) => ({
-                    scenes: state.scenes.map(scene =>
-                        scene.id === activeSceneId
-                            ? { ...scene, surfaces: [...scene.surfaces, newSurface], updatedAt: Date.now() }
-                            : scene
-                    ),
-                    selectedSurfaceIds: [newSurface.id],
-                }));
+                set((state) => {
+                    // If no scene exists yet, bootstrap one so shape creation always works.
+                    if (!resolvedSceneId) {
+                        const bootstrapScene: Scene = {
+                            id: generateId(),
+                            name: "Scene 1",
+                            surfaces: [newSurface],
+                            effects: {},
+                            keyframes: [],
+                            timelineDuration: 30,
+                            transitionDuration: 1.0,
+                            hotkey: undefined,
+                            createdAt: Date.now(),
+                            updatedAt: Date.now(),
+                        };
+
+                        return {
+                            scenes: [...state.scenes, bootstrapScene],
+                            activeSceneId: bootstrapScene.id,
+                            selectedSurfaceIds: [newSurface.id],
+                        };
+                    }
+
+                    return {
+                        scenes: state.scenes.map(scene =>
+                            scene.id === resolvedSceneId
+                                ? { ...scene, surfaces: [...scene.surfaces, newSurface], updatedAt: Date.now() }
+                                : scene
+                        ),
+                        activeSceneId: resolvedSceneId,
+                        selectedSurfaceIds: [newSurface.id],
+                    };
+                });
             },
 
             batchAddSurfaces: (surfaceConfigs: Partial<Surface>[]) => {
@@ -827,6 +868,16 @@ export const useProjectStore = create<ProjectStore>()(
                 get().switchToScene(newScene.id);
             },
 
+            updateScene: (id, updates) => {
+                set((state) => ({
+                    scenes: state.scenes.map((scene) =>
+                        scene.id === id
+                            ? { ...scene, ...updates, updatedAt: Date.now() }
+                            : scene
+                    ),
+                }));
+            },
+
             triggerScene: (id) => {
                 get().switchToScene(id);
             },
@@ -849,13 +900,16 @@ export const useProjectStore = create<ProjectStore>()(
             },
 
             switchToScene: async (id) => {
+                // Import first, then re-read latest store state.
+                // This avoids race conditions where async scene switching overwrites
+                // shape/surface edits that happen while the import resolves.
+                const { useTimelineStore } = await import("./timeline-store");
+
                 const { scenes, activeSceneId } = get();
                 if (activeSceneId === id) return;
 
                 // 1. Save current timeline state to the OLD scene
-                const { useTimelineStore } = await import("./timeline-store");
                 const timelineState = useTimelineStore.getState();
-
                 const updatedScenes = scenes.map(scene => {
                     if (scene.id === activeSceneId) {
                         return {

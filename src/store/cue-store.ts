@@ -101,7 +101,7 @@ export const useSceneStore = create<SceneState>((set, get) => ({
         const timelineState = useTimelineStore.getState();
 
         return {
-            surfaces: JSON.parse(JSON.stringify(projectState.surfaces)),
+            surfaces: JSON.parse(JSON.stringify(projectState.getActiveSurfaces())),
             effects: {},
             keyframes: JSON.parse(JSON.stringify(timelineState.keyframes)),
             timelineDuration: timelineState.duration,
@@ -114,9 +114,9 @@ export const useSceneStore = create<SceneState>((set, get) => ({
         const { useTimelineStore } = require("./timeline-store");
 
         // Restore surfaces
-        useProjectStore.setState({
-            surfaces: JSON.parse(JSON.stringify(snapshot.surfaces)),
-        });
+        useProjectStore
+            .getState()
+            .updateActiveSceneSurfaces(JSON.parse(JSON.stringify(snapshot.surfaces)));
 
         // Restore timeline keyframes and duration
         useTimelineStore.setState({

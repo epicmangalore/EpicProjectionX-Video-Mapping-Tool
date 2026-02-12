@@ -22,10 +22,16 @@ export interface DBAsset {
     name: string;
 }
 
+export interface DBSetting {
+    key: string;
+    value: string;
+}
+
 class ProjectionXDB extends Dexie {
     files!: Table<FileRecord>;
     projects!: Table<DBProject>;
     assets!: Table<DBAsset>;
+    settings!: Table<DBSetting>;
 
     constructor() {
         super('ProjectionXDB');
@@ -33,6 +39,12 @@ class ProjectionXDB extends Dexie {
             files: 'id, timestamp',
             projects: '++id, name, updatedAt',
             assets: '++id, projectId'
+        });
+        this.version(2).stores({
+            files: 'id, timestamp',
+            projects: '++id, name, updatedAt',
+            assets: '++id, projectId',
+            settings: 'key'
         });
     }
 }

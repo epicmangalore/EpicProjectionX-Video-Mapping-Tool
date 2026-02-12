@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { generateId } from "@/lib/utils";
-import { useProjectStore, type BlendMode } from "@/store/project-store";
+import { useProjectStore, type BlendMode, type Vector2 } from "@/store/project-store";
 import { updateGroupVideoUrl } from "@/lib/group-video-cache";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -10,6 +10,10 @@ export interface SurfaceGroup {
     id: string;
     name: string;
     color: string;
+    position: Vector2;
+    rotation: number;
+    scale: Vector2;
+    aspectRatioLocked: boolean;
     mediaId: string | null;
     opacity: number;
     blendMode: BlendMode;
@@ -50,6 +54,7 @@ interface GroupStore {
     deleteGroup: (groupId: string) => void;
     renameGroup: (groupId: string, name: string) => void;
     setGroupColor: (groupId: string, color: string) => void;
+    updateGroup: (groupId: string, updates: Partial<SurfaceGroup>) => void;
     toggleGroupCollapsed: (groupId: string) => void;
     selectGroup: (groupId: string | null) => void;
 
@@ -92,6 +97,10 @@ export const useGroupStore = create<GroupStore>()(
                     id,
                     name,
                     color,
+                    position: { x: 0, y: 0 },
+                    rotation: 0,
+                    scale: { x: 1, y: 1 },
+                    aspectRatioLocked: false,
                     mediaId: null,
                     opacity: 1,
                     blendMode: "normal",
@@ -144,6 +153,14 @@ export const useGroupStore = create<GroupStore>()(
                 set((state) => ({
                     groups: state.groups.map((g) =>
                         g.id === groupId ? { ...g, color } : g
+                    ),
+                }));
+            },
+
+            updateGroup: (groupId, updates) => {
+                set((state) => ({
+                    groups: state.groups.map((g) =>
+                        g.id === groupId ? { ...g, ...updates } : g
                     ),
                 }));
             },

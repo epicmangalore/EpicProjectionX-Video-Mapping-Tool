@@ -329,15 +329,44 @@ export async function loadProjectFile(file: File): Promise<string> {
     useTimelineStore.getState().stop();
 
     // Project store
-    useProjectStore.setState({
-        surfaces: surfaces || [],
-        mediaAssets: restoredMediaAssets,
-        scenes: [],
-        projectSettings: projectSettings || useProjectStore.getState().projectSettings,
-        selectedSurfaceIds: [],
-        history: [],
-        future: [],
-    });
+    const projectStore = useProjectStore.getState();
+    const restoredSurfaces = surfaces || [];
+    const restoredScenes = scenes?.scenes || [];
+    const restoredActiveSceneId = scenes?.activeSceneId || null;
+
+    // Prefer explicit scenes data when present; fall back to single-scene import from legacy surfaces.
+    if (restoredScenes.length > 0) {
+        useProjectStore.setState({
+            mediaAssets: restoredMediaAssets,
+            scenes: restoredScenes,
+            activeSceneId: restoredActiveSceneId,
+            projectSettings: projectSettings || projectStore.projectSettings,
+            selectedSurfaceIds: [],
+            history: [],
+            future: [],
+        });
+    } else {
+        const sceneId = `scene_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        useProjectStore.setState({
+            mediaAssets: restoredMediaAssets,
+            scenes: [{
+                id: sceneId,
+                name: "Scene 1",
+                surfaces: restoredSurfaces,
+                effects: {},
+                keyframes: [],
+                timelineDuration: 30,
+                transitionDuration: 1.0,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            }],
+            activeSceneId: sceneId,
+            projectSettings: projectSettings || projectStore.projectSettings,
+            selectedSurfaceIds: [],
+            history: [],
+            future: [],
+        });
+    }
 
     // Effects store
     if (effects) {

@@ -1,18 +1,17 @@
 "use client";
 
-import { useSceneStore } from "@/store/cue-store";
+import { useProjectStore } from "@/store/project-store";
 import { useTimelineStore } from "@/store/timeline-store";
 import { Plus, Play, Pause, Trash2, Edit2, Repeat } from "lucide-react";
 import { useState } from "react";
 
 export function SceneList() {
-    const scenes = useSceneStore((state) => state.scenes);
-    const activeSceneId = useSceneStore((state) => state.activeSceneId);
-    const isTransitioning = useSceneStore((state) => state.isTransitioning);
-    const addScene = useSceneStore((state) => state.addScene);
-    const updateScene = useSceneStore((state) => state.updateScene);
-    const deleteScene = useSceneStore((state) => state.deleteScene);
-    const triggerScene = useSceneStore((state) => state.triggerScene);
+    const scenes = useProjectStore((state) => state.scenes);
+    const activeSceneId = useProjectStore((state) => state.activeSceneId);
+    const addScene = useProjectStore((state) => state.addScene);
+    const updateScene = useProjectStore((state) => state.updateScene);
+    const deleteScene = useProjectStore((state) => state.deleteScene);
+    const triggerScene = useProjectStore((state) => state.triggerScene);
 
     // Timeline playback controls
     const isPlaying = useTimelineStore((state) => state.isPlaying);
@@ -26,7 +25,16 @@ export function SceneList() {
 
     const handleAddScene = () => {
         const nextHotkey = scenes.length < 9 ? scenes.length + 1 : undefined;
-        addScene(`Scene ${scenes.length + 1}`, nextHotkey);
+        const sceneName = `Scene ${scenes.length + 1}`;
+        addScene(sceneName);
+
+        // Assign hotkey to the newly added scene (project store addScene accepts only name)
+        if (nextHotkey) {
+            const newestScene = useProjectStore.getState().scenes.at(-1);
+            if (newestScene) {
+                updateScene(newestScene.id, { hotkey: String(nextHotkey) });
+            }
+        }
     };
 
     const handleEditStart = (scene: any) => {
@@ -140,8 +148,7 @@ export function SceneList() {
                                             play();
                                         }
                                     }}
-                                    disabled={isTransitioning}
-                                    className={`flex items-center justify-center w-7 h-7 rounded transition-all active:scale-90 disabled:opacity-50 ${activeSceneId === scene.id && isPlaying
+                                    className={`flex items-center justify-center w-7 h-7 rounded transition-all active:scale-90 ${activeSceneId === scene.id && isPlaying
                                         ? "bg-electric-cyan text-zinc-950"
                                         : "bg-zinc-800 text-zinc-400 hover:text-white border border-white/5"
                                         }`}
