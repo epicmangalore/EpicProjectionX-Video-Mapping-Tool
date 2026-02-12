@@ -7,9 +7,11 @@ import { useProjectStore } from "@/store/project-store";
 import { usePlaybackStore } from "@/store/playback-store";
 import { useUIStore } from "@/store/ui-store";
 import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
+import { useHasMounted } from "@/hooks/useHasMounted";
 import { TimelineTrackContent } from "./timeline/TimelineTrack";
 
 export function TimelinePanel() {
+    const hasMounted = useHasMounted();
     const currentTime = useTimelineStore((state) => state.currentTime);
     const duration = useTimelineStore((state) => state.duration);
     const snapToGrid = useTimelineStore((state) => state.snapToGrid);
@@ -251,7 +253,7 @@ export function TimelinePanel() {
 
                 {/* Content Area with Surface Tracks */}
                 <div className="flex-1 flex flex-col overflow-y-auto relative bg-zinc-950/20">
-                    {surfaces.map((surface) => (
+                    {hasMounted && surfaces.map((surface) => (
                         <TimelineTrackContent
                             key={surface.id}
                             surfaceId={surface.id}
