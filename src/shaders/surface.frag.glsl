@@ -15,6 +15,10 @@ uniform float uMasterOpacity;
 uniform float uMasterBrightness;
 uniform float uBlackout;
 
+// Mapping Mode
+uniform float uMappingMode; // 0: Local, 1: Global
+uniform vec2 uProjectResolution;
+
 // Edge blending
 uniform vec4 uBlendZones; // x: left, y: right, z: top, w: bottom (0-1)
 uniform float uBlendFeather; // Feathering amount (0-1)
@@ -22,6 +26,7 @@ uniform float uBlendGamma; // Gamma correction for blending
 
 varying vec2 vUv;
 varying vec3 vPosition;
+varying vec3 vWorldPosition;
 
 // Convert RGB to HSV
 vec3 rgb2hsv(vec3 c) {
@@ -81,11 +86,18 @@ uniform mat3 uTextureMatrix;
 
 // ... (previous code)
 
-void main() {
   vec4 texColor;
   
+  // Choose base UV based on mapping mode
+  vec2 baseUv = vUv;
+  if (uMappingMode > 0.5) {
+      // Global mapping: world position to project UV
+      vec2 canvasSize = uProjectResolution / 100.0;
+      baseUv = (vWorldPosition.xy / canvasSize) + 0.5;
+  }
+
   // Transform UVs
-  vec2 transformedUv = (uTextureMatrix * vec3(vUv, 1.0)).xy;
+  vec2 transformedUv = (uTextureMatrix * vec3(baseUv, 1.0)).xy;
 
   // Apply effects using transformed UVs
   if (uBlurAmount > 0.0) {

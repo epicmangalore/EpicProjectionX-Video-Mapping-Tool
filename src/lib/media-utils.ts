@@ -96,56 +96,65 @@ export const generateThumbnail = (file: File): Promise<string> => {
 
 export const processFile = async (
     file: File,
-    addMediaAsset: (asset: MediaAsset) => void
+    addMediaAsset: (asset: MediaAsset) => string
 ): Promise<string> => {
     const thumbnail = await generateThumbnail(file);
     const mediaId = generateId();
-
-    // Store file in IndexedDB
-    try {
-        await db.files.add({
-            id: mediaId,
-            blob: file,
-            timestamp: Date.now()
-        });
-    } catch (error: any) {
-        console.error("Failed to store file in DB:", error);
-
-        // Handle QuotaExceededError specifically
-        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
-            alert(
-                'Storage quota exceeded!\n\n' +
-                'Your browser has run out of storage space for media files.\n\n' +
-                'To fix this:\n' +
-                '1. Open DevTools (F12)\n' +
-                '2. Go to Application > Storage\n' +
-                '3. Click "Clear site data"\n\n' +
-                'Or run this in console:\n' +
-                'await db.files.clear()'
-            );
-            throw new Error('Storage quota exceeded');
-        }
-        throw error;
-    }
-
     const url = URL.createObjectURL(file);
 
-    return new Promise((resolve) => {
+    const assetData: any = {
+        id: mediaId,
+        name: file.name,
+        size: file.size,
+        thumbnail,
+        url,
+    };
+
+    return new Promise((resolve, reject) => {
         if (file.type.startsWith("image/")) {
             const img = new window.Image();
-            img.onload = () => {
-                addMediaAsset({
-                    id: mediaId,
-                    name: file.name,
+            img.onload = async () => {
+                const finalId = addMediaAsset({
+                    ...assetData,
                     type: "image",
-                    url,
-                    size: file.size,
-                    thumbnail,
                     width: img.naturalWidth,
                     height: img.naturalHeight,
                 });
-                resolve(mediaId);
+
+                // Only store in DB if it's a NEW asset
+                if (finalId === mediaId) {
+                    try {
+                        await db.files.add({
+                            id: mediaId,
+                            blob: file,
+                            timestamp: Date.now()
+                        });
+                    } catch (error: any) {
+                        console.error("Failed to store file in DB:", error);
+
+                        // Handle QuotaExceededError specifically
+                        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+                            alert(
+                                'Storage quota exceeded!\n\n' +
+                                'Your browser has run out of storage space for media files.\n\n' +
+                                'To fix this:\n' +
+                                '1. Open DevTools (F12)\n' +
+                                '2. Go to Application > Storage\n' +
+                                '3. Click "Clear site data"\n\n' +
+                                'Or run this in console:\n' +
+                                'await db.files.clear()'
+                            );
+                            throw new Error('Storage quota exceeded');
+                        }
+                        throw error;
+                    }
+                } else {
+                    // Revoke the temporary URL if we're using an existing asset
+                    URL.revokeObjectURL(url);
+                }
+                resolve(finalId);
             };
+            img.onerror = () => reject(new Error("Image load failed"));
             img.src = url;
         } else if (file.type.startsWith("video/")) {
             const video = document.createElement("video");
@@ -184,20 +193,47 @@ export const processFile = async (
                 video.src = url;
             });
 
-            metadataPromise.then((metadata) => {
-                addMediaAsset({
-                    id: mediaId,
-                    name: file.name,
+            metadataPromise.then(async (metadata) => {
+                const finalId = addMediaAsset({
+                    ...assetData,
                     type: "video",
-                    url,
-                    size: file.size,
-                    thumbnail,
                     width: metadata.width,
                     height: metadata.height,
                     duration: metadata.duration,
                 });
+
+                // Only store in DB if it's a NEW asset
+                if (finalId === mediaId) {
+                    try {
+                        await db.files.add({
+                            id: mediaId,
+                            blob: file,
+                            timestamp: Date.now()
+                        });
+                    } catch (error: any) {
+                        console.error("Failed to store file in DB:", error);
+
+                        // Handle QuotaExceededError specifically
+                        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+                            alert(
+                                'Storage quota exceeded!\n\n' +
+                                'Your browser has run out of storage space for media files.\n\n' +
+                                'To fix this:\n' +
+                                '1. Open DevTools (F12)\n' +
+                                '2. Go to Application > Storage\n' +
+                                '3. Click "Clear site data"\n\n' +
+                                'Or run this in console:\n' +
+                                'await db.files.clear()'
+                            );
+                            throw new Error('Storage quota exceeded');
+                        }
+                        throw error;
+                    }
+                } else {
+                    URL.revokeObjectURL(url);
+                }
                 video.remove();
-                resolve(mediaId);
+                resolve(finalId);
             });
         }
     });

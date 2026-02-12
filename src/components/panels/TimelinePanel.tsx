@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Maximize2 } from "lucide-react";
 import { useTimelineStore } from "@/store/timeline-store";
 import { useProjectStore } from "@/store/project-store";
 import { usePlaybackStore } from "@/store/playback-store";
@@ -10,7 +10,7 @@ import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
 import { useHasMounted } from "@/hooks/useHasMounted";
 import { TimelineTrackContent } from "./timeline/TimelineTrack";
 
-export const PIXELS_PER_SECOND = 40; // Increased fixed scale for better resolution
+export const BASE_PPS = 40; // Base pixels per second
 
 export function TimelinePanel() {
     const hasMounted = useHasMounted();
@@ -18,6 +18,7 @@ export function TimelinePanel() {
     const duration = useTimelineStore((state) => state.duration);
     const snapToGrid = useTimelineStore((state) => state.snapToGrid);
     const keyframes = useTimelineStore((state) => state.keyframes);
+    const zoom = useTimelineStore((state) => state.zoom);
 
     const updateSurface = useProjectStore((state) => state.updateSurface);
     const surfaces = useActiveSurfaces();
@@ -27,12 +28,16 @@ export function TimelinePanel() {
     const seek = useTimelineStore((state) => state.seek);
     const setSnapToGrid = useTimelineStore((state) => state.setSnapToGrid);
     const setDuration = useTimelineStore((state) => state.setDuration);
+    const setZoom = useTimelineStore((state) => state.setZoom);
     const initTimeline = useTimelineStore((state) => state.initTimeline);
     const updateTimeline = useTimelineStore((state) => state.updateTimeline);
 
     const timelineRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    // Calculate dynamic pixels per second
+    const pixelsPerSecond = BASE_PPS * zoom;
 
     // Initialize timeline on mount
     useEffect(() => {
@@ -68,6 +73,67 @@ export function TimelinePanel() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [pause, play]);
 
+    // Auto-fit logic
+    const [hasManuallyZoomed, setHasManuallyZoomed] = useState(false);
+
+    const fitToView = useCallback(() => {
+        if (!scrollContainerRef.current) return;
+        const containerWidth = scrollContainerRef.current.clientWidth;
+        if (containerWidth > 50 && duration > 0) {
+            const idealZoom = containerWidth / (duration * BASE_PPS);
+            setZoom(idealZoom);
+        }
+    }, [duration, setZoom]);
+
+    // Initial fit and Resize handling
+    useEffect(() => {
+        if (!hasManuallyZoomed) {
+            fitToView();
+        }
+
+        const observer = new ResizeObserver(() => {
+            if (!hasManuallyZoomed) {
+                fitToView();
+            }
+        });
+
+        if (scrollContainerRef.current) {
+            observer.observe(scrollContainerRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [fitToView, hasManuallyZoomed]);
+
+    // Handle Scroll to Zoom
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+
+        const handleWheel = (e: WheelEvent) => {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                e.preventDefault();
+                setHasManuallyZoomed(true);
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newZoom = zoom * delta;
+
+                // Pivot zoom around mouse position
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left + container.scrollLeft;
+                const timeAtMouse = mouseX / (BASE_PPS * zoom);
+
+                setZoom(newZoom);
+
+                // Adjust scroll to keep time position under mouse
+                const currentZoom = Math.max(0.1, Math.min(10, newZoom));
+                const newMouseX = timeAtMouse * (BASE_PPS * currentZoom);
+                container.scrollLeft = newMouseX - (e.clientX - rect.left);
+            }
+        };
+
+        container.addEventListener("wheel", handleWheel, { passive: false });
+        return () => container.removeEventListener("wheel", handleWheel);
+    }, [zoom, setZoom]);
+
     // Format time as HH:MM:SS.mmm
     const formatTime = (seconds: number) => {
         const hrs = Math.floor(seconds / 3600);
@@ -86,15 +152,15 @@ export function TimelinePanel() {
             .padStart(2, "0")}.${ms.toString().padStart(3, "0")}`;
     };
 
-    // Handle scrubber drag using fixed pixel unit
+    // Handle scrubber drag using dynamic pixel unit
     const handleScrubberMove = useCallback((e: React.MouseEvent | MouseEvent) => {
         if (!timelineRef.current) return;
 
         const rect = timelineRef.current.getBoundingClientRect();
         const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-        const newTime = x / PIXELS_PER_SECOND;
+        const newTime = x / pixelsPerSecond;
         seek(newTime);
-    }, [seek]);
+    }, [seek, pixelsPerSecond]);
 
     const handleScrubberMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
@@ -121,10 +187,9 @@ export function TimelinePanel() {
         };
     }, [isDragging, handleScrubberMove]);
 
-    // Ruler steps for fixed pixel scale
-    // We want a marker every 1, 5, or 10 seconds depending on PIXELS_PER_SECOND
-    const step = 1; // 1 second markers
-    const totalWidth = duration * PIXELS_PER_SECOND;
+    // Ruler steps for dynamic pixel scale
+    const step = zoom > 2 ? 0.5 : zoom < 0.5 ? 5 : 1;
+    const totalWidth = duration * pixelsPerSecond;
 
     return (
         <div className="h-64 bg-zinc-950 border-t border-white/5 flex flex-col font-sans select-none overflow-hidden text-zinc-300" data-tour="timeline-panel">
@@ -166,13 +231,23 @@ export function TimelinePanel() {
                     </button>
 
                     <button
+                        onClick={() => {
+                            setHasManuallyZoomed(false);
+                            fitToView();
+                        }}
+                        className="p-1.5 rounded transition-all active:scale-95 bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-electric-cyan/30 hover:text-electric-cyan hover:bg-electric-cyan/10"
+                        title="Fit Timeline to View"
+                    >
+                        <Maximize2 className="h-3.5 w-3.5" />
+                    </button>
+
+                    <button
                         onClick={() => usePlaybackStore.getState().syncAllVideos()}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded text-[9px] font-bold uppercase transition-all active:scale-95 bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-electric-cyan/30 hover:text-electric-cyan hover:bg-electric-cyan/10"
+                        className="p-1.5 rounded transition-all active:scale-95 bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-electric-cyan/30 hover:text-electric-cyan hover:bg-electric-cyan/10"
                         title="Sync all videos to current timeline position"
                         data-tour="video-sync"
                     >
-                        <RefreshCw className="h-3 w-3" />
-                        Sync Videos
+                        <RefreshCw className="h-3.5 w-3.5" />
                     </button>
 
                     <div className="flex items-center gap-3 bg-black/20 px-3 py-1 rounded border border-white/5">
@@ -188,7 +263,10 @@ export function TimelinePanel() {
 
             {/* Main Timeline Scroll Area */}
             {hasMounted && (
-                <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden timeline-scrollbar" ref={scrollContainerRef}>
+                <div
+                    className={`flex-1 flex flex-col overflow-y-hidden no-scrollbar timeline-scrollbar min-w-0 ${hasManuallyZoomed ? 'overflow-x-auto' : 'overflow-x-hidden'}`}
+                    ref={scrollContainerRef}
+                >
                     <div style={{ width: totalWidth, position: 'relative', minHeight: '100%' }} className="flex flex-col">
                         {/* Ruler Area */}
                         <div
@@ -200,7 +278,7 @@ export function TimelinePanel() {
                                 <div
                                     key={i}
                                     className="absolute top-0 bottom-0 border-l border-white/5"
-                                    style={{ left: i * step * PIXELS_PER_SECOND }}
+                                    style={{ left: i * step * pixelsPerSecond }}
                                 >
                                     <span className="absolute top-1 left-1 text-[8px] font-mono text-zinc-600 whitespace-nowrap">
                                         {formatTime(i * step).split('.')[0]}
@@ -211,16 +289,16 @@ export function TimelinePanel() {
                             {/* Playhead Handle */}
                             <div
                                 className="absolute top-0 bottom-0 z-50 pointer-events-none"
-                                style={{ left: currentTime * PIXELS_PER_SECOND }}
+                                style={{ left: currentTime * pixelsPerSecond }}
                             >
                                 <div className="absolute bottom-0 -translate-x-1/2 translate-y-1/2">
                                     <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M5.5 12L0 6V0H11V6L5.5 12Z" fill="#06b6d4" />
                                     </svg>
-                                </div>
+                                </div >
                                 <div className="absolute top-0 bottom-0 w-px bg-electric-cyan/50 -translate-x-[0.5px]" />
-                            </div>
-                        </div>
+                            </div >
+                        </div >
 
                         {/* Content Area with Surface Tracks */}
                         <div className="flex-1 flex flex-col relative bg-zinc-950/20 overflow-y-auto">
@@ -230,19 +308,19 @@ export function TimelinePanel() {
                                     surfaceId={surface.id}
                                     keyframes={keyframes}
                                     duration={duration}
-                                    pixelsPerSecond={PIXELS_PER_SECOND}
+                                    pixelsPerSecond={pixelsPerSecond}
                                 />
                             ))}
 
                             {/* Playhead Line */}
                             <div
                                 className="absolute top-0 bottom-0 w-px bg-electric-cyan/40 z-30 pointer-events-none shadow-[0_0_8px_rgba(0,240,255,0.4)]"
-                                style={{ left: currentTime * PIXELS_PER_SECOND }}
+                                style={{ left: currentTime * pixelsPerSecond }}
                             />
                         </div>
-                    </div>
-                </div>
+                    </div >
+                </div >
             )}
-        </div>
+        </div >
     );
 }

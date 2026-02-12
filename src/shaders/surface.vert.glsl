@@ -1,6 +1,7 @@
 // Vertex shader for surface rendering with warping support
 varying vec2 vUv;
 varying vec3 vPosition;
+varying vec3 vWorldPosition;
 uniform mat4 uWarpMatrix;
 
 void main() {
@@ -13,5 +14,8 @@ void main() {
   // Perspective divide is required for homography transformations
   vec3 finalPosition = warpedPosition.xyz / warpedPosition.w;
   
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(finalPosition, 1.0);
+  vec4 worldPos = modelMatrix * vec4(finalPosition, 1.0);
+  vWorldPosition = worldPos.xyz;
+  
+  gl_Position = projectionMatrix * viewMatrix * worldPos;
 }

@@ -21,6 +21,7 @@ interface UIStore {
     bottomPanelOpen: boolean;
     activeSnapLines: SnapLine[];
     isCanvasHovered: boolean;
+    mediaPickerOpen: boolean;
     // Actions
     setToolMode: (mode: ToolMode) => void;
     setPenSubMode: (mode: PenSubMode) => void;
@@ -32,6 +33,7 @@ interface UIStore {
     toggleBottomPanel: () => void;
     setSnapLines: (lines: SnapLine[]) => void;
     setCanvasHovered: (hovered: boolean) => void;
+    setMediaPickerOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -46,6 +48,7 @@ export const useUIStore = create<UIStore>((set) => ({
     bottomPanelOpen: true,
     activeSnapLines: [],
     isCanvasHovered: false,
+    mediaPickerOpen: false,
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
@@ -62,4 +65,5 @@ export const useUIStore = create<UIStore>((set) => ({
         set((state) => ({ bottomPanelOpen: !state.bottomPanelOpen })),
     setSnapLines: (lines) => set({ activeSnapLines: lines }),
     setCanvasHovered: (hovered: boolean) => set({ isCanvasHovered: hovered }),
+    setMediaPickerOpen: (open: boolean) => set({ mediaPickerOpen: open }),
 }));

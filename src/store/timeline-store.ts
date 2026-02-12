@@ -31,6 +31,7 @@ interface TimelineState {
     keyframes: Keyframe[];
 
     // UI State
+    zoom: number; // Zoom level, where 1.0 is standard
     expandedSurfaces: string[]; // surfaceIds that are expanded in the track list
 
     // GSAP timeline instance
@@ -44,6 +45,7 @@ interface TimelineState {
     setLoop: (loop: boolean) => void;
     setDuration: (duration: number) => void;
     setSnapToGrid: (snap: boolean) => void;
+    setZoom: (zoom: number) => void;
 
     // Keyframe management
     addKeyframe: (keyframe: Omit<Keyframe, "id">) => void;
@@ -68,6 +70,7 @@ export const useTimelineStore = create<TimelineState>()(
             snapToGrid: true,
             gridSize: 0.1,
             keyframes: [],
+            zoom: 1.0,
             expandedSurfaces: [],
             timeline: null,
 
@@ -111,6 +114,12 @@ export const useTimelineStore = create<TimelineState>()(
 
             setSnapToGrid: (snapToGrid: boolean) => {
                 set({ snapToGrid });
+            },
+
+            setZoom: (zoom: number) => {
+                // Limit zoom to reasonable bounds
+                const newZoom = Math.max(0.1, Math.min(10, zoom));
+                set({ zoom: newZoom });
             },
 
             toggleSurfaceExpanded: (surfaceId: string) => {
@@ -221,6 +230,7 @@ export const useTimelineStore = create<TimelineState>()(
                 loop: state.loop,
                 snapToGrid: state.snapToGrid,
                 gridSize: state.gridSize,
+                zoom: state.zoom,
                 keyframes: state.keyframes,
                 expandedSurfaces: state.expandedSurfaces,
             }),

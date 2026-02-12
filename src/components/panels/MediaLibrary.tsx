@@ -4,12 +4,13 @@ import { useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { generateId } from "@/lib/utils";
 import { processFile } from "@/lib/media-utils";
-import { Image, Video, Palette, Type, Webcam } from "lucide-react";
+import { Image, Video, Palette, Type, Webcam, Trash2 } from "lucide-react";
 
 export function MediaLibrary() {
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
     const addSurface = useProjectStore((state) => state.addSurface);
+    const clearAllMedia = useProjectStore((state) => state.clearAllMedia);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const processFiles = async (files: FileList | File[]) => {
@@ -106,7 +107,23 @@ export function MediaLibrary() {
             )}
 
             <div className="p-4 border-b border-white/10">
-                <h2 className="text-lg font-semibold text-electric-purple mb-3">Media Library</h2>
+                <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-lg font-semibold text-electric-purple">Media Library</h2>
+                    {mediaAssets.length > 0 && (
+                        <button
+                            onClick={() => {
+                                if (window.confirm("Are you sure you want to clear all media? This will remove media from ALL surfaces in ALL scenes.")) {
+                                    clearAllMedia();
+                                }
+                            }}
+                            className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-500 rounded-md transition-all flex items-center gap-1.5"
+                            title="Clear All Library"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">Clear</span>
+                        </button>
+                    )}
+                </div>
 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-2">

@@ -92,7 +92,11 @@ export type EffectType =
     | "kaleidoscope"
     | "pixelate"
     | "wave"
-    | "edgeBlend";
+    | "edgeBlend"
+    | "brightness"
+    | "contrast"
+    | "saturation"
+    | "hue";
 
 export type BlendMode =
     | "normal"
@@ -154,6 +158,8 @@ export interface ProjectSettings {
     snapThreshold: number;
     showCanvasFrame: boolean;
     showSafeArea: boolean;
+    compositionMediaId?: string | null;
+    showComposition?: boolean;
 }
 
 interface ProjectStore {
@@ -198,9 +204,10 @@ interface ProjectStore {
     alignSurfaces: (alignment: "left" | "center" | "right" | "top" | "middle" | "bottom") => void;
 
     // Media actions
-    addMediaAsset: (asset: MediaAsset) => void;
+    addMediaAsset: (asset: MediaAsset) => string;
     updateMediaAsset: (id: string, updates: Partial<MediaAsset>) => void;
-    removeMediaAsset: (id: string) => void;
+    removeMediaAsset: (id: string) => Promise<void>;
+    clearAllMedia: () => Promise<void>;
 
     // Scene actions
     addScene: (name: string) => void;
@@ -208,6 +215,13 @@ interface ProjectStore {
     triggerScene: (id: string) => void;
     deleteScene: (id: string) => void;
     switchToScene: (id: string) => void;
+
+    // FX actions
+    addEffect: (surfaceId: string, type: EffectType) => void;
+    removeEffect: (surfaceId: string, effectId: string) => void;
+    updateEffect: (surfaceId: string, effectId: string, params: Record<string, number>) => void;
+    toggleEffect: (surfaceId: string, effectId: string) => void;
+    reorderEffect: (surfaceId: string, effectId: string, newIndex: number) => void;
 
     // Helper methods
     getActiveSurfaces: () => Surface[];
@@ -254,6 +268,8 @@ const defaultProjectSettings: ProjectSettings = {
     snapThreshold: 0.05,
     showCanvasFrame: true,
     showSafeArea: false,
+    compositionMediaId: null,
+    showComposition: false,
 };
 
 export const useProjectStore = create<ProjectStore>()(
@@ -637,29 +653,27 @@ export const useProjectStore = create<ProjectStore>()(
                 const activeScene = scenes.find(s => s.id === activeSceneId);
                 if (!activeScene) return;
 
+                const updatedSurfaces: Surface[] = [];
                 const newSurfaces: Surface[] = [];
                 const newKeyframes: Keyframe[] = [];
-                const surfaceIdMap = new Map<string, string>();
 
-                // 1. Create new surfaces
-                ids.forEach(id => {
-                    const surface = activeScene.surfaces.find((s) => s.id === id);
-                    if (surface) {
+                // 1. Build updated surface list with duplicates inserted below originals
+                activeScene.surfaces.forEach(surface => {
+                    updatedSurfaces.push(surface);
+                    if (ids.includes(surface.id)) {
                         const nextId = generateId();
-                        surfaceIdMap.set(id, nextId);
-
                         const newSurface: Surface = {
                             ...JSON.parse(JSON.stringify(surface)),
                             id: nextId,
                             name: `${surface.name} (Copy)`,
-                            startTime: surface.startTime + surface.duration,
-                            zIndex: activeScene.surfaces.length + newSurfaces.length,
+                            updatedAt: Date.now(),
                         };
+                        updatedSurfaces.push(newSurface);
                         newSurfaces.push(newSurface);
 
-                        // 2. Duplicate and shift keyframes for this surface
+                        // 2. Duplicate keyframes at the same time position
                         const associatedKeyframes = (activeScene.keyframes || []).filter(
-                            kf => kf.surfaceId === id
+                            kf => kf.surfaceId === surface.id
                         );
 
                         associatedKeyframes.forEach(kf => {
@@ -667,7 +681,7 @@ export const useProjectStore = create<ProjectStore>()(
                                 ...JSON.parse(JSON.stringify(kf)),
                                 id: generateId(),
                                 surfaceId: nextId,
-                                time: kf.time + surface.duration
+                                time: kf.time
                             });
                         });
                     }
@@ -675,20 +689,13 @@ export const useProjectStore = create<ProjectStore>()(
 
                 if (newSurfaces.length === 0) return;
 
-                // 3. Calculate if we need to extend the timeline duration
-                let maxDuration = activeScene.timelineDuration;
-                newSurfaces.forEach(s => {
-                    maxDuration = Math.max(maxDuration, s.startTime + s.duration);
-                });
-
                 set((state) => ({
                     scenes: state.scenes.map(scene =>
                         scene.id === activeSceneId
                             ? {
                                 ...scene,
-                                surfaces: [...scene.surfaces, ...newSurfaces],
+                                surfaces: updatedSurfaces,
                                 keyframes: [...(scene.keyframes || []), ...newKeyframes],
-                                timelineDuration: maxDuration,
                                 updatedAt: Date.now(),
                             }
                             : scene
@@ -696,12 +703,12 @@ export const useProjectStore = create<ProjectStore>()(
                     selectedSurfaceIds: newSurfaces.map(s => s.id),
                 }));
 
-                // 4. Update the timeline store immediately so the UI reflects the new duration and keyframes
+                // 3. Update the timeline store immediately
                 import("./timeline-store").then(({ useTimelineStore }) => {
                     const scene = get().scenes.find(s => s.id === activeSceneId);
                     if (scene) {
                         useTimelineStore.setState({
-                            duration: scene.timelineDuration,
+                            duration: scene.timelineDuration, // Duration doesn't change for stacking
                             keyframes: JSON.parse(JSON.stringify(scene.keyframes || []))
                         });
                     }
@@ -895,13 +902,36 @@ export const useProjectStore = create<ProjectStore>()(
             },
 
             // Media actions
-            addMediaAsset: (asset) => {
+            addMediaAsset: (asset: MediaAsset): string => {
+                const { mediaAssets } = get();
+
+                // 1. Deduplication Check
+                let existingAsset = null;
+
+                if (asset.type === 'color' && asset.color) {
+                    existingAsset = mediaAssets.find(a => a.type === 'color' && a.color === asset.color);
+                } else if ((asset.type === 'image' || asset.type === 'video') && asset.size && asset.name) {
+                    // Match by name and size as a simple heuristic
+                    existingAsset = mediaAssets.find(a =>
+                        a.type === asset.type &&
+                        a.name === asset.name &&
+                        a.size === asset.size
+                    );
+                }
+
+                if (existingAsset) {
+                    console.log(`[Deduplication] Using existing ${asset.type} asset: ${existingAsset.id}`);
+                    return existingAsset.id;
+                }
+
                 set((state) => ({
                     mediaAssets: [...state.mediaAssets, asset],
                 }));
+
+                return asset.id;
             },
 
-            updateMediaAsset: (id, updates) => {
+            updateMediaAsset: (id: string, updates: Partial<MediaAsset>) => {
                 set((state) => ({
                     mediaAssets: state.mediaAssets.map((a) =>
                         a.id === id ? { ...a, ...updates } : a
@@ -909,10 +939,58 @@ export const useProjectStore = create<ProjectStore>()(
                 }));
             },
 
-            removeMediaAsset: (id) => {
+            removeMediaAsset: async (id: string) => {
+                get().saveHistory();
+
+                // Get the asset type before deletion for DB cleanup
+                const asset = get().mediaAssets.find(a => a.id === id);
+
                 set((state) => ({
                     mediaAssets: state.mediaAssets.filter((a) => a.id !== id),
+                    // Also clear from surfaces in all scenes
+                    scenes: state.scenes.map(scene => ({
+                        ...scene,
+                        surfaces: scene.surfaces.map(s =>
+                            s.mediaId === id ? { ...s, mediaId: null } : s
+                        )
+                    }))
                 }));
+
+                // Cleanup IndexedDB if it was a file
+                if (asset && (asset.type === 'image' || asset.type === 'video')) {
+                    try {
+                        const { db } = await import("@/lib/db");
+                        await db.files.delete(id);
+                    } catch (e) {
+                        console.error("Failed to delete media from DB:", e);
+                    }
+                }
+            },
+
+            clearAllMedia: async () => {
+                get().saveHistory();
+                const assetIds = get().mediaAssets
+                    .filter(a => a.type === 'image' || a.type === 'video')
+                    .map(a => a.id);
+
+                set((state) => ({
+                    mediaAssets: [],
+                    // Reset all surfaces in all scenes
+                    scenes: state.scenes.map(scene => ({
+                        ...scene,
+                        surfaces: scene.surfaces.map(s => ({ ...s, mediaId: null }))
+                    }))
+                }));
+
+                // Cleanup IndexedDB
+                if (assetIds.length > 0) {
+                    try {
+                        const { db } = await import("@/lib/db");
+                        await db.files.bulkDelete(assetIds);
+                    } catch (e) {
+                        console.error("Failed to clear media library from DB:", e);
+                    }
+                }
             },
 
             // Scene actions
@@ -1373,7 +1451,147 @@ export const useProjectStore = create<ProjectStore>()(
                             updates[asset.id] ? { ...asset, url: updates[asset.id] } : asset
                         )
                     }));
+                    get().saveHistory();
                 }
+            },
+            // FX actions
+            addEffect: (surfaceId, type) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                const defaultParams: Record<string, number> = {};
+                if (type === "brightness") defaultParams.amount = 0;
+                if (type === "contrast") defaultParams.amount = 0;
+                if (type === "saturation") defaultParams.amount = 0;
+                if (type === "hue") defaultParams.amount = 0;
+                if (type === "blur") defaultParams.amount = 0;
+                if (type === "chromatic") defaultParams.amount = 0;
+                if (type === "rgbShift") defaultParams.amount = 0;
+
+                const newEffect: Effect = {
+                    id: generateId(),
+                    type,
+                    enabled: true,
+                    params: defaultParams
+                };
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map(s =>
+                                    s.id === surfaceId
+                                        ? { ...s, effects: [...s.effects, newEffect] }
+                                        : s
+                                ),
+                                updatedAt: Date.now()
+                            }
+                            : scene
+                    )
+                }));
+            },
+
+            removeEffect: (surfaceId, effectId) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map(s =>
+                                    s.id === surfaceId
+                                        ? { ...s, effects: s.effects.filter(e => e.id !== effectId) }
+                                        : s
+                                ),
+                                updatedAt: Date.now()
+                            }
+                            : scene
+                    )
+                }));
+            },
+
+            updateEffect: (surfaceId, effectId, params) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map(s =>
+                                    s.id === surfaceId
+                                        ? {
+                                            ...s,
+                                            effects: s.effects.map(e =>
+                                                e.id === effectId
+                                                    ? { ...e, params: { ...e.params, ...params } }
+                                                    : e
+                                            )
+                                        }
+                                        : s
+                                ),
+                                updatedAt: Date.now()
+                            }
+                            : scene
+                    )
+                }));
+            },
+
+            toggleEffect: (surfaceId, effectId) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map(s =>
+                                    s.id === surfaceId
+                                        ? {
+                                            ...s,
+                                            effects: s.effects.map(e =>
+                                                e.id === effectId
+                                                    ? { ...e, enabled: !e.enabled }
+                                                    : e
+                                            )
+                                        }
+                                        : s
+                                ),
+                                updatedAt: Date.now()
+                            }
+                            : scene
+                    )
+                }));
+            },
+
+            reorderEffect: (surfaceId, effectId, newIndex) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map(s => {
+                                    if (s.id !== surfaceId) return s;
+                                    const newEffects = [...s.effects];
+                                    const oldIndex = newEffects.findIndex(e => e.id === effectId);
+                                    if (oldIndex === -1) return s;
+                                    const [removed] = newEffects.splice(oldIndex, 1);
+                                    newEffects.splice(newIndex, 0, removed);
+                                    return { ...s, effects: newEffects };
+                                }),
+                                updatedAt: Date.now()
+                            }
+                            : scene
+                    )
+                }));
             },
             _hasHydrated: false,
             setHasHydrated: (state) => set({ _hasHydrated: state }),

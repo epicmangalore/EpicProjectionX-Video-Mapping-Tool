@@ -10,6 +10,7 @@ import { CornerPin } from "./CornerPin";
 import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { CanvasFrame } from "./CanvasFrame";
+import { GlobalStageMixer } from "./GlobalStageMixer";
 import { SpacebarPan } from "./SpacebarPan";
 
 import { SurfaceTool } from "./SurfaceTool";
@@ -118,7 +119,10 @@ export function ProjectionCanvas() {
                     }}
                 />
 
-                {/* Spacebar panning */}
+                {/* Background & Global Mix Logic */}
+                <GlobalStageMixer />
+
+                {/* Surfaces rendering */}
                 <SpacebarPan />
                 <AudioManager />
             </Canvas>

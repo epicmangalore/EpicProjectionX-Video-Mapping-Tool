@@ -46,6 +46,35 @@ export function Surface({ surface }: SurfaceProps) {
     const isSelected = selectedIds.includes(surface.id);
     const effects = surfaceEffects[surface.id] || defaultEffectSettings;
 
+    // Aggregate stackable effects from new FX system
+    const aggregatedFX = useMemo(() => {
+        const result = {
+            brightness: effects.brightness,
+            contrast: effects.contrast,
+            saturation: effects.saturation,
+            hue: effects.hue,
+            blur: effects.blur,
+            chromatic: effects.chromaticAberration,
+            rgbShift: effects.rgbShift,
+        };
+
+        (surface.effects || []).forEach((fx) => {
+            if (!fx.enabled) return;
+            const amount = fx.params.amount ?? 0;
+            switch (fx.type) {
+                case "brightness": result.brightness += amount; break;
+                case "contrast": result.contrast += amount; break;
+                case "saturation": result.saturation += amount; break;
+                case "hue": result.hue += amount; break;
+                case "blur": result.blur += amount; break;
+                case "chromatic": result.chromatic += amount; break;
+                case "rgbShift": result.rgbShift += amount; break;
+            }
+        });
+
+        return result;
+    }, [effects, surface.effects]);
+
     // Get media asset
     const mediaAsset = useMemo(() => {
         if (!surface.mediaId) return null;
@@ -118,6 +147,9 @@ export function Surface({ surface }: SurfaceProps) {
 
             const onCanPlay = () => {
                 console.log("✓ Video can play:", mediaAsset.name);
+                if (isPlayingGlobal) {
+                    video.play().catch(err => console.warn("Auto-play on canplay failed:", err));
+                }
             };
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -244,6 +276,11 @@ export function Surface({ surface }: SurfaceProps) {
 
     // Create texture from media
     const texture = useMemo(() => {
+        // PRIORITY 1: Global Mixed Composition
+        if (surface.useComposition && (window as any).compositionTexture) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            return (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
+        }
+
         if (!mediaAsset) return null;
 
         if (mediaAsset.type === "color") {
@@ -259,23 +296,11 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         if (mediaAsset.type === "image" && resolvedUrl) {
-            // console.log("Loading image texture from URL");
             const loader = new THREE.TextureLoader();
-            const tex = loader.load(resolvedUrl,
-                () => console.log("Texture loaded successfully"),
-                undefined,
-                (err) => console.error("Error loading texture:", err)
-            );
-            return tex;
+            return loader.load(resolvedUrl);
         }
 
         if ((mediaAsset.type === "video" || mediaAsset.type === "webcam") && videoElement) {
-            console.log("Creating VideoTexture for:", mediaAsset.name, "Video state:", {
-                readyState: videoElement.readyState,
-                paused: videoElement.paused,
-                currentTime: videoElement.currentTime,
-                duration: videoElement.duration
-            });
             const tex = new THREE.VideoTexture(videoElement);
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
@@ -284,14 +309,10 @@ export function Surface({ surface }: SurfaceProps) {
             return tex;
         }
 
-        if (surface.useComposition && (window as any).compositionTexture) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            return (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
-        }
-
         if (mediaAsset.type === "text") {
             const canvas = document.createElement("canvas");
             canvas.width = 1024;
-            canvas.height = 1024; // Increased height for multiline
+            canvas.height = 1024;
             const ctx = canvas.getContext("2d");
             if (ctx) {
                 const text = mediaAsset.text || mediaAsset.name || "Text";
@@ -314,17 +335,18 @@ export function Surface({ surface }: SurfaceProps) {
 
                 const lines = text.split('\n');
                 const totalHeight = lines.length * (fontSize * lineHeight);
-                y -= totalHeight / 2; // Center vertically initially
+                y -= totalHeight / 2;
 
                 lines.forEach((line, i) => {
                     ctx.fillText(line, x, y + i * (fontSize * lineHeight) + (fontSize * lineHeight) / 2);
                 });
             }
-            return new THREE.CanvasTexture(canvas);
+            const tex = new THREE.CanvasTexture(canvas);
+            return tex;
         }
 
         return null;
-    }, [mediaAsset, videoElement, resolvedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [mediaAsset, videoElement, resolvedUrl, surface.useComposition, isPlayingGlobal]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate warping matrix or polygon geometry
     const isQuad = surface.corners.length === 4;
@@ -395,10 +417,7 @@ export function Surface({ surface }: SurfaceProps) {
             const sWidth = sMaxX - sMinX || 1;
             const sHeight = sMaxY - sMinY || 1;
 
-            const u = sMinX + tx * sWidth;
-            const v = sMinY + ty * sHeight;
-
-            uvAttribute.setXY(i, u, v);
+            uvAttribute.setXY(i, (x - minX) / width, (y - minY) / height);
         }
 
         uvAttribute.needsUpdate = true;
@@ -410,6 +429,9 @@ export function Surface({ surface }: SurfaceProps) {
     const textureMatrix = useMemo(() => {
         const matrix = new THREE.Matrix3();
         if (!mediaAsset || !surface.corners || surface.corners.length < 3) return matrix;
+
+        // For global mapping, we use identity matrix to avoid double-transformation
+        if (surface.compositionMapping === "global" || (surface.useComposition && (window as any).compositionTexture)) return matrix;
 
         // Default settings
         const settings = surface.textureSettings || {
@@ -490,7 +512,7 @@ export function Surface({ surface }: SurfaceProps) {
         matrix.translate(0.5, 0.5);
 
         return matrix;
-    }, [surface.corners, mediaAsset, surface.textureSettings]);
+    }, [surface.corners, mediaAsset, surface.textureSettings, surface.compositionMapping, surface.useComposition]);
 
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
@@ -531,10 +553,10 @@ export function Surface({ surface }: SurfaceProps) {
             uTexture: { value: texture },
             uTextureMatrix: { value: textureMatrix },
             uOpacity: { value: surface.opacity },
-            uBrightness: { value: effects.brightness },
-            uContrast: { value: effects.contrast },
-            uSaturation: { value: effects.saturation },
-            uHue: { value: effects.hue },
+            uBrightness: { value: aggregatedFX.brightness },
+            uContrast: { value: aggregatedFX.contrast },
+            uSaturation: { value: aggregatedFX.saturation },
+            uHue: { value: aggregatedFX.hue },
             uColorTint: {
                 value: new THREE.Vector3(
                     effects.colorTint.r,
@@ -542,9 +564,9 @@ export function Surface({ surface }: SurfaceProps) {
                     effects.colorTint.b
                 )
             },
-            uBlurAmount: { value: effects.blur },
-            uChromaticAberration: { value: effects.chromaticAberration },
-            uRGBShift: { value: effects.rgbShift },
+            uBlurAmount: { value: aggregatedFX.blur },
+            uChromaticAberration: { value: aggregatedFX.chromatic },
+            uRGBShift: { value: aggregatedFX.rgbShift },
             uWarpMatrix: { value: warpMatrix },
             uBlendZones: {
                 value: new THREE.Vector4(
@@ -559,7 +581,7 @@ export function Surface({ surface }: SurfaceProps) {
             uMasterOpacity: { value: projectSettings.masterOpacity },
             uMasterBrightness: { value: projectSettings.masterBrightness },
             uBlackout: { value: projectSettings.blackout ? 1.0 : 0.0 },
-            uMappingMode: { value: surface.compositionMapping === "global" ? 1 : 0 },
+            uMappingMode: { value: surface.compositionMapping === "global" ? 1.0 : 0.0 },
             uProjectResolution: {
                 value: new THREE.Vector2(
                     projectSettings.resolution.width,
@@ -569,16 +591,36 @@ export function Surface({ surface }: SurfaceProps) {
             ...effectUniforms, // Effect-specific uniforms override if present
         };
 
+        // Map blend mode to Three.js constants
+        let blending: THREE.Blending = THREE.NormalBlending;
+        if (surface.blendMode === "multiply") blending = THREE.MultiplyBlending;
+        else if (surface.blendMode === "additive") blending = THREE.AdditiveBlending;
+        else if (surface.blendMode === "screen" || surface.blendMode === "overlay") blending = THREE.CustomBlending;
+
         const mat = new THREE.ShaderMaterial({
             vertexShader,
             fragmentShader: effectShader,
             uniforms: allUniforms,
             transparent: true,
+            blending: blending,
             side: THREE.DoubleSide,
+            depthWrite: false, // Ensure transparency works correctly in stacks
         });
 
+        // Screen/Overlay factors
+        if (surface.blendMode === "screen") {
+            mat.blendSrc = THREE.OneFactor;
+            mat.blendDst = THREE.OneMinusSrcColorFactor;
+            mat.blendEquation = THREE.AddEquation;
+        } else if (surface.blendMode === "overlay") {
+            // Fallback for overlay
+            mat.blendSrc = THREE.SrcAlphaFactor;
+            mat.blendDst = THREE.OneMinusSrcAlphaFactor;
+            mat.blendEquation = THREE.AddEquation;
+        }
+
         return mat;
-    }, [texture, surface.compositionMapping, projectSettings.resolution, shaderEffects]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [texture, surface.compositionMapping, projectSettings.resolution, shaderEffects, aggregatedFX, surface.opacity, surface.blendMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update mesh geometry for MeshWarp
     // Helper for cubic bezier interpolation

@@ -1,17 +1,18 @@
 "use client";
 
+import React, { useRef, useState } from "react";
 import { useProjectStore } from "@/store/project-store";
 import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
-import React, { useRef } from "react";
 import { useUIStore } from "@/store/ui-store";
 import { EffectsPanel } from "./EffectsPanel";
 import { AudioMappingPanel } from "./AudioMappingPanel";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers } from "lucide-react";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus } from "lucide-react";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
 import { generateId, truncateMiddle } from "@/lib/utils";
+import { MediaPicker } from "./MediaPicker";
 
 // Group functionality removed
 
@@ -28,20 +29,26 @@ export function SurfaceProperties() {
     const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
     const toolMode = useUIStore((state) => state.toolMode);
     const setToolMode = useUIStore((state) => state.setToolMode);
+    const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
+    const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isImporting, setIsImporting] = useState(false);
 
     const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
 
-    // Helper: apply media to a surface
-    const applyMedia = (surfaceId: string, mediaId: string | null) => {
-        updateSurface(surfaceId, { mediaId });
-    };
-
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file && selectedSurface) {
+        if (!file || !selectedSurface) return;
+
+        setIsImporting(true);
+        try {
             const mediaId = await processFile(file, addMediaAsset);
-            applyMedia(selectedSurface.id, mediaId);
+            updateSurface(selectedSurface.id, { mediaId });
+        } catch (error) {
+            console.error("Failed to import media:", error);
+        } finally {
+            setIsImporting(false);
+            if (e.target) e.target.value = "";
         }
     };
 
@@ -99,80 +106,68 @@ export function SurfaceProperties() {
                     />
                 </div>
 
-                {/* Media Selector */}
+                {/* Media Selector - Visual Picker */}
                 <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Media Source</label>
-                    <div className="flex gap-2">
-                        <select
-                            value={selectedSurface.mediaId || ""}
-                            onChange={(e) => {
-                                const val = e.target.value;
-                                if (val === "webcam-builtin") {
-                                    // Check if a webcam asset already exists
-                                    const webcamAsset = mediaAssets.find(a => a.type === "webcam");
-                                    if (!webcamAsset) {
-                                        const newId = generateId();
-                                        addMediaAsset({
-                                            id: newId,
-                                            name: "Webcam Input",
-                                            type: "webcam",
-                                        });
-                                        applyMedia(selectedSurface.id, newId);
-                                    } else {
-                                        applyMedia(selectedSurface.id, webcamAsset.id);
-                                    }
-                                } else {
-                                    applyMedia(selectedSurface.id, val || null);
-                                }
-                            }}
-                            className="flex-1 min-w-0 px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
-                        >
-                            <option value="">None</option>
-                            <option value="webcam-builtin">Webcam</option>
-                            <optgroup label="Assets">
-                                {mediaAssets
-                                    .filter((asset) => asset.type !== "shader" && asset.type !== "webcam")
-                                    .map((asset) => (
-                                        <option key={asset.id} value={asset.id}>
-                                            {truncateMiddle(asset.name, 25)}
-                                        </option>
-                                    ))}
-                            </optgroup>
-                        </select>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs text-muted-foreground block">Media Source</label>
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="p-2 aspect-square glass glass-hover rounded-md flex items-center justify-center text-zinc-400 hover:text-electric-cyan transition-colors"
-                            title="Upload New Asset"
+                            disabled={isImporting}
+                            className="p-1 px-2 text-[10px] flex items-center gap-1.5 transition-all text-zinc-500 hover:text-white bg-zinc-900 border border-white/5 hover:border-white/20 rounded-md"
+                            title="Import and assign media"
                         >
-                            <Upload className="w-4 h-4" />
+                            {isImporting ? (
+                                <div className="w-3 h-3 border-2 border-electric-cyan/30 border-t-electric-cyan rounded-full animate-spin" />
+                            ) : (
+                                <Upload className="w-3 h-3" />
+                            )}
+                            {isImporting ? "Importing..." : "Import"}
                         </button>
                     </div>
                     <input
-                        ref={fileInputRef}
                         type="file"
-                        accept="image/*,video/*"
+                        ref={fileInputRef}
+                        onChange={handleFileImport}
                         className="hidden"
-                        onChange={handleFileUpload}
+                        accept="image/*,video/*"
                     />
+                    <button
+                        onClick={() => setMediaPickerOpen(true)}
+                        className="w-full flex items-center justify-between gap-3 p-3 bg-zinc-900/50 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all group"
+                    >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 rounded-lg bg-zinc-950 flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
+                                {selectedSurface.mediaId ? (
+                                    <>
+                                        {(() => {
+                                            const asset = mediaAssets.find(a => a.id === selectedSurface.mediaId);
+                                            if (asset?.type === "color") return <div className="w-full h-full" style={{ backgroundColor: asset.color }} />;
+                                            if (asset?.thumbnail) return <img src={asset.thumbnail} alt="" className="w-full h-full object-cover" />;
+                                            return <Video className="w-4 h-4 text-zinc-600" />;
+                                        })()}
+                                    </>
+                                ) : (
+                                    <Plus className="w-4 h-4 text-zinc-700" />
+                                )}
+                            </div>
+                            <div className="text-left overflow-hidden">
+                                <p className="text-xs font-bold text-zinc-200 truncate uppercase mt-0.5">
+                                    {selectedSurface.mediaId
+                                        ? mediaAssets.find(a => a.id === selectedSurface.mediaId)?.name || "Unknown Asset"
+                                        : "Assign Media"}
+                                </p>
+                                <p className="text-[9px] text-zinc-500 uppercase font-medium mt-0.5">
+                                    {selectedSurface.mediaId
+                                        ? mediaAssets.find(a => a.id === selectedSurface.mediaId)?.type || "Source"
+                                        : "Click to browse"}
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-electric-cyan transition-colors" />
+                    </button>
+
                 </div>
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => duplicateSurfaces([selectedSurface.id])}
-                        className="flex-1 px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2"
-                    >
-                        <Copy className="w-3 h-3" />
-                        Duplicate
-                    </button>
-                    <button
-                        onClick={() => deleteSurface(selectedSurface.id)}
-                        className="flex-1 px-3 py-2 text-xs glass glass-hover rounded-md flex items-center justify-center gap-2 text-red-400 hover:bg-red-500/20"
-                    >
-                        <Trash2 className="w-3 h-3" />
-                        Delete
-                    </button>
-                </div>
 
                 {/* Media Placement */}
                 <div className={`space-y-4 border-t border-white/5 pt-4 ${!selectedSurface.mediaId ? "opacity-30 pointer-events-none" : ""}`}>

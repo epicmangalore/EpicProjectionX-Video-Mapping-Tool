@@ -14,6 +14,7 @@ import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSync } from "@/hooks/useSync";
 import { MIDIMapper } from "@/components/panels/MIDIMapper";
+import { MediaPicker } from "@/components/panels/MediaPicker";
 import { CanvasSettings } from "@/components/panels/CanvasSettings";
 import { OnboardingGuide } from "@/components/ui/OnboardingGuide";
 import { useState, useEffect } from "react";
@@ -132,7 +133,12 @@ export default function Home() {
         },
 
         // Misc
-        { key: "m", ctrl: true, callback: () => setShowMIDIPanel((prev) => !prev) }, // Ctrl+M for MIDI
+        {
+            key: "m", ctrl: true, callback: () => {
+                setShowMIDIPanel((prev) => !prev);
+                setShowSettings(false);
+            }
+        }, // Ctrl+M for MIDI
     ]);
 
     // Warn before leaving with unsaved changes
@@ -144,6 +150,18 @@ export default function Home() {
         window.addEventListener("beforeunload", handleBeforeUnload);
         return () => window.removeEventListener("beforeunload", handleBeforeUnload);
     }, []);
+
+    const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
+    const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);
+
+    const handleMediaSelect = (mediaId: string | null) => {
+        if (selectedIds.length > 0) {
+            useProjectStore.getState().updateSurface(selectedIds[0], { mediaId });
+            setMediaPickerOpen(false);
+        }
+    };
+
+    const selectedSurface = surfaces.find(s => selectedIds.includes(s.id));
 
     return (
         <TooltipProvider>
@@ -287,7 +305,10 @@ export default function Home() {
 
                     <div className="flex gap-2 items-center relative">
                         <button
-                            onClick={() => setShowMIDIPanel(!showMIDIPanel)}
+                            onClick={() => {
+                                setShowMIDIPanel(!showMIDIPanel);
+                                if (!showMIDIPanel) setShowSettings(false);
+                            }}
                             className={`p-1.5 rounded transition-all ${showMIDIPanel
                                 ? "bg-electric-cyan text-black"
                                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
@@ -297,7 +318,10 @@ export default function Home() {
                         </button>
 
                         <button
-                            onClick={() => setShowSettings(!showSettings)}
+                            onClick={() => {
+                                setShowSettings(!showSettings);
+                                if (!showSettings) setShowMIDIPanel(false);
+                            }}
                             className={`p-1.5 rounded transition-all ${showSettings
                                 ? "bg-zinc-800 text-white"
                                 : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
@@ -305,13 +329,6 @@ export default function Home() {
                         >
                             <SettingsIcon className="w-4 h-4" />
                         </button>
-
-                        {/* Settings Popover */}
-                        {showSettings && (
-                            <div className="absolute top-12 right-0 z-50 animate-in fade-in zoom-in-95 duration-200">
-                                <CanvasSettings />
-                            </div>
-                        )}
 
                         <LightBeamButton
                             onClick={openOutputWindow}
@@ -325,12 +342,12 @@ export default function Home() {
                 </header>
 
                 {/* Application Body */}
-                <div className="flex-1 flex overflow-hidden relative">
+                <div className="flex-1 flex overflow-hidden relative min-w-0">
                     {/* Unified Left Sidebar */}
                     <LeftSidebar />
 
                     {/* Main Workspace */}
-                    <div className="flex-1 flex flex-col relative">
+                    <div className="flex-1 flex flex-col relative min-w-0">
                         <div className="flex-1 relative bg-zinc-900 overflow-hidden">
                             {/* 3D Canvas */}
                             {/* Centered canvas container with padding for "Artboard" feel */}
@@ -348,6 +365,24 @@ export default function Home() {
                                     <MIDIMapper />
                                 </div>
                             )}
+
+                            {/* Canvas Settings Overlay */}
+                            {showSettings && (
+                                <div className="absolute top-4 right-4 bottom-4 w-72 z-50 animate-in slide-in-from-right-4 duration-300">
+                                    <CanvasSettings onClose={() => setShowSettings(false)} />
+                                </div>
+                            )}
+
+                            {/* Media Picker Overlay - Slides out from right panel */}
+                            {mediaPickerOpen && selectedSurface && (
+                                <div className="absolute top-4 right-4 bottom-4 w-96 z-[60] animate-in slide-in-from-right-4 duration-300">
+                                    <MediaPicker
+                                        currentMediaId={selectedSurface.mediaId}
+                                        onSelect={handleMediaSelect}
+                                        onClose={() => setMediaPickerOpen(false)}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Bottom Panel: Timeline & Scenes */}
@@ -358,7 +393,7 @@ export default function Home() {
                             </div>
 
                             {/* Timeline Panel (Flexible) */}
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <TimelinePanel />
                             </div>
                         </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, Image as ImageIcon, Plus, Type, Sparkles, Wand2, Shapes } from "lucide-react";
+import { Layers, Plus, Type, Sparkles, Wand2, Shapes } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
-import { MediaLibrary } from "./MediaLibrary";
 import { EffectsBrowser } from "./EffectsBrowser";
 import { AutoDetectDialog } from "../dialogs/AutoDetectDialog";
 import { ShapeLibraryPanel } from "./ShapeLibraryPanel";
@@ -12,7 +11,7 @@ import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
 
 export function LeftSidebar() {
-    const [activeTab, setActiveTab] = useState<"layers" | "assets" | "fx">("layers");
+    const [activeTab, setActiveTab] = useState<"layers" | "fx">("layers");
 
     const [showAutoDetect, setShowAutoDetect] = useState(false);
     const [showShapeLibrary, setShowShapeLibrary] = useState(false);
@@ -61,18 +60,6 @@ export function LeftSidebar() {
                     <Layers className="w-3.5 h-3.5" />
                     Layers
                     {activeTab === "layers" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-cyan" />}
-                </button>
-                <button
-                    onClick={() => setActiveTab("assets")}
-                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "assets"
-                        ? "text-white"
-                        : "text-zinc-500 hover:text-zinc-200 hover:text-zinc-300"
-                        }`}
-                    data-tour="assets-tab"
-                >
-                    <ImageIcon className="w-3.5 h-3.5" />
-                    Assets
-                    {activeTab === "assets" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
 
                 <button
@@ -138,13 +125,6 @@ export function LeftSidebar() {
                     </div>
                 )}
 
-                {activeTab === "assets" && (
-                    <div className="absolute inset-0 flex flex-col">
-                        <div className="flex-1 overflow-hidden">
-                            <MediaLibrary />
-                        </div>
-                    </div>
-                )}
 
 
 

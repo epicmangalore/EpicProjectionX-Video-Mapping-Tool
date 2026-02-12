@@ -69,7 +69,7 @@
   }
 
   body {
-    @apply bg-dark-900 text-foreground;
+    @apply bg-dark-900 text-foreground overflow-x-hidden;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
