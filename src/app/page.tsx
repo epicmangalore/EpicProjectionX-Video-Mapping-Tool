@@ -163,6 +163,7 @@ export default function Home() {
         }
     };
 
+    const activeEffectConfig = useUIStore((state) => state.activeEffectConfig);
     const selectedSurface = surfaces.find(s => selectedIds.includes(s.id));
 
     return (
@@ -377,7 +378,7 @@ export default function Home() {
                             )}
 
                             {/* Effect Config Overlay */}
-                            {useUIStore.getState().activeEffectConfig && (
+                            {activeEffectConfig && (
                                 <div className="absolute top-4 right-4 bottom-4 w-80 z-[70] animate-in slide-in-from-right-4 duration-300">
                                     <EffectConfigPanel />
                                 </div>

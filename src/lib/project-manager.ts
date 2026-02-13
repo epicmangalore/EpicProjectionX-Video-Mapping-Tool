@@ -2,14 +2,12 @@ import { db, type DBProject } from "./db";
 import { useProjectStore } from "@/store/project-store";
 import { useEffectsStore } from "@/store/effects-store";
 import { useTimelineStore } from "@/store/timeline-store";
-import { useSceneStore } from "@/store/cue-store";
 
 export interface ProjectData {
     version: string;
     project: ReturnType<typeof useProjectStore.getState>;
     effects: ReturnType<typeof useEffectsStore.getState>;
     timeline: ReturnType<typeof useTimelineStore.getState>;
-    scenes: ReturnType<typeof useSceneStore.getState>;
 }
 
 export class ProjectManager {
@@ -30,7 +28,6 @@ export class ProjectManager {
             project: useProjectStore.getState(),
             effects: useEffectsStore.getState(),
             timeline: useTimelineStore.getState(),
-            scenes: useSceneStore.getState(),
         };
 
         const dbProject: DBProject = {
@@ -61,7 +58,6 @@ export class ProjectManager {
         useProjectStore.setState(projectData.project);
         useEffectsStore.setState(projectData.effects);
         useTimelineStore.setState(projectData.timeline);
-        useSceneStore.setState(projectData.scenes);
     }
 
     async deleteProject(id: number): Promise<void> {
@@ -98,6 +94,8 @@ export class ProjectManager {
     async createNewProject(name: string = "Untitled Project"): Promise<void> {
         // Reset all stores to default state
         useProjectStore.getState().resetProject();
+        useTimelineStore.getState().reset();
+
         useEffectsStore.setState({
             surfaceEffects: {},
             globalEffects: {
@@ -117,8 +115,6 @@ export class ProjectManager {
                 blendGamma: 2.2,
             },
         });
-        useTimelineStore.getState().stop();
-        useSceneStore.setState({ scenes: [], activeSceneId: null, isTransitioning: false });
 
         // Update project name
         useProjectStore.getState().updateProjectSettings({ name });

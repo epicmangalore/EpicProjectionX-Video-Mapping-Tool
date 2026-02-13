@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Search, Wand2, Sparkles, Zap, Palette, Droplets, Waves, Monitor, Brush, ChevronRight, X, Play } from "lucide-react";
+import { useUIStore } from "@/store/ui-store";
 import { effectsLibrary, type EffectMeta, type CategoryMeta } from "@/lib/effects/EffectsLibrary";
 import { useProjectStore } from "@/store/project-store";
 import { generateId } from "@/lib/utils";
@@ -74,35 +75,26 @@ export function EffectsBrowser() {
                 (e) =>
                     e.name.toLowerCase().includes(q) ||
                     e.description.toLowerCase().includes(q) ||
-                    e.tags.some((t) => t.includes(q))
+                    e.tags?.some((t) => t.toLowerCase().includes(q))
             );
         }
         return result;
     }, [effects, selectedCategory, searchQuery])();
 
-    // Apply effect to currently selected surface (as shader stack entry)
-    const applyEffectToSelectedSurface = async (effect: EffectMeta) => {
+    const setActiveEffectConfig = useUIStore((s) => s.setActiveEffectConfig);
+
+    // Open settings panel for effect (preview mode)
+    const handleEffectClick = async (effect: EffectMeta) => {
         const selectedSurface = activeSurfaces.find((s) => selectedSurfaceIds.includes(s.id));
         if (!selectedSurface) {
-            console.warn("No surface selected. Select a surface before applying an effect.");
+            console.warn("No surface selected. Select a surface before previewing an effect.");
             return;
         }
 
-        const shaderSource = await effectsLibrary.loadShader(effect.id);
-        const mediaId = generateId();
-
-        addMediaAsset({
-            id: mediaId,
-            name: effect.name,
-            type: "shader",
-            shaderSource,
-            effectId: effect.id,
-            uniforms: effectsLibrary.getDefaultUniforms(effect),
-        });
-
-        const nextShaderEffectIds = [...(selectedSurface.shaderEffectIds || []), mediaId];
-        updateSurface(selectedSurface.id, {
-            shaderEffectIds: nextShaderEffectIds,
+        setActiveEffectConfig({
+            type: "preview",
+            previewEffectId: effect.id,
+            surfaceId: selectedSurface.id
         });
     };
 
@@ -177,7 +169,7 @@ export function EffectsBrowser() {
                             <EffectCard
                                 key={effect.id}
                                 effect={effect}
-                                onApply={applyEffectToSelectedSurface}
+                                onApply={handleEffectClick}
                             />
                         ))}
                     </div>
@@ -199,20 +191,23 @@ function EffectCard({
     effect: EffectMeta;
     onApply: (effect: EffectMeta) => void;
 }) {
-    const [expanded, setExpanded] = useState(false);
     const color = CATEGORY_COLORS[effect.category] || "text-zinc-400";
     const icon = CATEGORY_ICONS[effect.category];
 
     return (
-        <div className="bg-zinc-800/40 border border-white/5 rounded-lg overflow-hidden hover:border-white/10 transition-colors">
-            <div
-                className="flex items-center gap-2.5 px-3 py-2.5 cursor-pointer"
-                onClick={() => setExpanded(!expanded)}
-            >
-                <div className={`${color}`}>{icon}</div>
+        <button
+            onClick={() => onApply(effect)}
+            className="w-full text-left bg-zinc-800/40 border border-white/5 rounded-lg overflow-hidden hover:border-white/10 hover:bg-zinc-800/60 transition-all group active:scale-[0.98]"
+        >
+            <div className="flex items-center gap-2.5 px-3 py-2.5">
+                <div className={`${color} group-hover:scale-110 transition-transform`}>{icon}</div>
                 <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-zinc-200 truncate">{effect.name}</div>
-                    <div className="text-[10px] text-zinc-500 truncate">{effect.description}</div>
+                    <div className="text-xs font-medium text-zinc-200 truncate group-hover:text-white transition-colors">
+                        {effect.name}
+                    </div>
+                    <div className="text-[10px] text-zinc-500 truncate group-hover:text-zinc-400 transition-colors">
+                        {effect.description}
+                    </div>
                 </div>
                 <div className="flex items-center gap-1.5">
                     {effect.animated && (
@@ -225,55 +220,9 @@ function EffectCard({
                             GEN
                         </span>
                     )}
-                    <ChevronRight
-                        className={`w-3 h-3 text-zinc-600 transition-transform ${expanded ? "rotate-90" : ""}`}
-                    />
+                    <ChevronRight className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-0.5 transition-all" />
                 </div>
             </div>
-
-            {expanded && (
-                <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
-                    {/* Uniform Controls Preview */}
-                    <div className="space-y-1">
-                        {Object.entries(effect.uniforms).map(([key, u]) => (
-                            <div key={key} className="flex items-center justify-between text-[10px]">
-                                <span className="text-zinc-500">{u.label}</span>
-                                <span className="text-zinc-400 font-mono">
-                                    {Array.isArray(u.default)
-                                        ? u.default.map((v) => v.toFixed(1)).join(", ")
-                                        : typeof u.default === "number"
-                                            ? u.default.toFixed(2)
-                                            : String(u.default)}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Tags */}
-                    <div className="flex gap-1 flex-wrap">
-                        {effect.tags.map((tag) => (
-                            <span
-                                key={tag}
-                                className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 border border-white/5"
-                            >
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-
-                    {/* Apply Button */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onApply(effect);
-                        }}
-                        className="w-full py-1.5 rounded text-[11px] font-medium bg-electric-purple/20 text-electric-purple border border-electric-purple/30 hover:bg-electric-purple/30 transition-colors flex items-center justify-center gap-1.5"
-                    >
-                        <Play className="w-3 h-3" />
-                        Apply to Selected Surface
-                    </button>
-                </div>
-            )}
-        </div>
+        </button>
     );
 }

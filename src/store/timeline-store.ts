@@ -58,6 +58,7 @@ interface TimelineState {
     // Internal
     initTimeline: (updateSurface: (id: string, updates: any) => void) => void;
     updateTimeline: (updateSurface: (id: string, updates: any) => void) => void;
+    reset: () => void;
 }
 
 export const useTimelineStore = create<TimelineState>()(
@@ -118,7 +119,7 @@ export const useTimelineStore = create<TimelineState>()(
 
             setZoom: (zoom: number) => {
                 // Limit zoom to reasonable bounds
-                const newZoom = Math.max(0.1, Math.min(10, zoom));
+                const newZoom = Math.max(0.0001, Math.min(10, zoom));
                 set({ zoom: newZoom });
             },
 
@@ -220,6 +221,24 @@ export const useTimelineStore = create<TimelineState>()(
                             }
                         }, prevKf.time);
                     });
+                });
+            },
+
+            reset: () => {
+                const tl = get().timeline;
+                if (tl) {
+                    tl.pause().clear();
+                }
+                set({
+                    currentTime: 0,
+                    duration: 30,
+                    isPlaying: false,
+                    loop: false,
+                    snapToGrid: true,
+                    gridSize: 0.1,
+                    keyframes: [],
+                    zoom: 1.0,
+                    expandedSurfaces: [],
                 });
             },
         }),

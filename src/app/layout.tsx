@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     manifest: "/manifest.json",
 };
 
+import { ToastContainer } from "@/components/ui/Toast";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -36,6 +38,7 @@ export default function RootLayout({
                 className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
             >
                 {children}
+                <ToastContainer />
             </body>
         </html>
     );

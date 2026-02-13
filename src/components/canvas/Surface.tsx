@@ -20,6 +20,8 @@ import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { SurfaceBorder } from "./SurfaceBorder";
 import { useSnapping } from "@/hooks/useSnapping";
+import { CornerPin } from "./CornerPin";
+import { Line } from "@react-three/drei";
 
 interface SurfaceProps {
     surface: SurfaceType;
@@ -1150,19 +1152,26 @@ export function Surface({ surface }: SurfaceProps) {
             {/* Selection UI and Handles - rendered within the local space of the group */}
             {!isOutput && isSelected && (
                 <>
-                    {/* Standard outline (follows the unit plane) */}
-                    <mesh position={[0, 0, 0.01]}>
-                        <lineSegments>
-                            <edgesGeometry args={[new THREE.PlaneGeometry(1, 1)]} />
-                            <lineBasicMaterial color="#7c3aed" linewidth={2} transparent opacity={0.6} />
-                        </lineSegments>
-                    </mesh>
+                    {/* Dynamic outline (follows the actual corners) */}
+                    <Line
+                        points={surface.corners.map(p => [p.x, p.y, 0.01] as [number, number, number]).concat([[surface.corners[0].x, surface.corners[0].y, 0.01]])}
+                        color="#7c3aed"
+                        lineWidth={1.5}
+                        transparent
+                        opacity={0.6}
+                        depthTest={false}
+                    />
 
                     {/* Unified Transform Handles (Local Space) */}
-                    {(toolMode === "select" || toolMode === "transform" || toolMode === "corner-pin") && (
+                    {(toolMode === "select" || toolMode === "transform") && (
                         <ResizeHandles surface={surface} />
                     )}
                 </>
+            )}
+
+            {/* Corner Pin Mode Handles */}
+            {isSelected && toolMode === "corner-pin" && (
+                <CornerPin surface={surface} />
             )}
 
             {/* Mesh Warp Mode */}

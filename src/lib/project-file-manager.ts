@@ -20,7 +20,6 @@ import { saveAs } from "file-saver";
 import { useProjectStore } from "@/store/project-store";
 import { useEffectsStore } from "@/store/effects-store";
 import { useTimelineStore } from "@/store/timeline-store";
-import { useSceneStore } from "@/store/cue-store";
 import { db } from "./db";
 
 const FILE_EXTENSION = ".projectx";
@@ -173,28 +172,40 @@ export async function saveProjectFile(
     const projectState = useProjectStore.getState();
     const effectsState = useEffectsStore.getState();
     const timelineState = useTimelineStore.getState();
-    const sceneState = useSceneStore.getState();
 
     const name = projectName || projectState.projectSettings.name || "Untitled Project";
     const targetFilename = `${sanitizeFilename(name)}${FILE_EXTENSION}`;
 
-    // Request native save target as early as possible (still inside user gesture)
-    // to avoid browsers blocking delayed download prompts after async work.
-    const saveHandle = await requestSaveFileHandle(targetFilename);
+    console.log("💾 [Save] Starting project save process for:", name);
+
+    // Request native save target - moved slightly later to see if it hangs
+    let saveHandle: SaveFilePickerHandle | null = null;
+    try {
+        console.log("💾 [Save] Requesting native save handle...");
+        saveHandle = await requestSaveFileHandle(targetFilename);
+        console.log("💾 [Save] Native handle received:", !!saveHandle);
+    } catch (e) {
+        console.warn("💾 [Save] Native picker failed/unsupported, falling back to download:", e);
+    }
 
     const zip = new JSZip();
     const settingsFolder = zip.folder("settings")!;
     const assetsFolder = zip.folder("assets")!;
 
     // ── Collect & embed binary assets ──────────────────────────────
+    console.log("💾 [Save] Collecting binary assets...");
     const assetEntries: AssetEntry[] = [];
 
     if (includeAssets) {
         for (const media of projectState.mediaAssets) {
             if (!media.url) continue;
+            console.log("💾 [Save] Fetching asset:", media.name, media.id);
 
             const blob = await fetchBlobFromUrl(media.url);
-            if (!blob || blob.size === 0) continue;
+            if (!blob || blob.size === 0) {
+                console.warn("💾 [Save] Failed to fetch blob for:", media.id);
+                continue;
+            }
 
             const ext = blob.type ? getExtFromMime(blob.type) : getExtensionFromUrl(media.url);
             const filename = `${media.id}.${ext}`;
@@ -215,15 +226,14 @@ export async function saveProjectFile(
 
         // Also save blobs stored in IndexedDB (files table)
         try {
+            console.log("💾 [Save] Checking IndexedDB for stored files...");
             const storedFiles = await db.files.toArray();
+            console.log("💾 [Save] Found", storedFiles.length, "files in DB");
             for (const file of storedFiles) {
-                // Check if any media asset references this file
                 const referencedMedia = projectState.mediaAssets.find(
                     (m) => m.url?.includes(file.id) || m.id === file.id
                 );
                 if (!referencedMedia) continue;
-
-                // Skip if we already captured it via URL fetch above
                 if (assetEntries.some((a) => a.id === file.id)) continue;
 
                 const ext = file.blob.type ? getExtFromMime(file.blob.type) : "bin";
@@ -238,13 +248,13 @@ export async function saveProjectFile(
                     size: file.blob.size,
                 });
             }
-        } catch {
-            // IndexedDB may not be available in all contexts
+        } catch (e) {
+            console.error("💾 [Save] IndexedDB access failed during save:", e);
         }
     }
 
     // ── Settings JSON files ────────────────────────────────────────
-    // Strip URL fields from media assets (they'll be re-created on load)
+    console.log("💾 [Save] Serializing settings...");
     const mediaAssetsForSave = projectState.mediaAssets.map((m) => ({
         ...m,
         url: undefined, // Don't store blob URLs
@@ -282,8 +292,8 @@ export async function saveProjectFile(
         "scenes.json",
         JSON.stringify(
             {
-                scenes: sceneState.scenes,
-                activeSceneId: sceneState.activeSceneId,
+                scenes: projectState.scenes,
+                activeSceneId: projectState.activeSceneId,
             },
             null,
             2
@@ -307,29 +317,54 @@ export async function saveProjectFile(
     zip.file("manifest.json", JSON.stringify(manifest, null, 2));
 
     // ── Preview thumbnail ──────────────────────────────────────────
+    console.log("💾 [Save] Generating preview thumbnail...");
     try {
         const canvas = document.querySelector("canvas");
         if (canvas) {
-            const blob = await new Promise<Blob | null>((resolve) =>
-                canvas.toBlob((b) => resolve(b), "image/jpeg", 0.7)
-            );
-            if (blob) zip.file("preview.jpg", blob);
+            const blob = await new Promise<Blob | null>((resolve) => {
+                const timeout = setTimeout(() => {
+                    console.warn("💾 [Save] Canvas.toBlob timed out!");
+                    resolve(null);
+                }, 2000);
+                canvas.toBlob((b) => {
+                    clearTimeout(timeout);
+                    resolve(b);
+                }, "image/jpeg", 0.7);
+            });
+            if (blob) {
+                console.log("💾 [Save] Thumbnail generated, size:", blob.size);
+                zip.file("preview.jpg", blob);
+            }
+        } else {
+            console.warn("💾 [Save] Canvas not found for thumbnail");
         }
-    } catch { }
+    } catch (e) {
+        console.error("💾 [Save] Preview generation failed:", e);
+    }
 
     // ── Generate & download ────────────────────────────────────────
+    console.log("💾 [Save] Generating ZIP archive...");
     const zipBlob = await zip.generateAsync({
         type: "blob",
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
     });
+    console.log("💾 [Save] ZIP generated, total size:", zipBlob.size);
 
     if (saveHandle) {
-        await writeBlobToHandle(saveHandle, zipBlob);
-        return;
+        console.log("💾 [Save] Writing to file handle...");
+        try {
+            await writeBlobToHandle(saveHandle, zipBlob);
+            console.log("💾 [Save] File write complete!");
+            return;
+        } catch (e) {
+            console.error("💾 [Save] Failed to write to handle, falling back to manual download:", e);
+        }
     }
 
+    console.log("💾 [Save] Triggering fallback download...");
     downloadBlobFallback(zipBlob, targetFilename);
+    console.log("💾 [Save] Process finished.");
 }
 
 /**
@@ -340,28 +375,37 @@ export async function loadProjectFile(file: File): Promise<string> {
         throw new Error(`Invalid file format. Expected ${FILE_EXTENSION}`);
     }
 
+    console.log("📂 [Load] Starting project load for file:", file.name);
     const zip = await JSZip.loadAsync(file);
+    console.log("📂 [Load] ZIP archive loaded successfully");
 
     // ── Read manifest ──────────────────────────────────────────────
     const manifestFile = zip.file("manifest.json");
     if (!manifestFile) {
+        console.error("📂 [Load] Missing manifest.json");
         throw new Error("Invalid project file: missing manifest.json");
     }
     const manifest: ProjectManifest = JSON.parse(await manifestFile.async("text"));
+    console.log("📂 [Load] Manifest read, project:", manifest.name, "ID:", manifest.projectId);
 
     // Version check (major version compatibility)
     const [fmtMajor] = manifest.formatVersion.split(".");
     const [appMajor] = FORMAT_VERSION.split(".");
     if (fmtMajor !== appMajor) {
+        console.error("📂 [Load] Version mismatch:", manifest.formatVersion, "vs supported", FORMAT_VERSION);
         throw new Error(
             `Incompatible project version ${manifest.formatVersion}. This app supports ${FORMAT_VERSION}.`
         );
     }
 
     // ── Load settings ──────────────────────────────────────────────
+    console.log("📂 [Load] Reading settings files...");
     const readJson = async (path: string) => {
         const f = zip.file(path);
-        if (!f) return null;
+        if (!f) {
+            console.warn("📂 [Load] Setting file not found:", path);
+            return null;
+        }
         return JSON.parse(await f.async("text"));
     };
 
@@ -373,13 +417,18 @@ export async function loadProjectFile(file: File): Promise<string> {
     const scenes = await readJson("settings/scenes.json");
 
     // ── Restore binary assets ──────────────────────────────────────
+    console.log("📂 [Load] Restoring binary assets...");
     const urlMap = new Map<string, string>(); // assetId → new blob URL
 
     for (const entry of manifest.assets) {
         const assetFile = zip.file(entry.filename);
-        if (!assetFile) continue;
+        if (!assetFile) {
+            console.warn("📂 [Load] Asset file missing from ZIP:", entry.filename);
+            continue;
+        }
 
         const blob = await assetFile.async("blob");
+        console.log("📂 [Load] Restored asset blob:", entry.id, "size:", blob.size);
 
         // Store in IndexedDB for persistence
         try {
@@ -388,7 +437,9 @@ export async function loadProjectFile(file: File): Promise<string> {
                 blob,
                 timestamp: Date.now(),
             });
-        } catch { }
+        } catch (e) {
+            console.warn("📂 [Load] Failed to store asset in IndexedDB:", e);
+        }
 
         // Create blob URL for immediate use
         const blobUrl = URL.createObjectURL(blob);
@@ -402,6 +453,7 @@ export async function loadProjectFile(file: File): Promise<string> {
     });
 
     // ── Restore all stores ─────────────────────────────────────────
+    console.log("📂 [Load] Restoring store states...");
     // Stop timeline playback first
     useTimelineStore.getState().stop();
 
@@ -410,6 +462,8 @@ export async function loadProjectFile(file: File): Promise<string> {
     const restoredSurfaces = surfaces || [];
     const restoredScenes = scenes?.scenes || [];
     const restoredActiveSceneId = scenes?.activeSceneId || null;
+
+    console.log("📂 [Load] Scenes to restore:", restoredScenes.length);
 
     // Prefer explicit scenes data when present; fall back to single-scene import from legacy surfaces.
     if (restoredScenes.length > 0) {
@@ -423,6 +477,7 @@ export async function loadProjectFile(file: File): Promise<string> {
             future: [],
         });
     } else {
+        console.log("📂 [Load] Falling back to single-scene (legacy) load");
         const sceneId = `scene_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         useProjectStore.setState({
             mediaAssets: restoredMediaAssets,
@@ -447,6 +502,7 @@ export async function loadProjectFile(file: File): Promise<string> {
 
     // Effects store
     if (effects) {
+        console.log("📂 [Load] Restoring effects...");
         useEffectsStore.setState({
             surfaceEffects: effects.surfaceEffects || {},
             globalEffects: effects.globalEffects || useEffectsStore.getState().globalEffects,
@@ -455,6 +511,7 @@ export async function loadProjectFile(file: File): Promise<string> {
 
     // Timeline store
     if (timeline) {
+        console.log("📂 [Load] Restoring timeline...");
         useTimelineStore.setState({
             keyframes: timeline.keyframes || [],
             duration: timeline.duration || 30,
@@ -466,15 +523,7 @@ export async function loadProjectFile(file: File): Promise<string> {
         });
     }
 
-    // Scene store
-    if (scenes) {
-        useSceneStore.setState({
-            scenes: scenes.scenes || [],
-            activeSceneId: scenes.activeSceneId || null,
-            isTransitioning: false,
-        });
-    }
-
+    console.log("📂 [Load] Project load complete!");
     return manifest.name;
 }
 

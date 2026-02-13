@@ -1341,12 +1341,12 @@ export const useProjectStore = create<ProjectStore>()(
 
             resetProject: () => {
                 set({
-                    // NOTE: surfaces are now in scenes[].surfaces
                     mediaAssets: [],
                     scenes: [],
                     activeSceneId: null,
                     projectSettings: defaultProjectSettings,
                     selectedSurfaceIds: [],
+                    currentProjectId: null,
                 });
             },
 

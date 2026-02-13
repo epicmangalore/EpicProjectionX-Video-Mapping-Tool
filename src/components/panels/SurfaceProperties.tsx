@@ -9,7 +9,8 @@ import { ShaderEffectControls } from "./ShaderEffectControls";
 import { AudioMappingPanel } from "./AudioMappingPanel";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus } from "lucide-react";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus, Wand2, Power } from "lucide-react";
+import { toast } from "@/store/toast-store";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
 import { processFile } from "@/lib/media-utils";
@@ -33,6 +34,7 @@ export function SurfaceProperties() {
     const setToolMode = useUIStore((state) => state.setToolMode);
     const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
     const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);
+    const setActiveEffectConfig = useUIStore((state) => state.setActiveEffectConfig);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isImporting, setIsImporting] = useState(false);
 
@@ -642,10 +644,109 @@ export function SurfaceProperties() {
                 )}
 
 
-                <div data-tour="effects-panel">
-                    <EffectsPanel />
-                    <ShaderEffectControls />
+                {/* Active Effects List - Simplified */}
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Active FX Stack</h3>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-white/5">
+                            <span className="text-[10px] font-bold text-zinc-500 font-mono">
+                                {(selectedSurface.shaderEffectIds?.length || 0) + (selectedSurface.effects?.filter(e => e.enabled).length || 0)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        {/* Shader Effects */}
+                        {selectedSurface.shaderEffectIds?.map((effectId) => {
+                            const asset = mediaAssets.find(a => a.id === effectId);
+                            if (!asset || asset.type !== "shader") return null;
+
+                            return (
+                                <div
+                                    key={effectId}
+                                    className="group flex items-center justify-between gap-3 p-1.5 bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 rounded-lg transition-all active:scale-[0.98]"
+                                >
+                                    <button
+                                        className="flex-1 flex items-center gap-2 cursor-pointer text-left"
+                                        onClick={() => setActiveEffectConfig({ type: "shader", effectId, surfaceId: selectedSurface.id })}
+                                    >
+                                        <div className="w-7 h-7 rounded bg-electric-purple/10 flex items-center justify-center group-hover:bg-electric-purple/20 transition-colors">
+                                            <Wand2 className="w-3.5 h-3.5 text-electric-purple" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[11px] text-zinc-300 font-medium truncate block group-hover:text-white transition-colors">{asset.name}</span>
+                                            <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Shader FX</span>
+                                        </div>
+                                    </button>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                        <button
+                                            onClick={() => {
+                                                const nextIds = (selectedSurface.shaderEffectIds || []).filter(id => id !== effectId);
+                                                updateSurface(selectedSurface.id, { shaderEffectIds: nextIds });
+                                                toast.info(`Removed ${asset.name}`);
+                                            }}
+                                            className="p-1.5 hover:bg-red-500/10 rounded-md text-zinc-600 hover:text-red-400 transition-colors"
+                                            title="Remove Effect"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Stackable Effects */}
+                        {selectedSurface.effects?.map((fx, index) => (
+                            <div
+                                key={fx.id}
+                                className={`group flex items-center justify-between gap-3 p-1.5 border rounded-lg transition-all active:scale-[0.98] ${fx.enabled ? 'bg-zinc-900/50 border-white/5 hover:bg-zinc-800' : 'bg-zinc-900/10 border-white/5 opacity-50'}`}
+                            >
+                                <button
+                                    className="flex-1 flex items-center gap-2 cursor-pointer text-left"
+                                    onClick={() => setActiveEffectConfig({ type: "stackable", effectId: fx.id, surfaceId: selectedSurface.id })}
+                                >
+                                    <div className="w-7 h-7 rounded bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
+                                        <span className="text-[10px] font-bold text-zinc-500">#{index + 1}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[11px] text-zinc-300 font-medium capitalize truncate block group-hover:text-white transition-colors">{fx.type.replace("-", " ")}</span>
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Native FX</span>
+                                    </div>
+                                </button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                    <button
+                                        onClick={() => updateSurface(selectedSurface.id, {
+                                            effects: selectedSurface.effects.map(e => e.id === fx.id ? { ...e, enabled: !e.enabled } : e)
+                                        })}
+                                        className={`p-1.5 rounded-md transition-colors ${fx.enabled ? 'text-electric-cyan hover:bg-electric-cyan/10' : 'text-zinc-600 hover:bg-white/5'}`}
+                                        title={fx.enabled ? "Disable" : "Enable"}
+                                    >
+                                        <Power className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            updateSurface(selectedSurface.id, {
+                                                effects: selectedSurface.effects.filter(e => e.id !== fx.id)
+                                            });
+                                            toast.info(`Removed ${fx.type}`);
+                                        }}
+                                        className="p-1.5 hover:bg-red-500/10 rounded-md text-zinc-600 hover:text-red-400 transition-colors"
+                                        title="Remove Effect"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {(!selectedSurface.shaderEffectIds?.length && !selectedSurface.effects?.length) && (
+                            <div className="py-4 text-center border border-dashed border-white/5 rounded-lg bg-zinc-900/20">
+                                <p className="text-[10px] text-zinc-600 uppercase tracking-tighter">No active effects applied</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
+
                 <div data-tour="audio-panel">
                     <AudioMappingPanel />
                 </div>

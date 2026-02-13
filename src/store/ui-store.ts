@@ -23,8 +23,9 @@ interface UIStore {
     isCanvasHovered: boolean;
     mediaPickerOpen: boolean;
     activeEffectConfig: {
-        type: "stackable" | "shader" | "base";
+        type: "stackable" | "shader" | "base" | "preview";
         effectId?: string;
+        previewEffectId?: string;
         surfaceId: string;
     } | null;
     // Actions
@@ -39,7 +40,7 @@ interface UIStore {
     setSnapLines: (lines: SnapLine[]) => void;
     setCanvasHovered: (hovered: boolean) => void;
     setMediaPickerOpen: (open: boolean) => void;
-    setActiveEffectConfig: (config: { type: "stackable" | "shader" | "base"; effectId?: string; surfaceId: string } | null) => void;
+    setActiveEffectConfig: (config: { type: "stackable" | "shader" | "base" | "preview"; effectId?: string; previewEffectId?: string; surfaceId: string } | null) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({

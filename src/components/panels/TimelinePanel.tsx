@@ -128,10 +128,13 @@ export function TimelinePanel() {
         if (!container) return;
 
         const handleWheel = (e: WheelEvent) => {
-            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            // Check if vertical scroll is dominant OR if Ctrl/Cmd is held for zooming
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX) || e.ctrlKey || e.metaKey) {
                 e.preventDefault();
                 setHasManuallyZoomed(true);
-                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+
+                // Increase sensitivity and handle trackpad vs mouse wheel
+                const delta = e.deltaY > 0 ? 0.85 : 1.15;
                 const minZoomToFit = getMinZoomToFit();
                 const newZoom = Math.max(minZoomToFit, Math.min(10, zoom * delta));
 
@@ -229,11 +232,19 @@ export function TimelinePanel() {
                         <div className="flex items-center">
                             <input
                                 type="number"
-                                value={Number((duration / 60).toFixed(2))} // Display as minutes
+                                defaultValue={Number((duration / 60).toFixed(2))} // Use defaultValue for better control
+                                key={duration} // Force re-render on external changes
                                 step="0.1"
-                                onChange={(e) => {
+                                onBlur={(e) => {
                                     const mins = parseFloat(e.target.value) || 0.5;
                                     setDuration(Math.min(43200, Math.max(1, mins * 60)));
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const mins = parseFloat((e.target as HTMLInputElement).value) || 0.5;
+                                        setDuration(Math.min(43200, Math.max(1, mins * 60)));
+                                        (e.target as HTMLInputElement).blur();
+                                    }
                                 }}
                                 className="w-12 md:w-14 h-5 bg-zinc-800 border border-zinc-700 rounded-l text-[10px] font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
                                 title="Max 12 hours (720m)"

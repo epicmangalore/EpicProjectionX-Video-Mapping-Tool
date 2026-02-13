@@ -36,9 +36,8 @@ export function OnboardingGuide() {
             target: "body",
             content: (
                 <div className="text-left">
-                    <h3 className="font-bold text-lg mb-2 text-electric-cyan">Welcome to ProjectionX!</h3>
-                    <p className="mb-2">A professional projection mapping tool with advanced audio reactivity and creative effects.</p>
-                    <p className="text-sm text-zinc-400">Let's explore the key features to get you started!</p>
+                    <h3 className="font-bold text-lg mb-1 text-electric-cyan">Welcome to ProjectionX</h3>
+                    <p className="text-sm text-zinc-300">Let's quickly cover the essentials to get you mapping.</p>
                 </div>
             ),
             placement: "center",
@@ -46,65 +45,22 @@ export function OnboardingGuide() {
         },
         {
             target: "[data-tour='toolbar']",
-            content: "These are your main tools: Select (V), Transform (T), Corner Pin (C), Mesh Warp (M), and Pen Tool for custom shapes.",
+            content: "Use the Toolbar to create surfaces and shapes. Try the Shape Library for 25+ presets.",
             placement: "bottom",
-        },
-        {
-            target: "[data-tour='layers-panel']",
-            content: "This panel manages your Surfaces. Each Surface is a quad you can map to physical objects in your scene.",
-            placement: "right",
-        },
-        {
-            target: "[data-tour='add-surface']",
-            content: "Click 'Surface' to add a rectangular surface, or 'Text' for text layers. You can also use the Shape Library for preset shapes!",
-            placement: "right",
-        },
-        {
-            target: "[data-tour='shape-library']",
-            content: "NEW! Access 25+ preset shapes including triangles, stars, polygons, and arrows. Perfect for creative projection mapping.",
-            placement: "right",
         },
         {
             target: "[data-tour='assets-tab']",
-            content: "Switch to the Assets tab to import images, videos, and colors. Drag assets onto surfaces to apply them.",
+            content: "Import your media here. Simply drag and drop assets onto your surfaces.",
             placement: "right",
         },
         {
-            target: "[data-tour='corner-pin']",
-            content: "Use the Corner Pin tool to align surface corners with your physical projection targets. Essential for mapping!",
-            placement: "bottom",
-            data: {
-                action: () => setToolMode("corner-pin"),
-            }
-        },
-        {
             target: "[data-tour='audio-panel']",
-            content: "NEW! Audio Reactivity lets you sync visuals to music. Map audio bands (bass, mid, treble, energy, etc.) to visual properties like opacity, scale, color, and more!",
+            content: "Link visual properties to audio bands or apply effects for dynamic visuals.",
             placement: "left",
-        },
-        {
-            target: "[data-tour='video-sync']",
-            content: "NEW! Use the Video Sync button to force all video surfaces to match the timeline position. Prevents drift during live performances.",
-            placement: "bottom",
-        },
-        {
-            target: "[data-tour='effects-panel']",
-            content: "Apply visual effects like blur, chromatic aberration, color grading, and distortion. Stack multiple effects for unique looks!",
-            placement: "left",
-        },
-        {
-            target: "[data-tour='timeline-panel']",
-            content: "The timeline controls playback and lets you create keyframe animations. Sync your entire project to music or BPM.",
-            placement: "top",
         },
         {
             target: "[data-tour='export-menu']",
-            content: "NEW! Export your project to After Effects or Premiere Pro for further editing. Also save as .projectx files to share with others!",
-            placement: "bottom",
-        },
-        {
-            target: "[data-tour='launch-output']",
-            content: "When ready to project, open the Output Window. Drag it to your projector display and go fullscreen for the final output!",
+            content: "Save as .projectx or export to pro tools. Open the Output window to start projecting.",
             placement: "bottom-end",
         },
     ];

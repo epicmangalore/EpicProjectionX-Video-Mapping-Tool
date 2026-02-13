@@ -23,6 +23,7 @@ import {
     FolderPlus,
     FolderMinus,
     Palette,
+    X,
 } from "lucide-react";
 import { ContextMenu } from "@/components/ui/ContextMenu";
 import { useState } from "react";
@@ -492,23 +493,17 @@ export function SurfaceOutliner() {
 
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Build display list: groups (with members) + ungrouped surfaces
-    const allSorted = [...surfaces].sort(
-        (a, b) => b.zIndex - a.zIndex
-    );
-    const filteredSurfaces = allSorted.filter((s) =>
-        s.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const lowSearch = searchQuery.toLowerCase();
 
-    // Grouped surface IDs (across all groups)
-    const groupedIds = new Set(
-        groups.flatMap((g) => g.surfaceIds)
-    );
+    // Helper to check if a surface matches the search
+    const matchesSearch = (s: any) => s.name.toLowerCase().includes(lowSearch);
 
-    // Ungrouped surfaces
-    const ungroupedSurfaces = filteredSurfaces.filter(
-        (s) => !groupedIds.has(s.id)
-    );
+    // Filtered ungrouped surfaces
+    const groupedIds = new Set(groups.flatMap((g) => g.surfaceIds));
+    const ungroupedSurfaces = surfaces
+        .filter((s) => !groupedIds.has(s.id))
+        .filter(matchesSearch)
+        .sort((a, b) => b.zIndex - a.zIndex);
 
     // Build ordered display list for DnD (ungrouped only for now)
     const sortableIds = ungroupedSurfaces.map((s) => s.id);
@@ -560,8 +555,8 @@ export function SurfaceOutliner() {
         <aside className="w-full h-full flex flex-col pointer-events-auto bg-zinc-950 font-sans text-xs">
             {/* Search Bar */}
             <div className="p-1 border-b border-white/5 bg-zinc-900">
-                <div className="relative">
-                    <Search className="absolute left-2 top-1.5 w-3 h-3 text-zinc-500" />
+                <div className="relative group/search">
+                    <Search className={`absolute left-2 top-1.5 w-3 h-3 transition-colors ${searchQuery ? "text-electric-cyan" : "text-zinc-500"}`} />
                     <input
                         type="text"
                         placeholder="SEARCH"
@@ -569,6 +564,14 @@ export function SurfaceOutliner() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-zinc-950 border border-white/5 rounded px-7 py-1 text-[10px] font-bold text-zinc-300 focus:outline-none focus:border-electric-cyan placeholder:text-zinc-600 uppercase tracking-wide"
                     />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-2 top-1.5 p-0.5 rounded-full hover:bg-white/10 text-zinc-500 hover:text-white transition-all"
+                        >
+                            <X className="w-2.5 h-2.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -602,24 +605,20 @@ export function SurfaceOutliner() {
                             {/* ── Groups Section ── */}
                             {groups.map((group) => {
                                 const memberSurfaces = group.surfaceIds
-                                    .map((id) =>
-                                        surfaces.find((s) => s.id === id)
-                                    )
-                                    .filter(Boolean)
-                                    .filter((s) =>
-                                        s!.name
-                                            .toLowerCase()
-                                            .includes(
-                                                searchQuery.toLowerCase()
-                                            )
-                                    );
+                                    .map((id) => surfaces.find((s) => s.id === id))
+                                    .filter((s): s is any => !!s)
+                                    .filter(matchesSearch);
 
-                                // Hide group if no members match search
-                                if (
-                                    searchQuery &&
-                                    memberSurfaces.length === 0
-                                )
+                                const groupMatchesHeader = group.name.toLowerCase().includes(lowSearch);
+                                const hasMatchingMembers = memberSurfaces.length > 0;
+
+                                // Hide group if neither its name nor its members match the search
+                                if (searchQuery && !groupMatchesHeader && !hasMatchingMembers) {
                                     return null;
+                                }
+
+                                const isForcedExpand = searchQuery && hasMatchingMembers;
+                                const isCollapsed = group.collapsed && !isForcedExpand;
 
                                 return (
                                     <div key={group.id}>
@@ -630,15 +629,15 @@ export function SurfaceOutliner() {
                                                 group.id
                                             }
                                         />
-                                        {!group.collapsed &&
+                                        {!isCollapsed &&
                                             memberSurfaces.map(
                                                 (surface, idx) => (
                                                     <SortableLayerRow
-                                                        key={surface!.id}
+                                                        key={surface.id}
                                                         surface={surface}
                                                         index={idx}
                                                         isSelected={selectedIds.includes(
-                                                            surface!.id
+                                                            surface.id
                                                         )}
                                                         selectSurface={
                                                             selectSurface
