@@ -11,11 +11,9 @@ void main() {
   // Apply warping matrix to local vertex position
   vec4 warpedPosition = uWarpMatrix * vec4(position, 1.0);
   
-  // Perspective divide is required for homography transformations
-  vec3 finalPosition = warpedPosition.xyz / warpedPosition.w;
-  
-  vec4 worldPos = modelMatrix * vec4(finalPosition, 1.0);
-  vWorldPosition = worldPos.xyz;
+  // Pass through full warpedPosition for hardware perspective-correct interpolation
+  vec4 worldPos = modelMatrix * warpedPosition;
+  vWorldPosition = worldPos.xyz / warpedPosition.w; // Preserve accurate world position for global mapping
   
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 }

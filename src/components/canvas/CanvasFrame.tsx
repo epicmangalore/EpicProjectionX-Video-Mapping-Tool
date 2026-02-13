@@ -103,8 +103,8 @@ export function CanvasFrame() {
                     userSelect: 'none',
                 }}
             >
-                <div className="text-xs font-mono text-cyan-400 bg-zinc-900/80 px-2 py-1 rounded border border-cyan-400/30 shadow-lg backdrop-blur-sm">
-                    {settings.resolution.width} × {settings.resolution.height}
+                <div className="text-[9px] font-mono text-cyan-400 bg-zinc-900/80 px-1.5 py-0.5 rounded border border-cyan-400/30 shadow-lg backdrop-blur-sm whitespace-nowrap">
+                    {settings.resolution.width} x {settings.resolution.height}
                 </div>
             </Html>
 

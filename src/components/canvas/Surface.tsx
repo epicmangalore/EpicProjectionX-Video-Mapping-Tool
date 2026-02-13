@@ -520,6 +520,8 @@ export function Surface({ surface }: SurfaceProps) {
         const surfaceWidth = maxX - minX;
         const surfaceHeight = maxY - minY;
         const surfaceAspect = surfaceWidth / surfaceHeight;
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
 
         // 2. Get Media Aspect Ratio
         let mediaAspect = 1;
@@ -539,20 +541,15 @@ export function Surface({ surface }: SurfaceProps) {
         let sy = 1;
 
         if (settings.fit === "cover") {
+            // COVER: Zoom in until the whole surface is covered
             if (surfaceAspect > mediaAspect) {
-                // Surface is wider than media: Fit to width, crop height
-                // To crop height, we need to show LESS vertical UV.
-                // Scale < 1 means shrinking the UV space (zooming in on the texture).
                 sy = mediaAspect / surfaceAspect;
             } else {
-                // Surface is taller than media: Fit to height, crop width
                 sx = surfaceAspect / mediaAspect;
             }
         } else if (settings.fit === "contain") {
+            // CONTAIN: Zoom out until the whole media fits inside
             if (surfaceAspect > mediaAspect) {
-                // Surface is wider: Fit to height, letterbox width
-                // To show MORE width (black bars), we need to show MORE UV horizontal space.
-                // Scale > 1 means expanding UV space (zooming out).
                 sx = surfaceAspect / mediaAspect;
             } else {
                 sy = mediaAspect / surfaceAspect;
@@ -560,25 +557,32 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         // 4. Apply Manual Transforms
-        sx /= settings.scale?.x || 1;
-        sy /= settings.scale?.y || 1;
+        const manualScaleX = settings.scale?.x ?? 1;
+        const manualScaleY = settings.scale?.y ?? 1;
+        const manualOffsetX = settings.offset?.x ?? 0;
+        const manualOffsetY = settings.offset?.y ?? 0;
+
+        sx /= manualScaleX;
+        sy /= manualScaleY;
 
         // Flip
         if (settings.flipX) sx *= -1;
         if (settings.flipY) sy *= -1;
 
-        // Center correction for scaling/rotation
-        matrix.translate(-0.5, -0.5);
+        // 5. Build Texture Matrix
+        // We need to map the quad's [minX, maxX] range to the texture's space.
+        // First, center the UVs based on the quad's actual center relative to the unit plane
+        matrix.translate(-(0.5 + centerX), -(0.5 + centerY));
 
         // Rotation
         const rot = (settings.rotation || 0) * (Math.PI / 180);
-        matrix.rotate(-rot); // Rotate UVs opposite to image rotation
+        matrix.rotate(-rot);
 
         // Scale
         matrix.scale(sx, sy);
 
-        // Offset (Move UVs opposite to desired image movement)
-        matrix.translate(-(settings.offset?.x || 0), -(settings.offset?.y || 0));
+        // Offset (Move UVs)
+        matrix.translate(-manualOffsetX, -manualOffsetY);
 
         // Restore center
         matrix.translate(0.5, 0.5);
@@ -1138,7 +1142,7 @@ export function Surface({ surface }: SurfaceProps) {
                 {polygonGeometry ? (
                     <primitive object={polygonGeometry} attach="geometry" />
                 ) : (
-                    <planeGeometry args={[1, 1, surface.meshWarp ? surface.meshWarp.gridSize : 1, surface.meshWarp ? surface.meshWarp.gridSize : 1]} />
+                    <planeGeometry args={[1, 1, 32, 32]} />
                 )}
                 {shaderMaterial ? (
                     <primitive object={shaderMaterial} attach="material" />

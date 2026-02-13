@@ -141,6 +141,17 @@ export default function Home() {
                 setShowSettings(false);
             }
         }, // Ctrl+M for MIDI
+
+        // Scene Switching (1-9)
+        { key: APP_HOTKEYS.SCENE_1, callback: () => { const s = useProjectStore.getState().scenes; if (s[0]) useProjectStore.getState().switchToScene(s[0].id); } },
+        { key: APP_HOTKEYS.SCENE_2, callback: () => { const s = useProjectStore.getState().scenes; if (s[1]) useProjectStore.getState().switchToScene(s[1].id); } },
+        { key: APP_HOTKEYS.SCENE_3, callback: () => { const s = useProjectStore.getState().scenes; if (s[2]) useProjectStore.getState().switchToScene(s[2].id); } },
+        { key: APP_HOTKEYS.SCENE_4, callback: () => { const s = useProjectStore.getState().scenes; if (s[3]) useProjectStore.getState().switchToScene(s[3].id); } },
+        { key: APP_HOTKEYS.SCENE_5, callback: () => { const s = useProjectStore.getState().scenes; if (s[4]) useProjectStore.getState().switchToScene(s[4].id); } },
+        { key: APP_HOTKEYS.SCENE_6, callback: () => { const s = useProjectStore.getState().scenes; if (s[5]) useProjectStore.getState().switchToScene(s[5].id); } },
+        { key: APP_HOTKEYS.SCENE_7, callback: () => { const s = useProjectStore.getState().scenes; if (s[6]) useProjectStore.getState().switchToScene(s[6].id); } },
+        { key: APP_HOTKEYS.SCENE_8, callback: () => { const s = useProjectStore.getState().scenes; if (s[7]) useProjectStore.getState().switchToScene(s[7].id); } },
+        { key: APP_HOTKEYS.SCENE_9, callback: () => { const s = useProjectStore.getState().scenes; if (s[8]) useProjectStore.getState().switchToScene(s[8].id); } },
     ]);
 
     // Warn before leaving with unsaved changes
@@ -166,29 +177,46 @@ export default function Home() {
     const activeEffectConfig = useUIStore((state) => state.activeEffectConfig);
     const selectedSurface = surfaces.find(s => selectedIds.includes(s.id));
 
+    const [isMacElectron, setIsMacElectron] = useState(false);
+
+    useEffect(() => {
+        const isElectron = /Electron/.test(navigator.userAgent);
+        const isMac = /Mac/.test(navigator.platform);
+        setIsMacElectron(isElectron && isMac);
+    }, []);
+
     return (
         <TooltipProvider>
             <main className="h-screen w-screen overflow-hidden bg-zinc-950 flex flex-col text-zinc-100 font-sans">
                 <ProjectHydration />
                 <OnboardingGuide />
                 {/* Top Toolbar - Pro Minimalist */}
-                <header className="h-12 bg-zinc-900 border-b border-white/5 flex items-center px-4 gap-4 z-50">
-                    <div className="flex items-center gap-2">
+                <header
+                    className={`h-12 bg-zinc-900 border-b border-white/5 flex items-center gap-4 z-50 select-none ${isMacElectron ? "pl-20 pr-4" : "px-4"}`}
+                    style={{ WebkitAppRegion: 'drag' } as any}
+                >
+                    <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
                         <img
-                            src="/logo.svg"
-                            alt="ProjectionX"
-                            className="h-8 w-auto" // Adjust height to fit header
+                            src="/editor-logo.png"
+                            alt="ProjectX"
+                            className="h-8 w-auto pointer-events-none" // Adjust height to fit header
                         />
                     </div>
 
-                    <div className="h-4 w-px bg-white/10 mx-2" />
+                    <div className="h-4 w-px bg-white/10 mx-2" style={{ WebkitAppRegion: 'no-drag' } as any} />
 
                     {/* File Menu Component */}
-                    <ProjectMenu />
+                    <div style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <ProjectMenu />
+                    </div>
 
-                    <div className="flex-1 flex justify-center">
+                    <div className="flex-1 flex justify-center h-full items-center">
                         {/* Tool Modes - Flat Segmented Control */}
-                        <div className="flex bg-zinc-950/50 rounded p-0.5 border border-white/5" data-tour="toolbar">
+                        <div
+                            className="flex bg-zinc-950/50 rounded p-0.5 border border-white/5"
+                            data-tour="toolbar"
+                            style={{ WebkitAppRegion: 'no-drag' } as any}
+                        >
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <button
@@ -307,7 +335,7 @@ export default function Home() {
                         </div>
                     </div>
 
-                    <div className="flex gap-2 items-center relative">
+                    <div className="flex gap-2 items-center relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
                         <button
                             onClick={() => {
                                 setShowMIDIPanel(!showMIDIPanel);

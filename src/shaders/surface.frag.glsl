@@ -110,10 +110,7 @@ void main() {
   // For now, let's rely on texture clamping/repeating settings in Three.js, but standard video textures usually clamp to edge.
   // If we want transparency outside, we can discard or set alpha to 0.
   if (transformedUv.x < 0.0 || transformedUv.x > 1.0 || transformedUv.y < 0.0 || transformedUv.y > 1.0) {
-      // For "contain", we might want transparent borders. 
-      // But let's stick to simple texture sampling first. 
-      // Actually, standard behavior for "contain" with RepeatWrapping is repeat, ClampToEdge is streak.
-      // We'll handle wrapping in Surface.tsx
+      texColor.a = 0.0;
   }
 
   // Apply brightness

@@ -16,14 +16,20 @@
     "target": [
       {
         "target": "dmg",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "x64",
+          "arm64"
+        ]
       },
       {
         "target": "zip",
-        "arch": ["x64", "arm64"]
+        "arch": [
+          "x64",
+          "arm64"
+        ]
       }
     ],
-    "icon": "build/icon.icns",
+    "icon": "build/icon.png",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
     "entitlements": "build/entitlements.mac.plist",
@@ -49,13 +55,19 @@
     }
   },
   "linux": {
-    "target": ["AppImage", "deb"],
+    "target": [
+      "AppImage",
+      "deb"
+    ],
     "category": "Graphics",
     "icon": "build/icons"
   },
   "win": {
-    "target": ["nsis", "portable"],
-    "icon": "build/icon.ico"
+    "target": [
+      "nsis",
+      "portable"
+    ],
+    "icon": "build/icon.png"
   },
   "nsis": {
     "oneClick": false,
