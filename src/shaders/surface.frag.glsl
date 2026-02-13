@@ -19,10 +19,6 @@ uniform float uBlackout;
 uniform float uMappingMode; // 0: Local, 1: Global
 uniform vec2 uProjectResolution;
 
-// Edge blending
-uniform vec4 uBlendZones; // x: left, y: right, z: top, w: bottom (0-1)
-uniform float uBlendFeather; // Feathering amount (0-1)
-uniform float uBlendGamma; // Gamma correction for blending
 
 varying vec2 vUv;
 varying vec3 vPosition;
@@ -141,32 +137,10 @@ void main() {
   // Apply opacity
   texColor.a *= uOpacity;
   
-  // Apply edge blending (using original vUv or transformed? Usually original surface UVs)
-  float leftBlend = 1.0;
-  float rightBlend = 1.0;
-  float topBlend = 1.0;
-  float bottomBlend = 1.0;
-  
-  // Blending should be based on the physical surface edges, so keep vUv
-  if (uBlendZones.x > 0.0 && vUv.x < uBlendZones.x) {
-    leftBlend = pow(smoothstep(0.0, 1.0, vUv.x / uBlendZones.x), uBlendGamma);
-  }
-  if (uBlendZones.y > 0.0 && vUv.x > (1.0 - uBlendZones.y)) {
-    rightBlend = pow(smoothstep(0.0, 1.0, (1.0 - vUv.x) / uBlendZones.y), uBlendGamma);
-  }
-  if (uBlendZones.z > 0.0 && vUv.y > (1.0 - uBlendZones.z)) {
-    topBlend = pow(smoothstep(0.0, 1.0, (1.0 - vUv.y) / uBlendZones.z), uBlendGamma);
-  }
-  if (uBlendZones.w > 0.0 && vUv.y < uBlendZones.w) {
-    bottomBlend = pow(smoothstep(0.0, 1.0, vUv.y / uBlendZones.w), uBlendGamma);
-  }
-  
-  float blendFactor = leftBlend * rightBlend * topBlend * bottomBlend;
-  blendFactor = mix(1.0, blendFactor, uBlendFeather);
-
   // Apply master controls
   texColor.rgb *= uMasterBrightness;
-  texColor.a *= uMasterOpacity * (1.0 - uBlackout) * blendFactor;
+  texColor.a *= uMasterOpacity * (1.0 - uBlackout);
   
   gl_FragColor = texColor;
 }
+

@@ -16,6 +16,7 @@ import { useSync } from "@/hooks/useSync";
 import { MIDIMapper } from "@/components/panels/MIDIMapper";
 import { MediaPicker } from "@/components/panels/MediaPicker";
 import { CanvasSettings } from "@/components/panels/CanvasSettings";
+import { EffectConfigPanel } from "@/components/panels/EffectConfigPanel";
 import { OnboardingGuide } from "@/components/ui/OnboardingGuide";
 import { useState, useEffect } from "react";
 import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon, Pen, ChevronDown, ArrowRight } from "lucide-react";
@@ -372,6 +373,13 @@ export default function Home() {
                             {showSettings && (
                                 <div className="absolute top-4 right-4 bottom-4 w-72 z-50 animate-in slide-in-from-right-4 duration-300">
                                     <CanvasSettings onClose={() => setShowSettings(false)} />
+                                </div>
+                            )}
+
+                            {/* Effect Config Overlay */}
+                            {useUIStore.getState().activeEffectConfig && (
+                                <div className="absolute top-4 right-4 bottom-4 w-80 z-[70] animate-in slide-in-from-right-4 duration-300">
+                                    <EffectConfigPanel />
                                 </div>
                             )}
 

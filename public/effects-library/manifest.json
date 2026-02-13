@@ -54,10 +54,26 @@
       "shader": "shaders/glitch/rgb-split.frag",
       "isGenerator": false,
       "uniforms": {
-        "uAmount": { "type": "float", "default": 0.01, "min": 0.0, "max": 0.1, "label": "Amount" },
-        "uAngle": { "type": "float", "default": 0.0, "min": 0.0, "max": 6.28, "label": "Angle" }
+        "uAmount": {
+          "type": "float",
+          "default": 0.01,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Amount"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Angle"
+        }
       },
-      "tags": ["glitch", "rgb", "chromatic"]
+      "tags": [
+        "glitch",
+        "rgb",
+        "chromatic"
+      ]
     },
     {
       "id": "digital-glitch",
@@ -68,10 +84,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uIntensity": { "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "label": "Intensity" },
-        "uBlockSize": { "type": "float", "default": 16.0, "min": 4.0, "max": 64.0, "label": "Block Size" }
+        "uIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Intensity"
+        },
+        "uBlockSize": {
+          "type": "float",
+          "default": 16.0,
+          "min": 4.0,
+          "max": 64.0,
+          "label": "Block Size"
+        }
       },
-      "tags": ["glitch", "digital", "blocks"]
+      "tags": [
+        "glitch",
+        "digital",
+        "blocks"
+      ]
     },
     {
       "id": "scan-lines",
@@ -82,11 +114,33 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uDensity": { "type": "float", "default": 200.0, "min": 50.0, "max": 500.0, "label": "Density" },
-        "uOpacity": { "type": "float", "default": 0.3, "min": 0.0, "max": 1.0, "label": "Opacity" },
-        "uFlicker": { "type": "float", "default": 0.03, "min": 0.0, "max": 0.2, "label": "Flicker" }
+        "uDensity": {
+          "type": "float",
+          "default": 200.0,
+          "min": 50.0,
+          "max": 500.0,
+          "label": "Density"
+        },
+        "uOpacity": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Opacity"
+        },
+        "uFlicker": {
+          "type": "float",
+          "default": 0.03,
+          "min": 0.0,
+          "max": 0.2,
+          "label": "Flicker"
+        }
       },
-      "tags": ["glitch", "scanlines", "crt"]
+      "tags": [
+        "glitch",
+        "scanlines",
+        "crt"
+      ]
     },
     {
       "id": "vhs-distortion",
@@ -97,9 +151,20 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uIntensity": { "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "label": "Intensity" }
+        "uIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Intensity"
+        }
       },
-      "tags": ["glitch", "vhs", "tape", "retro"]
+      "tags": [
+        "glitch",
+        "vhs",
+        "tape",
+        "retro"
+      ]
     },
     {
       "id": "pixel-sort",
@@ -110,10 +175,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uThreshold": { "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "label": "Threshold" },
-        "uDirection": { "type": "float", "default": 0.0, "min": 0.0, "max": 1.0, "label": "Direction" }
+        "uThreshold": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Threshold"
+        },
+        "uDirection": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Direction"
+        }
       },
-      "tags": ["glitch", "sort", "art"]
+      "tags": [
+        "glitch",
+        "sort",
+        "art"
+      ]
     },
     {
       "id": "chromatic-aberration",
@@ -123,10 +204,26 @@
       "shader": "shaders/color/chromatic-aberration.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 0.5, "min": 0.0, "max": 2.0, "label": "Strength" },
-        "uFalloff": { "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "label": "Falloff" }
+        "uStrength": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Strength"
+        },
+        "uFalloff": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Falloff"
+        }
       },
-      "tags": ["color", "chromatic", "lens"]
+      "tags": [
+        "color",
+        "chromatic",
+        "lens"
+      ]
     },
     {
       "id": "color-grading",
@@ -136,12 +233,40 @@
       "shader": "shaders/color/color-grading.frag",
       "isGenerator": false,
       "uniforms": {
-        "uBrightness": { "type": "float", "default": 0.0, "min": -1.0, "max": 1.0, "label": "Brightness" },
-        "uContrast": { "type": "float", "default": 1.0, "min": 0.0, "max": 3.0, "label": "Contrast" },
-        "uSaturation": { "type": "float", "default": 1.0, "min": 0.0, "max": 3.0, "label": "Saturation" },
-        "uTemperature": { "type": "float", "default": 0.0, "min": -1.0, "max": 1.0, "label": "Temperature" }
+        "uBrightness": {
+          "type": "float",
+          "default": 0.0,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Brightness"
+        },
+        "uContrast": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Contrast"
+        },
+        "uSaturation": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Saturation"
+        },
+        "uTemperature": {
+          "type": "float",
+          "default": 0.0,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Temperature"
+        }
       },
-      "tags": ["color", "grading", "correction"]
+      "tags": [
+        "color",
+        "grading",
+        "correction"
+      ]
     },
     {
       "id": "hue-shift",
@@ -152,10 +277,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uShift": { "type": "float", "default": 0.0, "min": 0.0, "max": 6.28, "label": "Shift" },
-        "uSpeed": { "type": "float", "default": 0.0, "min": 0.0, "max": 2.0, "label": "Speed" }
+        "uShift": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Shift"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Speed"
+        }
       },
-      "tags": ["color", "hue", "rainbow"]
+      "tags": [
+        "color",
+        "hue",
+        "rainbow"
+      ]
     },
     {
       "id": "posterize",
@@ -165,10 +306,26 @@
       "shader": "shaders/color/posterize.frag",
       "isGenerator": false,
       "uniforms": {
-        "uLevels": { "type": "float", "default": 6.0, "min": 2.0, "max": 16.0, "label": "Levels" },
-        "uGamma": { "type": "float", "default": 1.0, "min": 0.5, "max": 2.0, "label": "Gamma" }
+        "uLevels": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 16.0,
+          "label": "Levels"
+        },
+        "uGamma": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 2.0,
+          "label": "Gamma"
+        }
       },
-      "tags": ["color", "posterize", "levels"]
+      "tags": [
+        "color",
+        "posterize",
+        "levels"
+      ]
     },
     {
       "id": "duotone",
@@ -178,10 +335,30 @@
       "shader": "shaders/color/duotone.frag",
       "isGenerator": false,
       "uniforms": {
-        "uShadowColor": { "type": "color", "default": [0.1, 0.0, 0.3], "label": "Shadow Color" },
-        "uHighlightColor": { "type": "color", "default": [1.0, 0.8, 0.0], "label": "Highlight Color" }
+        "uShadowColor": {
+          "type": "color",
+          "default": [
+            0.1,
+            0.0,
+            0.3
+          ],
+          "label": "Shadow Color"
+        },
+        "uHighlightColor": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.8,
+            0.0
+          ],
+          "label": "Highlight Color"
+        }
       },
-      "tags": ["color", "duotone", "tint"]
+      "tags": [
+        "color",
+        "duotone",
+        "tint"
+      ]
     },
     {
       "id": "gaussian-blur",
@@ -191,10 +368,27 @@
       "shader": "shaders/blur/gaussian-blur.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 2.0, "min": 0.0, "max": 10.0, "label": "Strength" },
-        "uDirection": { "type": "vec2", "default": [1.0, 1.0], "label": "Direction" }
+        "uStrength": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0.0,
+          "max": 10.0,
+          "label": "Strength"
+        },
+        "uDirection": {
+          "type": "vec2",
+          "default": [
+            1.0,
+            1.0
+          ],
+          "label": "Direction"
+        }
       },
-      "tags": ["blur", "gaussian", "smooth"]
+      "tags": [
+        "blur",
+        "gaussian",
+        "smooth"
+      ]
     },
     {
       "id": "radial-blur",
@@ -204,10 +398,27 @@
       "shader": "shaders/blur/radial-blur.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 0.1, "min": 0.0, "max": 0.5, "label": "Strength" },
-        "uCenter": { "type": "vec2", "default": [0.5, 0.5], "label": "Center" }
+        "uStrength": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 0.5,
+          "label": "Strength"
+        },
+        "uCenter": {
+          "type": "vec2",
+          "default": [
+            0.5,
+            0.5
+          ],
+          "label": "Center"
+        }
       },
-      "tags": ["blur", "radial", "zoom"]
+      "tags": [
+        "blur",
+        "radial",
+        "zoom"
+      ]
     },
     {
       "id": "motion-blur",
@@ -217,10 +428,26 @@
       "shader": "shaders/blur/motion-blur.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 0.02, "min": 0.0, "max": 0.1, "label": "Strength" },
-        "uAngle": { "type": "float", "default": 0.0, "min": 0.0, "max": 6.28, "label": "Angle" }
+        "uStrength": {
+          "type": "float",
+          "default": 0.02,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Strength"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Angle"
+        }
       },
-      "tags": ["blur", "motion", "directional"]
+      "tags": [
+        "blur",
+        "motion",
+        "directional"
+      ]
     },
     {
       "id": "zoom-blur",
@@ -230,10 +457,27 @@
       "shader": "shaders/blur/zoom-blur.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 0.1, "min": 0.0, "max": 0.5, "label": "Strength" },
-        "uCenter": { "type": "vec2", "default": [0.5, 0.5], "label": "Center" }
+        "uStrength": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 0.5,
+          "label": "Strength"
+        },
+        "uCenter": {
+          "type": "vec2",
+          "default": [
+            0.5,
+            0.5
+          ],
+          "label": "Center"
+        }
       },
-      "tags": ["blur", "zoom", "radial"]
+      "tags": [
+        "blur",
+        "zoom",
+        "radial"
+      ]
     },
     {
       "id": "kaleidoscope",
@@ -244,10 +488,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uSegments": { "type": "float", "default": 6.0, "min": 2.0, "max": 16.0, "label": "Segments" },
-        "uRotation": { "type": "float", "default": 0.0, "min": 0.0, "max": 6.28, "label": "Rotation" }
+        "uSegments": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 16.0,
+          "label": "Segments"
+        },
+        "uRotation": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Rotation"
+        }
       },
-      "tags": ["distortion", "kaleidoscope", "symmetry"]
+      "tags": [
+        "distortion",
+        "kaleidoscope",
+        "symmetry"
+      ]
     },
     {
       "id": "mirror",
@@ -257,9 +517,19 @@
       "shader": "shaders/distortion/mirror.frag",
       "isGenerator": false,
       "uniforms": {
-        "uMode": { "type": "float", "default": 0.0, "min": 0.0, "max": 3.0, "label": "Mode" }
+        "uMode": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Mode"
+        }
       },
-      "tags": ["distortion", "mirror", "reflection"]
+      "tags": [
+        "distortion",
+        "mirror",
+        "reflection"
+      ]
     },
     {
       "id": "fisheye",
@@ -269,9 +539,19 @@
       "shader": "shaders/distortion/fisheye.frag",
       "isGenerator": false,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 0.5, "min": -1.0, "max": 1.0, "label": "Strength" }
+        "uStrength": {
+          "type": "float",
+          "default": 0.5,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Strength"
+        }
       },
-      "tags": ["distortion", "fisheye", "lens"]
+      "tags": [
+        "distortion",
+        "fisheye",
+        "lens"
+      ]
     },
     {
       "id": "wave-distortion",
@@ -282,11 +562,33 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uAmplitude": { "type": "float", "default": 0.02, "min": 0.0, "max": 0.1, "label": "Amplitude" },
-        "uFrequency": { "type": "float", "default": 10.0, "min": 1.0, "max": 50.0, "label": "Frequency" },
-        "uSpeed": { "type": "float", "default": 1.0, "min": 0.0, "max": 5.0, "label": "Speed" }
+        "uAmplitude": {
+          "type": "float",
+          "default": 0.02,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Amplitude"
+        },
+        "uFrequency": {
+          "type": "float",
+          "default": 10.0,
+          "min": 1.0,
+          "max": 50.0,
+          "label": "Frequency"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
       },
-      "tags": ["distortion", "wave", "animated"]
+      "tags": [
+        "distortion",
+        "wave",
+        "animated"
+      ]
     },
     {
       "id": "swirl",
@@ -297,10 +599,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uStrength": { "type": "float", "default": 3.0, "min": -10.0, "max": 10.0, "label": "Strength" },
-        "uRadius": { "type": "float", "default": 0.5, "min": 0.1, "max": 1.0, "label": "Radius" }
+        "uStrength": {
+          "type": "float",
+          "default": 3.0,
+          "min": -10.0,
+          "max": 10.0,
+          "label": "Strength"
+        },
+        "uRadius": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 1.0,
+          "label": "Radius"
+        }
       },
-      "tags": ["distortion", "swirl", "vortex"]
+      "tags": [
+        "distortion",
+        "swirl",
+        "vortex"
+      ]
     },
     {
       "id": "crt-screen",
@@ -311,10 +629,27 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uCurvature": { "type": "float", "default": 3.0, "min": 0.0, "max": 10.0, "label": "Curvature" },
-        "uScanlineIntensity": { "type": "float", "default": 0.3, "min": 0.0, "max": 1.0, "label": "Scanlines" }
+        "uCurvature": {
+          "type": "float",
+          "default": 3.0,
+          "min": 0.0,
+          "max": 10.0,
+          "label": "Curvature"
+        },
+        "uScanlineIntensity": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Scanlines"
+        }
       },
-      "tags": ["retro", "crt", "monitor", "vintage"]
+      "tags": [
+        "retro",
+        "crt",
+        "monitor",
+        "vintage"
+      ]
     },
     {
       "id": "led-matrix",
@@ -324,10 +659,27 @@
       "shader": "shaders/retro/led-matrix.frag",
       "isGenerator": false,
       "uniforms": {
-        "uSize": { "type": "float", "default": 8.0, "min": 2.0, "max": 32.0, "label": "LED Size" },
-        "uBrightness": { "type": "float", "default": 1.5, "min": 0.5, "max": 3.0, "label": "Brightness" }
+        "uSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 2.0,
+          "max": 32.0,
+          "label": "LED Size"
+        },
+        "uBrightness": {
+          "type": "float",
+          "default": 1.5,
+          "min": 0.5,
+          "max": 3.0,
+          "label": "Brightness"
+        }
       },
-      "tags": ["retro", "led", "matrix", "dots"]
+      "tags": [
+        "retro",
+        "led",
+        "matrix",
+        "dots"
+      ]
     },
     {
       "id": "pixelate",
@@ -337,9 +689,20 @@
       "shader": "shaders/retro/pixelate.frag",
       "isGenerator": false,
       "uniforms": {
-        "uPixelSize": { "type": "float", "default": 8.0, "min": 2.0, "max": 64.0, "label": "Pixel Size" }
+        "uPixelSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 2.0,
+          "max": 64.0,
+          "label": "Pixel Size"
+        }
       },
-      "tags": ["retro", "pixel", "mosaic", "8bit"]
+      "tags": [
+        "retro",
+        "pixel",
+        "mosaic",
+        "8bit"
+      ]
     },
     {
       "id": "ascii-art",
@@ -349,9 +712,20 @@
       "shader": "shaders/retro/ascii-art.frag",
       "isGenerator": false,
       "uniforms": {
-        "uCharSize": { "type": "float", "default": 8.0, "min": 4.0, "max": 24.0, "label": "Char Size" }
+        "uCharSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 4.0,
+          "max": 24.0,
+          "label": "Char Size"
+        }
       },
-      "tags": ["retro", "ascii", "text", "art"]
+      "tags": [
+        "retro",
+        "ascii",
+        "text",
+        "art"
+      ]
     },
     {
       "id": "oil-painting",
@@ -361,9 +735,20 @@
       "shader": "shaders/artistic/oil-painting.frag",
       "isGenerator": false,
       "uniforms": {
-        "uRadius": { "type": "float", "default": 4.0, "min": 1.0, "max": 8.0, "label": "Radius" }
+        "uRadius": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1.0,
+          "max": 8.0,
+          "label": "Radius"
+        }
       },
-      "tags": ["artistic", "painting", "oil", "kuwahara"]
+      "tags": [
+        "artistic",
+        "painting",
+        "oil",
+        "kuwahara"
+      ]
     },
     {
       "id": "edge-detection",
@@ -373,11 +758,38 @@
       "shader": "shaders/artistic/edge-detection.frag",
       "isGenerator": false,
       "uniforms": {
-        "uThreshold": { "type": "float", "default": 0.1, "min": 0.0, "max": 1.0, "label": "Threshold" },
-        "uEdgeColor": { "type": "color", "default": [1.0, 1.0, 1.0], "label": "Edge Color" },
-        "uBgColor": { "type": "color", "default": [0.0, 0.0, 0.0], "label": "Background" }
+        "uThreshold": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Threshold"
+        },
+        "uEdgeColor": {
+          "type": "color",
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "label": "Edge Color"
+        },
+        "uBgColor": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "label": "Background"
+        }
       },
-      "tags": ["artistic", "edge", "lines", "sobel"]
+      "tags": [
+        "artistic",
+        "edge",
+        "lines",
+        "sobel"
+      ]
     },
     {
       "id": "watercolor",
@@ -388,10 +800,26 @@
       "isGenerator": false,
       "animated": true,
       "uniforms": {
-        "uWetness": { "type": "float", "default": 1.0, "min": 0.0, "max": 3.0, "label": "Wetness" },
-        "uGranulation": { "type": "float", "default": 0.5, "min": 0.0, "max": 1.0, "label": "Granulation" }
+        "uWetness": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Wetness"
+        },
+        "uGranulation": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Granulation"
+        }
       },
-      "tags": ["artistic", "watercolor", "paint"]
+      "tags": [
+        "artistic",
+        "watercolor",
+        "paint"
+      ]
     },
     {
       "id": "halftone",
@@ -401,10 +829,27 @@
       "shader": "shaders/artistic/halftone.frag",
       "isGenerator": false,
       "uniforms": {
-        "uDotSize": { "type": "float", "default": 6.0, "min": 2.0, "max": 20.0, "label": "Dot Size" },
-        "uAngle": { "type": "float", "default": 0.0, "min": 0.0, "max": 1.57, "label": "Angle" }
+        "uDotSize": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 20.0,
+          "label": "Dot Size"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.57,
+          "label": "Angle"
+        }
       },
-      "tags": ["artistic", "halftone", "dots", "print"]
+      "tags": [
+        "artistic",
+        "halftone",
+        "dots",
+        "print"
+      ]
     },
     {
       "id": "perlin-noise",
@@ -415,12 +860,44 @@
       "isGenerator": true,
       "animated": true,
       "uniforms": {
-        "uScale": { "type": "float", "default": 4.0, "min": 1.0, "max": 20.0, "label": "Scale" },
-        "uSpeed": { "type": "float", "default": 0.5, "min": 0.0, "max": 3.0, "label": "Speed" },
-        "uColor1": { "type": "color", "default": [0.0, 0.0, 0.2], "label": "Color 1" },
-        "uColor2": { "type": "color", "default": [0.0, 0.8, 1.0], "label": "Color 2" }
+        "uScale": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1.0,
+          "max": 20.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Speed"
+        },
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.2
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.8,
+            1.0
+          ],
+          "label": "Color 2"
+        }
       },
-      "tags": ["generator", "noise", "organic"]
+      "tags": [
+        "generator",
+        "noise",
+        "organic"
+      ]
     },
     {
       "id": "voronoi",
@@ -431,12 +908,44 @@
       "isGenerator": true,
       "animated": true,
       "uniforms": {
-        "uScale": { "type": "float", "default": 5.0, "min": 1.0, "max": 20.0, "label": "Scale" },
-        "uSpeed": { "type": "float", "default": 0.5, "min": 0.0, "max": 3.0, "label": "Speed" },
-        "uColor1": { "type": "color", "default": [0.1, 0.0, 0.3], "label": "Color 1" },
-        "uColor2": { "type": "color", "default": [1.0, 0.4, 0.0], "label": "Color 2" }
+        "uScale": {
+          "type": "float",
+          "default": 5.0,
+          "min": 1.0,
+          "max": 20.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Speed"
+        },
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.1,
+            0.0,
+            0.3
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.4,
+            0.0
+          ],
+          "label": "Color 2"
+        }
       },
-      "tags": ["generator", "voronoi", "cells"]
+      "tags": [
+        "generator",
+        "voronoi",
+        "cells"
+      ]
     },
     {
       "id": "plasma",
@@ -447,10 +956,26 @@
       "isGenerator": true,
       "animated": true,
       "uniforms": {
-        "uScale": { "type": "float", "default": 1.0, "min": 0.5, "max": 5.0, "label": "Scale" },
-        "uSpeed": { "type": "float", "default": 1.0, "min": 0.0, "max": 5.0, "label": "Speed" }
+        "uScale": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 5.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
       },
-      "tags": ["generator", "plasma", "demoscene"]
+      "tags": [
+        "generator",
+        "plasma",
+        "demoscene"
+      ]
     },
     {
       "id": "fractal",
@@ -461,12 +986,144 @@
       "isGenerator": true,
       "animated": true,
       "uniforms": {
-        "uScale": { "type": "float", "default": 1.0, "min": 0.5, "max": 3.0, "label": "Scale" },
-        "uSpeed": { "type": "float", "default": 1.0, "min": 0.0, "max": 3.0, "label": "Speed" },
-        "uColor1": { "type": "color", "default": [0.0, 0.0, 0.0], "label": "Color 1" },
-        "uColor2": { "type": "color", "default": [0.0, 0.6, 1.0], "label": "Color 2" }
+        "uScale": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 3.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Speed"
+        },
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.6,
+            1.0
+          ],
+          "label": "Color 2"
+        }
       },
-      "tags": ["generator", "fractal", "julia", "math"]
+      "tags": [
+        "generator",
+        "fractal",
+        "julia",
+        "math"
+      ]
+    },
+    {
+      "id": "border-glow",
+      "name": "Border & Glow",
+      "category": "artistic",
+      "description": "Customizable surface border with glow and animations",
+      "shader": "shaders/color/border-glow.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uBorderColor": {
+          "type": "color",
+          "default": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "label": "Color"
+        },
+        "uBorderWidth": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0.0,
+          "max": 20.0,
+          "label": "Width"
+        },
+        "uBorderOpacity": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Opacity"
+        },
+        "uGlowIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Glow"
+        },
+        "uAnimationStyle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 4.0,
+          "label": "Animation"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
+      },
+      "tags": [
+        "color",
+        "border",
+        "glow",
+        "outline"
+      ]
+    },
+    {
+      "id": "edge-blend",
+      "name": "Edge Blending",
+      "category": "color",
+      "description": "Smooth overlapping edges for multi-projector setups",
+      "shader": "shaders/color/edge-blend.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uBlendZones": {
+          "type": "vec2",
+          "default": [
+            0.1,
+            0.1
+          ],
+          "label": "Zones (L, R)"
+        },
+        "uBlendFeather": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Feather"
+        },
+        "uBlendGamma": {
+          "type": "float",
+          "default": 2.2,
+          "min": 1.0,
+          "max": 4.0,
+          "label": "Gamma"
+        }
+      },
+      "tags": [
+        "color",
+        "blending",
+        "edge",
+        "multi-projector"
+      ]
     }
   ]
 }

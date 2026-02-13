@@ -44,7 +44,9 @@ export function EffectsBrowser() {
     const [loading, setLoading] = useState(true);
 
     const addMediaAsset = useProjectStore((s) => s.addMediaAsset);
-    const addSurface = useProjectStore((s) => s.addSurface);
+    const updateSurface = useProjectStore((s) => s.updateSurface);
+    const selectedSurfaceIds = useProjectStore((s) => s.selectedSurfaceIds);
+    const activeSurfaces = useProjectStore((s) => s.getActiveSurfaces());
 
     // Load manifest on mount
     useEffect(() => {
@@ -78,10 +80,17 @@ export function EffectsBrowser() {
         return result;
     }, [effects, selectedCategory, searchQuery])();
 
-    // Apply effect as a generator surface
-    const applyGenerator = async (effect: EffectMeta) => {
+    // Apply effect to currently selected surface (as shader stack entry)
+    const applyEffectToSelectedSurface = async (effect: EffectMeta) => {
+        const selectedSurface = activeSurfaces.find((s) => selectedSurfaceIds.includes(s.id));
+        if (!selectedSurface) {
+            console.warn("No surface selected. Select a surface before applying an effect.");
+            return;
+        }
+
         const shaderSource = await effectsLibrary.loadShader(effect.id);
         const mediaId = generateId();
+
         addMediaAsset({
             id: mediaId,
             name: effect.name,
@@ -90,7 +99,11 @@ export function EffectsBrowser() {
             effectId: effect.id,
             uniforms: effectsLibrary.getDefaultUniforms(effect),
         });
-        addSurface(mediaId);
+
+        const nextShaderEffectIds = [...(selectedSurface.shaderEffectIds || []), mediaId];
+        updateSurface(selectedSurface.id, {
+            shaderEffectIds: nextShaderEffectIds,
+        });
     };
 
     if (loading) {
@@ -129,11 +142,10 @@ export function EffectsBrowser() {
             <div className="px-3 py-2 flex gap-1.5 flex-wrap border-b border-white/5">
                 <button
                     onClick={() => setSelectedCategory(null)}
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors border ${
-                        !selectedCategory
-                            ? "bg-white/10 border-white/20 text-white"
-                            : "border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-                    }`}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors border ${!selectedCategory
+                        ? "bg-white/10 border-white/20 text-white"
+                        : "border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10"
+                        }`}
                 >
                     All
                 </button>
@@ -141,11 +153,10 @@ export function EffectsBrowser() {
                     <button
                         key={cat.id}
                         onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors border flex items-center gap-1 ${
-                            selectedCategory === cat.id
-                                ? `${CATEGORY_BG[cat.id]} ${CATEGORY_COLORS[cat.id]}`
-                                : "border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10"
-                        }`}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors border flex items-center gap-1 ${selectedCategory === cat.id
+                            ? `${CATEGORY_BG[cat.id]} ${CATEGORY_COLORS[cat.id]}`
+                            : "border-white/5 text-zinc-500 hover:text-zinc-300 hover:border-white/10"
+                            }`}
                     >
                         {CATEGORY_ICONS[cat.id]}
                         {cat.name}
@@ -166,7 +177,7 @@ export function EffectsBrowser() {
                             <EffectCard
                                 key={effect.id}
                                 effect={effect}
-                                onApply={applyGenerator}
+                                onApply={applyEffectToSelectedSurface}
                             />
                         ))}
                     </div>
@@ -191,7 +202,6 @@ function EffectCard({
     const [expanded, setExpanded] = useState(false);
     const color = CATEGORY_COLORS[effect.category] || "text-zinc-400";
     const icon = CATEGORY_ICONS[effect.category];
-    const uniformCount = Object.keys(effect.uniforms).length;
 
     return (
         <div className="bg-zinc-800/40 border border-white/5 rounded-lg overflow-hidden hover:border-white/10 transition-colors">
@@ -232,8 +242,8 @@ function EffectCard({
                                     {Array.isArray(u.default)
                                         ? u.default.map((v) => v.toFixed(1)).join(", ")
                                         : typeof u.default === "number"
-                                        ? u.default.toFixed(2)
-                                        : String(u.default)}
+                                            ? u.default.toFixed(2)
+                                            : String(u.default)}
                                 </span>
                             </div>
                         ))}
@@ -260,7 +270,7 @@ function EffectCard({
                         className="w-full py-1.5 rounded text-[11px] font-medium bg-electric-purple/20 text-electric-purple border border-electric-purple/30 hover:bg-electric-purple/30 transition-colors flex items-center justify-center gap-1.5"
                     >
                         <Play className="w-3 h-3" />
-                        {effect.isGenerator ? "Create Surface" : "Apply Effect"}
+                        Apply to Selected Surface
                     </button>
                 </div>
             )}

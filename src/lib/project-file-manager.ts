@@ -27,6 +27,13 @@ const FILE_EXTENSION = ".projectx";
 const FORMAT_VERSION = "1.0.0";
 const APP_VERSION = "1.0.0";
 
+type SaveFilePickerHandle = {
+    createWritable: () => Promise<{
+        write: (data: Blob) => Promise<void>;
+        close: () => Promise<void>;
+    }>;
+};
+
 interface AssetEntry {
     id: string;
     originalName: string;
@@ -95,6 +102,65 @@ function getExtFromMime(mime: string): string {
     return map[mime] || "bin";
 }
 
+async function requestSaveFileHandle(suggestedName: string): Promise<SaveFilePickerHandle | null> {
+    const picker = (window as Window & {
+        showSaveFilePicker?: (options?: {
+            suggestedName?: string;
+            types?: Array<{
+                description?: string;
+                accept: Record<string, string[]>;
+            }>;
+        }) => Promise<SaveFilePickerHandle>;
+    }).showSaveFilePicker;
+
+    if (!picker) return null;
+
+    try {
+        return await picker({
+            suggestedName,
+            types: [
+                {
+                    description: "ProjectionX Project File",
+                    accept: {
+                        "application/zip": [FILE_EXTENSION],
+                    },
+                },
+            ],
+        });
+    } catch (err: unknown) {
+        // User canceled the native picker.
+        if ((err as { name?: string })?.name === "AbortError") {
+            return null;
+        }
+        throw err;
+    }
+}
+
+async function writeBlobToHandle(handle: SaveFilePickerHandle, blob: Blob): Promise<void> {
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+}
+
+function downloadBlobFallback(blob: Blob, filename: string): void {
+    try {
+        saveAs(blob, filename);
+        return;
+    } catch {
+        // Fall through to manual anchor download.
+    }
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 /**
  * Save the current workspace as a .projectx file (ZIP archive).
  */
@@ -110,6 +176,12 @@ export async function saveProjectFile(
     const sceneState = useSceneStore.getState();
 
     const name = projectName || projectState.projectSettings.name || "Untitled Project";
+    const targetFilename = `${sanitizeFilename(name)}${FILE_EXTENSION}`;
+
+    // Request native save target as early as possible (still inside user gesture)
+    // to avoid browsers blocking delayed download prompts after async work.
+    const saveHandle = await requestSaveFileHandle(targetFilename);
+
     const zip = new JSZip();
     const settingsFolder = zip.folder("settings")!;
     const assetsFolder = zip.folder("assets")!;
@@ -252,7 +324,12 @@ export async function saveProjectFile(
         compressionOptions: { level: 6 },
     });
 
-    saveAs(zipBlob, `${sanitizeFilename(name)}${FILE_EXTENSION}`);
+    if (saveHandle) {
+        await writeBlobToHandle(saveHandle, zipBlob);
+        return;
+    }
+
+    downloadBlobFallback(zipBlob, targetFilename);
 }
 
 /**

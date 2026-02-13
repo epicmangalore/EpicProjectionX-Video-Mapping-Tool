@@ -5,7 +5,9 @@ import { useProjectStore } from "@/store/project-store";
 import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
 import { useUIStore } from "@/store/ui-store";
 import { EffectsPanel } from "./EffectsPanel";
+import { ShaderEffectControls } from "./ShaderEffectControls";
 import { AudioMappingPanel } from "./AudioMappingPanel";
+import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
 import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus } from "lucide-react";
 import { MasterControls } from "./MasterControls";
@@ -34,7 +36,11 @@ export function SurfaceProperties() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isImporting, setIsImporting] = useState(false);
 
+    const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
+    const updateSurfaceEffect = useEffectsStore((state) => state.updateSurfaceEffect);
+
     const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
+    const effects = selectedSurface ? (surfaceEffects[selectedSurface.id] || defaultEffectSettings) : defaultEffectSettings;
 
     const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -509,6 +515,53 @@ export function SurfaceProperties() {
                             </div>
                         </div>
                     </div>
+
+                    {/* RGB Filters */}
+                    <div className="space-y-3 pt-2 border-t border-white/5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[9px] text-zinc-600 font-bold uppercase">Color Filters</label>
+                            <button
+                                onClick={() => updateSurfaceEffect(selectedSurface!.id, { colorTint: { r: 1, g: 1, b: 1 } })}
+                                className="text-[8px] text-zinc-500 hover:text-zinc-300 uppercase tracking-tighter"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {[
+                                { label: "Red", key: "r", color: "bg-red-500" },
+                                { label: "Green", key: "g", color: "bg-green-500" },
+                                { label: "Blue", key: "b", color: "bg-blue-500" },
+                            ].map((channel) => (
+                                <div key={channel.key} className="flex items-center gap-3">
+                                    <span className="text-[9px] text-zinc-500 w-8">{channel.label}</span>
+                                    <div className="flex-1 h-1 bg-zinc-900 rounded-full relative group">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.01"
+                                            value={effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1}
+                                            onChange={(e) => updateSurfaceEffect(selectedSurface!.id, {
+                                                colorTint: {
+                                                    ...(effects.colorTint || defaultEffectSettings.colorTint),
+                                                    [channel.key]: parseFloat(e.target.value)
+                                                }
+                                            })}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                        />
+                                        <div
+                                            className={`h-full rounded-full ${channel.color} transition-all`}
+                                            style={{ width: `${(effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[9px] text-zinc-600 font-mono w-6 text-right">
+                                        {Math.round((effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Global Composition Source Toggle */}
@@ -588,167 +641,10 @@ export function SurfaceProperties() {
                     </div>
                 )}
 
-                {/* Border & Glow Deck */}
-                <div className="bg-zinc-900/30 border border-white/5 rounded-lg overflow-hidden">
-                    <div className="flex items-center justify-between p-3 border-b border-white/5 pb-2">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Border & Glow</h3>
-                            <button
-                                onClick={() => updateSurface(selectedSurface.id, {
-                                    border: {
-                                        ...selectedSurface.border || {
-                                            color: "#00ff00",
-                                            width: 2,
-                                            opacity: 1,
-                                            glow: 0.5,
-                                            style: "solid",
-                                            animation: "none",
-                                            animationSpeed: 1
-                                        },
-                                        enabled: !selectedSurface.border?.enabled
-                                    }
-                                })}
-                                className={`w-8 h-4 rounded-full relative transition-colors ${selectedSurface.border?.enabled ? "bg-electric-cyan" : "bg-zinc-800"}`}
-                            >
-                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${selectedSurface.border?.enabled ? "left-4.5 translate-x-1" : "left-0.5"}`} />
-                            </button>
-                        </div>
-                        <div className={`w-2 h-2 rounded-full transition-shadow ${selectedSurface.border?.enabled ? "bg-electric-cyan shadow-[0_0_5px_rgba(0,240,255,0.5)]" : "bg-zinc-800"}`}></div>
-                    </div>
 
-                    {selectedSurface.border?.enabled && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                            {/* Color Picker */}
-                            <div className="flex items-center justify-between">
-                                <label className="text-[9px] text-zinc-500 font-bold uppercase">Color</label>
-                                <div className="flex items-center gap-2">
-                                    <div
-                                        className="w-4 h-4 rounded-sm border border-white/10 shadow-sm"
-                                        style={{ backgroundColor: selectedSurface.border.color }}
-                                    />
-                                    <input
-                                        type="color"
-                                        value={selectedSurface.border.color}
-                                        onChange={(e) => updateSurface(selectedSurface.id, {
-                                            border: { ...selectedSurface.border!, color: e.target.value }
-                                        })}
-                                        className="w-8 h-6 bg-transparent border-none p-0 cursor-pointer"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <RotaryKnob
-                                    label="Width"
-                                    value={selectedSurface.border.width}
-                                    min={1}
-                                    max={20}
-                                    step={0.5}
-                                    color={selectedSurface.border.color}
-                                    defaultValue={2}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        border: { ...selectedSurface.border!, width: val }
-                                    })}
-                                />
-                                <RotaryKnob
-                                    label="Opacity"
-                                    value={selectedSurface.border.opacity}
-                                    min={0}
-                                    max={1}
-                                    step={0.05}
-                                    color={selectedSurface.border.color}
-                                    defaultValue={1}
-                                    formatValue={(v) => `${Math.round(v * 100)}%`}
-                                    onChange={(val) => updateSurface(selectedSurface.id, {
-                                        border: { ...selectedSurface.border!, opacity: val }
-                                    })}
-                                />
-                            </div>
-
-                            <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-[9px] text-zinc-500 font-bold uppercase">Glow Intensity</label>
-                                    <span className="text-[9px] text-zinc-400 font-mono">{(selectedSurface.border.glow * 100).toFixed(0)}%</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="2"
-                                    step="0.1"
-                                    value={selectedSurface.border.glow}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        border: { ...selectedSurface.border!, glow: parseFloat(e.target.value) }
-                                    })}
-                                    className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
-                                />
-                            </div>
-
-                            {/* Border Style */}
-                            <div className="space-y-1">
-                                <label className="text-[9px] text-zinc-500 font-bold uppercase">Style</label>
-                                <div className="flex bg-zinc-900 border border-white/10 rounded p-0.5">
-                                    {["solid", "dashed", "dotted"].map((style) => (
-                                        <button
-                                            key={style}
-                                            onClick={() => updateSurface(selectedSurface.id, {
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                border: { ...selectedSurface.border!, style: style as any }
-                                            })}
-                                            className={`flex-1 py-1 text-[10px] uppercase rounded-sm transition-all ${selectedSurface.border!.style === style ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"}`}
-                                        >
-                                            {style}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Animation Type */}
-                            <div className="space-y-1">
-                                <label className="text-[9px] text-zinc-500 font-bold uppercase">Animation</label>
-                                <select
-                                    value={selectedSurface.border.animation || "none"}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                        border: { ...selectedSurface.border!, animation: e.target.value as any }
-                                    })}
-                                    className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none"
-                                >
-                                    <option value="none">None</option>
-                                    <option value="march">Marching Ants</option>
-                                    <option value="pulse">Pulse Width</option>
-                                    <option value="breathe">Breathe Opacity</option>
-                                    <option value="flicker">Flicker</option>
-                                </select>
-                            </div>
-
-                            {/* Animation Speed */}
-                            {selectedSurface.border.animation !== "none" && (
-                                <div className="space-y-1 animate-in fade-in slide-in-from-top-1">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[9px] text-zinc-500 font-bold uppercase">Speed</label>
-                                        <span className="text-[9px] text-zinc-400 font-mono">{selectedSurface.border.animationSpeed?.toFixed(1) || 1.0}x</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0.1"
-                                        max="5"
-                                        step="0.1"
-                                        value={selectedSurface.border.animationSpeed || 1}
-                                        onChange={(e) => updateSurface(selectedSurface.id, {
-                                            border: { ...selectedSurface.border!, animationSpeed: parseFloat(e.target.value) }
-                                        })}
-                                        className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
-                                    />
-                                </div>
-                            )}
-
-                        </div>
-                    )}
-                </div>
-
-                <EdgeBlendingControls surfaceId={selectedSurface.id} />
                 <div data-tour="effects-panel">
                     <EffectsPanel />
+                    <ShaderEffectControls />
                 </div>
                 <div data-tour="audio-panel">
                     <AudioMappingPanel />

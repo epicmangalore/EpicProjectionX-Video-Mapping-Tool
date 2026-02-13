@@ -22,6 +22,11 @@ interface UIStore {
     activeSnapLines: SnapLine[];
     isCanvasHovered: boolean;
     mediaPickerOpen: boolean;
+    activeEffectConfig: {
+        type: "stackable" | "shader" | "base";
+        effectId?: string;
+        surfaceId: string;
+    } | null;
     // Actions
     setToolMode: (mode: ToolMode) => void;
     setPenSubMode: (mode: PenSubMode) => void;
@@ -34,6 +39,7 @@ interface UIStore {
     setSnapLines: (lines: SnapLine[]) => void;
     setCanvasHovered: (hovered: boolean) => void;
     setMediaPickerOpen: (open: boolean) => void;
+    setActiveEffectConfig: (config: { type: "stackable" | "shader" | "base"; effectId?: string; surfaceId: string } | null) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -49,6 +55,7 @@ export const useUIStore = create<UIStore>((set) => ({
     activeSnapLines: [],
     isCanvasHovered: false,
     mediaPickerOpen: false,
+    activeEffectConfig: null,
 
     // Actions
     setToolMode: (mode) => set({ toolMode: mode }),
@@ -66,4 +73,5 @@ export const useUIStore = create<UIStore>((set) => ({
     setSnapLines: (lines) => set({ activeSnapLines: lines }),
     setCanvasHovered: (hovered: boolean) => set({ isCanvasHovered: hovered }),
     setMediaPickerOpen: (open: boolean) => set({ mediaPickerOpen: open }),
+    setActiveEffectConfig: (config) => set({ activeEffectConfig: config }),
 }));

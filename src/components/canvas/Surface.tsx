@@ -638,16 +638,6 @@ export function Surface({ surface }: SurfaceProps) {
             uChromaticAberration: { value: aggregatedFX.chromatic },
             uRGBShift: { value: aggregatedFX.rgbShift },
             uWarpMatrix: { value: warpMatrix },
-            uBlendZones: {
-                value: new THREE.Vector4(
-                    effects.blendLeft,
-                    effects.blendRight,
-                    effects.blendTop,
-                    effects.blendBottom
-                )
-            },
-            uBlendFeather: { value: effects.blendFeather },
-            uBlendGamma: { value: effects.blendGamma },
             uMasterOpacity: { value: projectSettings.masterOpacity },
             uMasterBrightness: { value: projectSettings.masterBrightness },
             uBlackout: { value: projectSettings.blackout ? 1.0 : 0.0 },
@@ -986,17 +976,6 @@ export function Surface({ surface }: SurfaceProps) {
             if (uniforms.uChromaticAberration) uniforms.uChromaticAberration.value = reactiveChromatic;
             if (uniforms.uRGBShift) uniforms.uRGBShift.value = reactiveRgbShift;
 
-            // Update Blend Uniforms
-            if (uniforms.uBlendZones) {
-                uniforms.uBlendZones.value.set(
-                    effects.blendLeft,
-                    effects.blendRight,
-                    effects.blendTop,
-                    effects.blendBottom
-                );
-            }
-            if (uniforms.uBlendFeather) uniforms.uBlendFeather.value = effects.blendFeather;
-            if (uniforms.uBlendGamma) uniforms.uBlendGamma.value = effects.blendGamma;
 
             // Global controls
             if (uniforms.uMasterOpacity) uniforms.uMasterOpacity.value = projectSettings.masterOpacity;
@@ -1166,12 +1145,6 @@ export function Surface({ surface }: SurfaceProps) {
                 )}
             </mesh>
 
-            {/* Neon Border Effect */}
-            {surface.border?.enabled && (
-                <group position={[0, 0, 0.02]}>
-                    <SurfaceBorder surface={surface} />
-                </group>
-            )}
 
             {/* Selection UI and Handles - rendered within the local space of the group */}
             {/* Selection UI and Handles - rendered within the local space of the group */}
