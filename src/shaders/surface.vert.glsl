@@ -11,9 +11,10 @@ void main() {
   // Apply warping matrix to local vertex position
   vec4 warpedPosition = uWarpMatrix * vec4(position, 1.0);
   
-  // Pass through full warpedPosition for hardware perspective-correct interpolation
+  // High-precision world position for global mapping
   vec4 worldPos = modelMatrix * warpedPosition;
-  vWorldPosition = worldPos.xyz / warpedPosition.w; // Preserve accurate world position for global mapping
+  vWorldPosition = worldPos.xyz;
   
+  // Standard gl_Position with perspective support
   gl_Position = projectionMatrix * viewMatrix * worldPos;
 }

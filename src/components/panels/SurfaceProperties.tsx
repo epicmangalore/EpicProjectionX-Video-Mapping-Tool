@@ -194,12 +194,11 @@ export function SurfaceProperties() {
                                 key={mode.id}
                                 onClick={() => updateSurface(selectedSurface.id, {
                                     textureSettings: {
+                                        ...selectedSurface.textureSettings,
                                         fit: mode.id as any,
-                                        scale: selectedSurface.textureSettings?.scale || { x: 1, y: 1 },
-                                        offset: selectedSurface.textureSettings?.offset || { x: 0, y: 0 },
-                                        rotation: selectedSurface.textureSettings?.rotation || 0,
-                                        flipX: selectedSurface.textureSettings?.flipX,
-                                        flipY: selectedSurface.textureSettings?.flipY
+                                        scale: { x: 1, y: 1 },
+                                        offset: { x: 0, y: 0 },
+                                        rotation: selectedSurface.textureSettings?.rotation ?? 0
                                     }
                                 })}
                                 className={`flex-1 py-1.5 text-[10px] font-medium transition-colors border-r border-white/5 last:border-r-0 transform-gpu ${(selectedSurface.textureSettings?.fit || "stretch") === mode.id
@@ -211,129 +210,6 @@ export function SurfaceProperties() {
                             </button>
                         ))}
                     </div>
-
-                    {/* Manual Mapping Controls */}
-                    <div className="grid grid-cols-2 gap-4 pb-2">
-                        <div className="space-y-2">
-                            <label className="text-[9px] text-zinc-600 font-bold uppercase block">Texture Scale</label>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-zinc-500 w-4">X</span>
-                                <input
-                                    type="range"
-                                    min="0.1"
-                                    max="5"
-                                    step="0.01"
-                                    value={selectedSurface.textureSettings?.scale?.x ?? 1}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            fit: selectedSurface.textureSettings?.fit || "stretch",
-                                            scale: {
-                                                ...(selectedSurface.textureSettings?.scale || { x: 1, y: 1 }),
-                                                x: parseFloat(e.target.value)
-                                            },
-                                            offset: selectedSurface.textureSettings?.offset || { x: 0, y: 0 },
-                                            rotation: selectedSurface.textureSettings?.rotation || 0,
-                                            flipX: selectedSurface.textureSettings?.flipX,
-                                            flipY: selectedSurface.textureSettings?.flipY
-                                        }
-                                    })}
-                                    className="flex-1 h-1 bg-zinc-900 rounded-full appearance-none cursor-pointer accent-electric-cyan"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-zinc-500 w-4">Y</span>
-                                <input
-                                    type="range"
-                                    min="0.1"
-                                    max="5"
-                                    step="0.01"
-                                    value={selectedSurface.textureSettings?.scale?.y ?? 1}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            fit: selectedSurface.textureSettings?.fit || "stretch",
-                                            scale: {
-                                                ...(selectedSurface.textureSettings?.scale || { x: 1, y: 1 }),
-                                                y: parseFloat(e.target.value)
-                                            },
-                                            offset: selectedSurface.textureSettings?.offset || { x: 0, y: 0 },
-                                            rotation: selectedSurface.textureSettings?.rotation || 0,
-                                            flipX: selectedSurface.textureSettings?.flipX,
-                                            flipY: selectedSurface.textureSettings?.flipY
-                                        }
-                                    })}
-                                    className="flex-1 h-1 bg-zinc-900 rounded-full appearance-none cursor-pointer accent-electric-cyan"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[9px] text-zinc-600 font-bold uppercase block">Texture Offset</label>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-zinc-500 w-4">X</span>
-                                <input
-                                    type="range"
-                                    min="-1"
-                                    max="1"
-                                    step="0.01"
-                                    value={selectedSurface.textureSettings?.offset?.x ?? 0}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            fit: selectedSurface.textureSettings?.fit || "stretch",
-                                            scale: selectedSurface.textureSettings?.scale || { x: 1, y: 1 },
-                                            offset: {
-                                                ...(selectedSurface.textureSettings?.offset || { x: 0, y: 0 }),
-                                                x: parseFloat(e.target.value)
-                                            },
-                                            rotation: selectedSurface.textureSettings?.rotation || 0,
-                                            flipX: selectedSurface.textureSettings?.flipX,
-                                            flipY: selectedSurface.textureSettings?.flipY
-                                        }
-                                    })}
-                                    className="flex-1 h-1 bg-zinc-900 rounded-full appearance-none cursor-pointer accent-electric-cyan"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[9px] text-zinc-500 w-4">Y</span>
-                                <input
-                                    type="range"
-                                    min="-1"
-                                    max="1"
-                                    step="0.01"
-                                    value={selectedSurface.textureSettings?.offset?.y ?? 0}
-                                    onChange={(e) => updateSurface(selectedSurface.id, {
-                                        textureSettings: {
-                                            fit: selectedSurface.textureSettings?.fit || "stretch",
-                                            scale: selectedSurface.textureSettings?.scale || { x: 1, y: 1 },
-                                            offset: {
-                                                ...(selectedSurface.textureSettings?.offset || { x: 0, y: 0 }),
-                                                y: parseFloat(e.target.value)
-                                            },
-                                            rotation: selectedSurface.textureSettings?.rotation || 0,
-                                            flipX: selectedSurface.textureSettings?.flipX,
-                                            flipY: selectedSurface.textureSettings?.flipY
-                                        }
-                                    })}
-                                    className="flex-1 h-1 bg-zinc-900 rounded-full appearance-none cursor-pointer accent-electric-cyan"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={() => updateSurface(selectedSurface.id, {
-                            textureSettings: {
-                                fit: "stretch",
-                                scale: { x: 1, y: 1 },
-                                offset: { x: 0, y: 0 },
-                                rotation: 0,
-                                flipX: false,
-                                flipY: false
-                            }
-                        })}
-                        className="w-full py-1 text-[9px] text-zinc-500 hover:text-zinc-300 border border-white/5 hover:bg-white/5 rounded transition-all uppercase tracking-tighter"
-                    >
-                        Reset Texture Mapping
-                    </button>
                 </div>
 
                 {/* Transform Deck - simplified */}

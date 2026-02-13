@@ -64,10 +64,10 @@ export const SHAPE_PRESETS: ShapePreset[] = [
         category: "basic",
         description: "Perfect square",
         corners: [
-            { x: -0.5, y: -0.5 },
-            { x: 0.5, y: -0.5 },
-            { x: 0.5, y: 0.5 },
-            { x: -0.5, y: 0.5 }
+            { x: -0.5, y: 0.5 },  // TL
+            { x: 0.5, y: 0.5 },   // TR
+            { x: -0.5, y: -0.5 }, // BL
+            { x: 0.5, y: -0.5 }   // BR
         ],
         defaultScale: { x: 200, y: 200 }
     },

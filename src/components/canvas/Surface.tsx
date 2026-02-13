@@ -570,9 +570,8 @@ export function Surface({ surface }: SurfaceProps) {
         if (settings.flipY) sy *= -1;
 
         // 5. Build Texture Matrix
-        // We need to map the quad's [minX, maxX] range to the texture's space.
-        // First, center the UVs based on the quad's actual center relative to the unit plane
-        matrix.translate(-(0.5 + centerX), -(0.5 + centerY));
+        // Always center transforms around the UV center (0.5, 0.5) for local mapping
+        matrix.translate(-0.5, -0.5);
 
         // Rotation
         const rot = (settings.rotation || 0) * (Math.PI / 180);
