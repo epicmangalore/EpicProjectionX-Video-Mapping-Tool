@@ -55,6 +55,12 @@ interface TimelineState {
     // UI Actions
     toggleSurfaceExpanded: (surfaceId: string) => void;
 
+    // Scene management
+    loadSceneState: (
+        data: { keyframes: Keyframe[]; duration: number; currentTime: number; isPlaying: boolean },
+        updateSurface: (id: string, updates: any) => void
+    ) => void;
+
     // Internal
     initTimeline: (updateSurface: (id: string, updates: any) => void) => void;
     updateTimeline: (updateSurface: (id: string, updates: any) => void) => void;
@@ -65,7 +71,7 @@ export const useTimelineStore = create<TimelineState>()(
     persist(
         (set, get) => ({
             currentTime: 0,
-            duration: 30,
+            duration: 300,
             isPlaying: false,
             loop: false,
             snapToGrid: true,
@@ -110,7 +116,7 @@ export const useTimelineStore = create<TimelineState>()(
             },
 
             setDuration: (duration: number) => {
-                set({ duration });
+                set({ duration: Math.max(300, duration) });
             },
 
             setSnapToGrid: (snapToGrid: boolean) => {
@@ -163,6 +169,32 @@ export const useTimelineStore = create<TimelineState>()(
                 });
                 set({ timeline: tl });
                 get().updateTimeline(updateSurface);
+            },
+
+            loadSceneState: (data, updateSurface) => {
+                const { timeline } = get();
+
+                // 1. Update basic state
+                set({
+                    keyframes: JSON.parse(JSON.stringify(data.keyframes || [])),
+                    duration: data.duration || 30,
+                    currentTime: data.currentTime || 0,
+                    isPlaying: data.isPlaying || false
+                });
+
+                // 2. Rebuild the GSAP timeline with new keyframes
+                get().updateTimeline(updateSurface);
+
+                // 3. Re-seek the new timeline to the target time
+                const newTimeline = get().timeline;
+                if (newTimeline) {
+                    newTimeline.time(data.currentTime || 0);
+                    if (data.isPlaying) {
+                        newTimeline.play();
+                    } else {
+                        newTimeline.pause();
+                    }
+                }
             },
 
             updateTimeline: (updateSurface) => {
@@ -231,7 +263,7 @@ export const useTimelineStore = create<TimelineState>()(
                 }
                 set({
                     currentTime: 0,
-                    duration: 30,
+                    duration: 300,
                     isPlaying: false,
                     loop: false,
                     snapToGrid: true,

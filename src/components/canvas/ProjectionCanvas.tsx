@@ -12,7 +12,7 @@ import { MeshWarp } from "./MeshWarp";
 import { PenTool } from "./PenTool";
 import { CanvasFrame } from "./CanvasFrame";
 import { GlobalStageMixer } from "./GlobalStageMixer";
-import { SpacebarPan } from "./SpacebarPan";
+import { useIsClient } from "@/hooks/useIsClient";
 
 import { SurfaceTool } from "./SurfaceTool";
 import { PenDrawTool } from "./PenDrawTool";
@@ -21,6 +21,7 @@ import { useAudioStore } from "@/store/audio-store";
 import { useFrame } from "@react-three/fiber";
 import { SelectionBox } from "./SelectionBox";
 import { SnapLines } from "./SnapLines";
+import { SpacebarPan } from "./SpacebarPan";
 
 function AudioManager() {
     const updateLevels = useAudioStore((state) => state.updateLevels);
@@ -36,13 +37,32 @@ function AudioManager() {
 }
 
 export function ProjectionCanvas() {
-    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
-    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
+    const isClient = useIsClient();
+    const hasHydrated = useProjectStore((state) => state._hasHydrated);
+
+    const scenes = useProjectStore((state) => state.scenes);
+    const activeSceneId = useProjectStore((state) => state.activeSceneId);
     const projectSettings = useProjectStore((state) => state.projectSettings);
+    const playingSceneId = projectSettings.playingSceneId;
+
+    const isOutput = useOutputStore((state) => state.isOutput);
+
+    // VJ Workflow Logic: 
+    // - Editor window always shows the ACTIVE scene (the one being edited).
+    // - Output window shows the PLAYING (LIVE) scene, falling back to active.
+    const renderSceneId = isOutput ? (playingSceneId || activeSceneId) : activeSceneId;
+
+    const activeScene = scenes.find(s => s.id === renderSceneId);
+    const surfaces = activeScene?.surfaces || [];
+
+    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
     const isTimelinePlaying = useTimelineStore((state) => state.isPlaying);
     const deselectAll = useProjectStore((state) => state.deselectAll);
     const setCanvasHovered = useUIStore((state) => state.setCanvasHovered);
-    const isOutput = useOutputStore((state) => state.isOutput);
+
+    if (!isClient || !hasHydrated) {
+        return <div className="w-full h-full bg-black/20 animate-pulse" />;
+    }
 
     return (
         <div

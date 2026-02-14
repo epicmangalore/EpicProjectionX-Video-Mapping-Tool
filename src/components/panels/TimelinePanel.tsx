@@ -236,13 +236,13 @@ export function TimelinePanel() {
                                 key={duration} // Force re-render on external changes
                                 step="0.1"
                                 onBlur={(e) => {
-                                    const mins = parseFloat(e.target.value) || 0.5;
-                                    setDuration(Math.min(43200, Math.max(1, mins * 60)));
+                                    const mins = parseFloat(e.target.value) || 5;
+                                    setDuration(Math.min(43200, Math.max(300, mins * 60)));
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        const mins = parseFloat((e.target as HTMLInputElement).value) || 0.5;
-                                        setDuration(Math.min(43200, Math.max(1, mins * 60)));
+                                        const mins = parseFloat((e.target as HTMLInputElement).value) || 5;
+                                        setDuration(Math.min(43200, Math.max(300, mins * 60)));
                                         (e.target as HTMLInputElement).blur();
                                     }
                                 }}
@@ -274,7 +274,11 @@ export function TimelinePanel() {
                     </button>
 
                     <button
-                        onClick={() => usePlaybackStore.getState().syncAllVideos()}
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent("force-video-sync", {
+                                detail: { time: currentTime }
+                            }));
+                        }}
                         className="p-1.5 rounded transition-all active:scale-95 bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-electric-cyan/30 hover:text-electric-cyan hover:bg-electric-cyan/10"
                         title="Sync all videos to current timeline position"
                         data-tour="video-sync"

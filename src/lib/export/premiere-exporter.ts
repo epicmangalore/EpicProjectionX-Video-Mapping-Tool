@@ -3,7 +3,7 @@ import { Scene, Surface, MediaAsset } from "@/store/project-store";
 import { ExportOptions } from "./export-types";
 
 /**
- * Export ProjectionX project to Premiere Pro Motion Graphics Template (MOGRT)
+ * Export ProjectX by EPIC project to Premiere Pro Motion Graphics Template (MOGRT)
  */
 export async function exportToPremiere(
     scenes: Scene[],
@@ -46,8 +46,8 @@ function generateMOGRTXml(scene: Scene, mediaAssets: MediaAsset[], options: Expo
 <MotionGraphicsTemplate version="1.0">
     <Metadata>
         <Property name="name" value="${scene.name}" />
-        <Property name="author" value="ProjectionX" />
-        <Property name="description" value="Exported from ProjectionX" />
+        <Property name="author" value="ProjectX by EPIC" />
+        <Property name="description" value="Exported from ProjectX by EPIC" />
     </Metadata>
 
     <Composition>
@@ -119,7 +119,7 @@ function generateThumbnailSVG(): string {
     return `<svg width="256" height="144" xmlns="http://www.w3.org/2000/svg">
   <rect width="256" height="144" fill="#1a1a1a"/>
   <text x="128" y="72" font-family="Arial" font-size="16" fill="#00f0ff" text-anchor="middle">
-    ProjectionX
+    ProjectX by EPIC
   </text>
 </svg>`;
 }

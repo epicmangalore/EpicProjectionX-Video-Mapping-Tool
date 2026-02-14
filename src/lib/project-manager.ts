@@ -23,11 +23,32 @@ export class ProjectManager {
     }
 
     async saveProject(name: string, id?: number): Promise<number> {
+        const pState = useProjectStore.getState();
+        const eState = useEffectsStore.getState();
+        const tState = useTimelineStore.getState();
+
         const projectData: ProjectData = {
             version: "1.0.0",
-            project: useProjectStore.getState(),
-            effects: useEffectsStore.getState(),
-            timeline: useTimelineStore.getState(),
+            project: {
+                surfaces: pState.surfaces,
+                mediaAssets: pState.mediaAssets,
+                projectSettings: pState.projectSettings,
+                scenes: pState.scenes,
+                selectedSurfaceIds: [], // Clear selection on save
+            } as any,
+            effects: {
+                surfaceEffects: eState.surfaceEffects,
+                globalEffects: eState.globalEffects,
+            } as any,
+            timeline: {
+                keyframes: tState.keyframes,
+                duration: tState.duration,
+                loop: tState.loop,
+                snapToGrid: tState.snapToGrid,
+                gridSize: tState.gridSize,
+                zoom: tState.zoom,
+                expandedSurfaces: tState.expandedSurfaces,
+            } as any,
         };
 
         const dbProject: DBProject = {

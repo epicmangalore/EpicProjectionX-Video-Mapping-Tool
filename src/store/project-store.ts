@@ -140,6 +140,8 @@ export interface Scene {
     keyframes: Keyframe[]; // Scene-specific timeline keyframes
     timelineDuration: number; // Scene-specific timeline duration
     transitionDuration: number; // For scene switching
+    currentTime: number; // Independent playback time
+    isPlaying: boolean; // Independent playback state
     createdAt: number;
     updatedAt: number;
 }
@@ -160,6 +162,7 @@ export interface ProjectSettings {
     showSafeArea: boolean;
     compositionMediaId?: string | null;
     showComposition?: boolean;
+    playingSceneId?: string | null;
 }
 
 interface ProjectStore {
@@ -234,6 +237,7 @@ interface ProjectStore {
     resetCorners: (surfaceId: string) => void;
     initializeMeshWarp: (surfaceId: string, gridSize?: number) => void;
     resetProject: () => void;
+    setPlayingSceneId: (id: string | null) => void;
 
     // History
     history: HistoryState[];
@@ -270,6 +274,7 @@ const defaultProjectSettings: ProjectSettings = {
     showSafeArea: false,
     compositionMediaId: null,
     showComposition: false,
+    playingSceneId: null,
 };
 
 export const useProjectStore = create<ProjectStore>()(
@@ -285,6 +290,9 @@ export const useProjectStore = create<ProjectStore>()(
             selectedSurfaceIds: [],
             currentProjectId: null,
             clipboard: null,
+            setPlayingSceneId: (id) => set((state) => ({
+                projectSettings: { ...state.projectSettings, playingSceneId: id }
+            })),
             get surfaces() {
                 const { scenes, activeSceneId } = get();
                 const activeScene = scenes.find((scene) => scene.id === activeSceneId);
@@ -346,7 +354,7 @@ export const useProjectStore = create<ProjectStore>()(
                     visible: true,
                     locked: false,
                     startTime: 0,
-                    duration: 5, // Default 5 seconds
+                    duration: 300, // Default 300 seconds (5 minutes)
                     aspectRatioLocked: false,
                     audioMappings: [],
                     border: {
@@ -354,7 +362,7 @@ export const useProjectStore = create<ProjectStore>()(
                         color: "#00ff00",
                         width: 2,
                         opacity: 1,
-                        glow: 0.5,
+                        glow: surfaceCount === 0 ? 0.5 : 0,
                         style: "solid" as const,
                         animation: "none" as const,
                         animationSpeed: 1
@@ -373,6 +381,8 @@ export const useProjectStore = create<ProjectStore>()(
                             keyframes: [],
                             timelineDuration: 30,
                             transitionDuration: 1.0,
+                            currentTime: 0,
+                            isPlaying: false,
                             hotkey: undefined,
                             createdAt: Date.now(),
                             updatedAt: Date.now(),
@@ -450,7 +460,7 @@ export const useProjectStore = create<ProjectStore>()(
                     visible: true,
                     locked: false,
                     startTime: 0,
-                    duration: 5,
+                    duration: 300,
                     aspectRatioLocked: false,
                     audioMappings: [],
                     border: {
@@ -477,6 +487,8 @@ export const useProjectStore = create<ProjectStore>()(
                             keyframes: [],
                             timelineDuration: 30,
                             transitionDuration: 1.0,
+                            currentTime: 0,
+                            isPlaying: false,
                             hotkey: undefined,
                             createdAt: Date.now(),
                             updatedAt: Date.now(),
@@ -539,7 +551,7 @@ export const useProjectStore = create<ProjectStore>()(
                         visible: true,
                         locked: false,
                         startTime: 0,
-                        duration: 5,
+                        duration: 300,
                         aspectRatioLocked: false,
                         audioMappings: [],
                         border: {
@@ -996,14 +1008,16 @@ export const useProjectStore = create<ProjectStore>()(
             // Scene actions
             addScene: (name) => {
                 const newScene: Scene = {
-                    id: generateId(),
-                    name,
+                    id: Math.random().toString(36).substring(7),
+                    name: `Scene ${get().scenes.length + 1}`, // Changed to use `get().scenes.length` for dynamic naming
                     surfaces: [], // Start with empty surfaces
                     effects: {},
                     keyframes: [],
                     timelineDuration: 30, // Default 30 seconds
                     transitionDuration: 1.0, // Default 1s fade
-                    hotkey: undefined,
+                    hotkey: undefined, // Added missing property
+                    currentTime: 0,
+                    isPlaying: false,
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
                 };
@@ -1027,7 +1041,27 @@ export const useProjectStore = create<ProjectStore>()(
             },
 
             triggerScene: async (id) => {
-                await get().switchToScene(id);
+                const { activeSceneId } = get();
+
+                // Update the scene state to playing
+                set((state) => ({
+                    scenes: state.scenes.map((scene) =>
+                        scene.id === id
+                            ? { ...scene, isPlaying: true, updatedAt: Date.now() }
+                            : scene
+                    ),
+                    projectSettings: { ...state.projectSettings, playingSceneId: id }
+                }));
+
+                if (activeSceneId === id) {
+                    // Scene is already active — switchToScene would early-return.
+                    // Directly start the timeline via the timeline store.
+                    const { useTimelineStore } = await import("./timeline-store");
+                    useTimelineStore.getState().play();
+                } else {
+                    // Switch to the new scene — loadSceneState handles playback.
+                    await get().switchToScene(id);
+                }
             },
 
             deleteScene: (id) => {
@@ -1064,21 +1098,23 @@ export const useProjectStore = create<ProjectStore>()(
                             ...scene,
                             keyframes: JSON.parse(JSON.stringify(timelineState.keyframes)),
                             timelineDuration: timelineState.duration,
+                            currentTime: timelineState.currentTime,
+                            isPlaying: timelineState.isPlaying,
                             updatedAt: Date.now()
                         };
                     }
                     return scene;
                 });
 
-                // 2. Load NEW scene state into the timeline store
+                // 2. Load NEW scene state into the timeline store via the new sync action
                 const nextScene = updatedScenes.find(s => s.id === id);
                 if (nextScene) {
-                    useTimelineStore.setState({
-                        keyframes: JSON.parse(JSON.stringify(nextScene.keyframes || [])),
+                    useTimelineStore.getState().loadSceneState({
+                        keyframes: nextScene.keyframes || [],
                         duration: nextScene.timelineDuration || 30,
-                        currentTime: 0, // Reset playhead on switch
-                        isPlaying: false // Pause on switch
-                    });
+                        currentTime: nextScene.currentTime || 0,
+                        isPlaying: nextScene.isPlaying || false
+                    }, get().updateSurface);
                 }
 
                 set({
@@ -1418,29 +1454,21 @@ export const useProjectStore = create<ProjectStore>()(
                 let hasUpdates = false;
 
                 await Promise.all(mediaAssets.map(async (asset) => {
-                    // Only process video/image assets with blob URLs
+                    // Proactively re-hydrate blob URLs since they NEVER persist across sessions/reloads.
+                    // Instead of checking if they're valid (which can be flaky), we just regenerate them.
                     if ((asset.type === 'video' || asset.type === 'image') && asset.url?.startsWith('blob:')) {
-                        try {
-                            // Check if the current URL is still valid (fast check)
-                            const resp = await fetch(asset.url);
-                            if (resp.ok) return; // URL is still valid
-                        } catch {
-                            // URL is likely invalid
-                        }
-
-                        // Valid URL not found, try to restore from DB
                         try {
                             const fileRecord = await db.files.get(asset.id);
                             if (fileRecord && fileRecord.blob) {
                                 const newUrl = URL.createObjectURL(fileRecord.blob);
                                 updates[asset.id] = newUrl;
                                 hasUpdates = true;
-                                console.log(`Hydrated asset ${asset.id} with new URL: ${newUrl}`);
+                                console.log(`↺ Re-hydrated asset ${asset.id} (${asset.name})`);
                             } else {
-                                console.warn(`Could not find file record for asset ${asset.id}`);
+                                console.warn(`✗ No blob found in DB for asset ${asset.id} (${asset.name})`);
                             }
                         } catch (e: unknown) {
-                            console.error(`Failed to hydrate asset ${asset.id}:`, e);
+                            console.error(`✗ Failed to hydrate asset ${asset.id}:`, e);
                         }
                     }
                 }));
@@ -1635,6 +1663,8 @@ export const useProjectStore = create<ProjectStore>()(
                             keyframes: [],
                             timelineDuration: 30,
                             transitionDuration: 1.0,
+                            currentTime: 0,
+                            isPlaying: false,
                             hotkey: undefined,
                             createdAt: Date.now(),
                             updatedAt: Date.now(),

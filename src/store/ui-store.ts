@@ -22,6 +22,7 @@ interface UIStore {
     activeSnapLines: SnapLine[];
     isCanvasHovered: boolean;
     mediaPickerOpen: boolean;
+    sidebarTab: "layers" | "fx" | "library";
     activeEffectConfig: {
         type: "stackable" | "shader" | "base" | "preview";
         effectId?: string;
@@ -40,6 +41,7 @@ interface UIStore {
     setSnapLines: (lines: SnapLine[]) => void;
     setCanvasHovered: (hovered: boolean) => void;
     setMediaPickerOpen: (open: boolean) => void;
+    setSidebarTab: (tab: "layers" | "fx" | "library") => void;
     setActiveEffectConfig: (config: { type: "stackable" | "shader" | "base" | "preview"; effectId?: string; previewEffectId?: string; surfaceId: string } | null) => void;
 }
 
@@ -56,6 +58,7 @@ export const useUIStore = create<UIStore>((set) => ({
     activeSnapLines: [],
     isCanvasHovered: false,
     mediaPickerOpen: false,
+    sidebarTab: "layers",
     activeEffectConfig: null,
 
     // Actions
@@ -74,5 +77,6 @@ export const useUIStore = create<UIStore>((set) => ({
     setSnapLines: (lines) => set({ activeSnapLines: lines }),
     setCanvasHovered: (hovered: boolean) => set({ isCanvasHovered: hovered }),
     setMediaPickerOpen: (open: boolean) => set({ mediaPickerOpen: open }),
+    setSidebarTab: (tab) => set({ sidebarTab: tab }),
     setActiveEffectConfig: (config) => set({ activeEffectConfig: config }),
 }));

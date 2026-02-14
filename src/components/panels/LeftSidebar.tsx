@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Layers, Plus, Type, Sparkles, Wand2, Shapes } from "lucide-react";
+import { Layers, Plus, Type, Sparkles, Wand2, Shapes, Image as ImageIcon } from "lucide-react";
 import { SurfaceOutliner } from "./SurfaceOutliner";
 import { EffectsBrowser } from "./EffectsBrowser";
+import { MediaLibrary } from "./MediaLibrary";
 import { AutoDetectDialog } from "../dialogs/AutoDetectDialog";
 import { ShapeLibraryPanel } from "./ShapeLibraryPanel";
 import { useProjectStore } from "@/store/project-store";
@@ -11,7 +12,8 @@ import { useUIStore } from "@/store/ui-store";
 import { generateId } from "@/lib/utils";
 
 export function LeftSidebar() {
-    const [activeTab, setActiveTab] = useState<"layers" | "fx">("layers");
+    const activeTab = useUIStore((state) => state.sidebarTab);
+    const setActiveTab = useUIStore((state) => state.setSidebarTab);
 
     const [showAutoDetect, setShowAutoDetect] = useState(false);
     const [showShapeLibrary, setShowShapeLibrary] = useState(false);
@@ -20,15 +22,9 @@ export function LeftSidebar() {
     const addSurface = useProjectStore((state) => state.addSurface);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
 
-    const toolMode = useUIStore((state) => state.toolMode);
-    const setToolMode = useUIStore((state) => state.setToolMode);
 
     const handleCreateSurface = () => {
-        if (toolMode === "surface") {
-            setToolMode("select");
-        } else {
-            setToolMode("surface");
-        }
+        addSurface();
     };
 
     const handleCreateText = () => {
@@ -38,7 +34,7 @@ export function LeftSidebar() {
             name: "Text Layer",
             type: "text",
             text: "Hello World",
-            color: "#ffffff",
+            textColor: "#ffffff",
         });
         addSurface(mediaId);
     };
@@ -73,6 +69,18 @@ export function LeftSidebar() {
                     FX
                     {activeTab === "fx" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-electric-purple" />}
                 </button>
+
+                <button
+                    onClick={() => setActiveTab("library")}
+                    className={`flex-1 py-3 text-xs font-medium flex items-center justify-center gap-2 transition-all relative ${activeTab === "library"
+                        ? "text-white"
+                        : "text-zinc-500 hover:text-zinc-300"
+                        }`}
+                >
+                    <ImageIcon className="w-3.5 h-3.5" />
+                    Library
+                    {activeTab === "library" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />}
+                </button>
             </div>
 
             {/* Tab Content */}
@@ -84,10 +92,7 @@ export function LeftSidebar() {
                             <div className="grid grid-cols-2 gap-2">
                                 <button
                                     onClick={handleCreateSurface}
-                                    className={`flex items-center gap-2 px-3 py-2 rounded text-xs transition-colors border ${toolMode === "surface"
-                                        ? "bg-electric-cyan/20 border-electric-cyan text-electric-cyan"
-                                        : "bg-zinc-800 border-white/5 hover:bg-zinc-700 text-zinc-100"
-                                        }`}
+                                    className="flex items-center gap-2 px-3 py-2 rounded bg-zinc-800 border-white/5 hover:bg-zinc-700 text-zinc-100 text-xs transition-colors border"
                                     data-tour="add-surface"
                                 >
                                     <Plus className="w-3 h-3" />
@@ -131,6 +136,12 @@ export function LeftSidebar() {
                 {activeTab === "fx" && (
                     <div className="absolute inset-0 flex flex-col">
                         <EffectsBrowser />
+                    </div>
+                )}
+
+                {activeTab === "library" && (
+                    <div className="absolute inset-0 flex flex-col">
+                        <MediaLibrary />
                     </div>
                 )}
             </div>

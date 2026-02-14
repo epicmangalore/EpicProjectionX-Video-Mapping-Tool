@@ -9,6 +9,7 @@ import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { useTimelineStore } from "@/store/timeline-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useUIStore } from "@/store/ui-store";
+import { useGroupVideo } from "@/hooks/useGroupVideo";
 
 // Import shaders and utils
 import vertexShader from "@/shaders/surface.vert.glsl";
@@ -92,38 +93,115 @@ export function Surface({ surface }: SurfaceProps) {
     }, [surface.shaderEffectIds, mediaAssets]);
 
     // Manage Video/Webcam elements
-    const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null);
+    const [localVideoElement, setLocalVideoElement] = useState<HTMLVideoElement | null>(null);
     const [resolvedUrl, setResolvedUrl] = useState<string | undefined>(undefined);
+    const [metadataLoaded, setMetadataLoaded] = useState(0); // Trigger re-memoization
+    const [videoHasData, setVideoHasData] = useState(false); // Track if video has loaded any frames
+    const [videoDimensionsReady, setVideoDimensionsReady] = useState(false); // Track if video dimensions are available
+
+    // Use shared group video if groupId is present
+    const groupVideo = useGroupVideo(surface.groupId, resolvedUrl);
+    const videoElement = groupVideo ?? localVideoElement;
+
+    // CRITICAL: Synchronize state for group videos.
+    useEffect(() => {
+        if (!groupVideo) return;
+
+        const onData = () => {
+            setVideoHasData(true);
+            if (groupVideo.videoWidth > 0) setVideoDimensionsReady(true);
+        };
+        const onMetadata = () => {
+            if (groupVideo.videoWidth > 0) setVideoDimensionsReady(true);
+        };
+
+        if (groupVideo.readyState >= 2) setVideoHasData(true);
+        if (groupVideo.readyState >= 1 && groupVideo.videoWidth > 0) setVideoDimensionsReady(true);
+
+        groupVideo.addEventListener("loadeddata", onData);
+        groupVideo.addEventListener("loadedmetadata", onMetadata);
+        groupVideo.addEventListener("canplay", onData);
+
+        return () => {
+            groupVideo.removeEventListener("loadeddata", onData);
+            groupVideo.removeEventListener("loadedmetadata", onMetadata);
+            groupVideo.removeEventListener("canplay", onData);
+        };
+    }, [groupVideo]);
 
     const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
+
+    // Reset data ready states when media changes
+    useEffect(() => {
+        setVideoHasData(false);
+        setVideoDimensionsReady(false);
+    }, [mediaAsset?.id]);
 
     // Hydrate Blob URLs for Output Window AND Editor (persistence fix)
     useEffect(() => {
         if (!mediaAsset) {
-            console.log("🔴 No mediaAsset");
             setResolvedUrl(undefined);
             return;
         }
 
         const url = mediaAsset.url;
-        console.log("🔵 Media asset URL check:", { name: mediaAsset.name, url, type: mediaAsset.type });
 
-        if (!url) {
-            console.log("🔴 No URL for media asset:", mediaAsset.name);
-            setResolvedUrl(undefined);
-            return;
-        }
+        // Proactive hydration from IndexedDB for output window or stale blob URLs
+        const hydrateFromDb = async () => {
+            if (!mediaAsset.id) return;
+            try {
+                const { db } = await import("@/lib/db");
+                const fileRecord = await db.files.get(mediaAsset.id);
+                if (fileRecord?.blob) {
+                    const localUrl = URL.createObjectURL(fileRecord.blob);
+                    console.log("↺ Hydrated local URL from IndexedDB:", mediaAsset.name, "ID:", mediaAsset.id, "URL:", localUrl.substring(0, 50));
+                    setResolvedUrl(localUrl);
+                    return true;
+                } else {
+                    console.warn("✗ No blob found in IndexedDB for ID:", mediaAsset.id);
+                }
+            } catch (err) {
+                console.warn("Proactive hydration failed for ID:", mediaAsset.id, err);
+            }
+            return false;
+        };
 
-        // Always use blob URLs directly - don't validate with HEAD request
-        // Blob URLs don't support HEAD requests, so the check always fails
-        if (url.startsWith("blob:")) {
-            console.log("✅ Using blob URL directly:", url.substring(0, 50) + "...");
-            setResolvedUrl(url);
-        } else {
-            console.log("✅ Using HTTP/HTTPS URL directly:", url);
-            setResolvedUrl(url);
-        }
-    }, [mediaAsset, updateMediaAsset]); // eslint-disable-line react-hooks/exhaustive-deps
+        const checkAndHydrate = async () => {
+            if (!url) {
+                console.log("→ Surface: No URL provided for asset, attempting DB recovery:", mediaAsset.name);
+                const success = await hydrateFromDb();
+                if (!success) {
+                    setResolvedUrl(undefined);
+                }
+                return;
+            }
+
+            if (url.startsWith("blob:")) {
+                try {
+                    // Blob URLs are window-specific. Proactively check if this one is valid.
+                    const resp = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' } });
+                    if (resp.ok) {
+                        setResolvedUrl(url);
+                    } else {
+                        console.log("→ Surface: Blob URL stale, hydrating from DB:", mediaAsset.name);
+                        await hydrateFromDb();
+                    }
+                } catch {
+                    // Blob is likely from another session or window
+                    console.log("→ Surface: Blob URL fetch failed, hydrating from DB:", mediaAsset.name);
+                    await hydrateFromDb();
+                }
+            } else {
+                setResolvedUrl(url);
+            }
+        };
+
+        checkAndHydrate();
+
+        return () => {
+            // Cleanup handled by the textures/elements usually, but we could revoke here if we tracked it
+        };
+    }, [mediaAsset?.id, mediaAsset?.url, isOutput]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!mediaAsset || !resolvedUrl) {
@@ -133,96 +211,212 @@ export function Surface({ surface }: SurfaceProps) {
 
         if (mediaAsset.type === "video") {
             console.log("Creating video element for:", mediaAsset.name, "URL:", resolvedUrl);
-            const video = document.createElement("video");
-            let recoveredFromDb = false;
-            video.src = resolvedUrl;
-            video.crossOrigin = "anonymous";
-            video.loop = true;
-            video.muted = true;
-            video.defaultMuted = true;
-            video.autoplay = true;
-            video.playsInline = true;
 
-            // Important for long videos: preload metadata
-            video.preload = "auto";
+            // CRITICAL: Wait for global video container to be ready before creating video elements
+            const createVideoElement = () => {
+                const video = document.createElement("video");
+                let recoveredFromDb = false;
+                video.src = resolvedUrl;
+                video.crossOrigin = "anonymous";
+                video.loop = true;
+                video.muted = true;
+                video.defaultMuted = true;
+                video.autoplay = false; // Changed to false - we'll manually play when ready
+                video.playsInline = true;
 
-            const onLoadedMetadata = () => {
-                console.log("✓ Video metadata loaded:", mediaAsset.name, "Duration:", video.duration);
-            };
+                // Important for long videos: preload metadata
+                video.preload = "auto";
 
-            const onCanPlay = () => {
-                console.log("✓ Video can play:", mediaAsset.name);
-                if (isPlayingGlobal) {
-                    video.play().catch(err => console.warn("Auto-play on canplay failed:", err));
-                }
-            };
-
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const onError = async (e: any) => {
-                console.error("✗ Video error for", mediaAsset.name, ":", video.error, e);
-
-                // Blob URLs can become stale after reload/crash. Recover from IndexedDB once.
-                if (recoveredFromDb || !mediaAsset.id) return;
-                recoveredFromDb = true;
-
-                try {
-                    const { db } = await import("@/lib/db");
-                    const fileRecord = await db.files.get(mediaAsset.id);
-
-                    if (fileRecord?.blob) {
-                        const recoveredUrl = URL.createObjectURL(fileRecord.blob);
-                        console.log("↺ Recovered video URL from IndexedDB:", mediaAsset.name);
-                        updateMediaAsset(mediaAsset.id, { url: recoveredUrl });
-                        video.src = recoveredUrl;
-                        video.load();
-                        if (isPlayingGlobal) {
-                            video.play().catch(err => console.warn("Play failed after DB recovery:", err));
-                        }
+                const onLoadedMetadata = () => {
+                    console.log("✓ Video metadata loaded:", mediaAsset.name, "Duration:", video.duration,
+                        "Dimensions:", video.videoWidth + "x" + video.videoHeight);
+                    setMetadataLoaded(prev => prev + 1);
+                    // Check if dimensions are available
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        console.log("→ Video dimensions ready at metadata stage");
+                        setVideoDimensionsReady(true);
                     }
-                } catch (recoveryError) {
-                    console.warn("Video recovery from IndexedDB failed:", recoveryError);
+                };
+
+                const onCanPlay = () => {
+                    console.log("✓ Video can play:", mediaAsset.name, "readyState:", video.readyState,
+                        "Dimensions:", video.videoWidth + "x" + video.videoHeight);
+                    // CRITICAL: Ensure video has data flag is set
+                    console.log("→ Setting videoHasData = true for:", mediaAsset.name);
+                    setVideoHasData(true);
+                    // Check if dimensions are available
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        console.log("→ Video dimensions ready at canplay stage");
+                        setVideoDimensionsReady(true);
+                    }
+                    // Force texture update immediately when video is ready
+                    if (isPlayingGlobal && video.paused) {
+                        video.play().catch(err => console.warn("Auto-play on canplay failed:", err));
+                    }
+                };
+
+                const onLoadedData = () => {
+                    console.log("✓ Video loaded data:", mediaAsset.name, "readyState:", video.readyState,
+                        "Dimensions:", video.videoWidth + "x" + video.videoHeight);
+                    // CRITICAL: Mark that video has data so texture can be created
+                    console.log("→ Setting videoHasData = true for:", mediaAsset.name);
+                    setVideoHasData(true);
+                    // Check if dimensions are available
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        console.log("→ Video dimensions ready at loadeddata stage");
+                        setVideoDimensionsReady(true);
+                    }
+                    // Video has loaded enough data to start playing
+                    if (isPlayingGlobal && video.paused) {
+                        video.play().catch(err => console.warn("Auto-play on loadeddata failed:", err));
+                    }
+                };
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const onError = async (e: any) => {
+                    const mediaError = video.error;
+
+                    // Error code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED (codec issue)
+                    // Don't retry codec errors - they will never work
+                    if (mediaError?.code === 4) {
+                        console.error("✗ Video codec not supported:", mediaAsset.name, "- This file cannot be played in browsers. Please convert to H.264/MP4.");
+                        return;
+                    }
+
+                    console.error("✗ Video error for", mediaAsset.name, ":", video.error, e);
+
+                    // Blob URLs can become stale after reload/crash. Recover from IndexedDB once.
+                    if (recoveredFromDb || !mediaAsset.id) return;
+                    recoveredFromDb = true;
+
+                    try {
+                        const { db } = await import("@/lib/db");
+                        const fileRecord = await db.files.get(mediaAsset.id);
+
+                        if (fileRecord?.blob) {
+                            const recoveredUrl = URL.createObjectURL(fileRecord.blob);
+                            console.log("↺ Recovered video URL from IndexedDB:", mediaAsset.name);
+                            updateMediaAsset(mediaAsset.id, { url: recoveredUrl });
+                            video.src = recoveredUrl;
+                            video.load();
+                            if (isPlayingGlobal) {
+                                video.play().catch(err => console.warn("Play failed after DB recovery:", err));
+                            }
+                        }
+                    } catch (recoveryError) {
+                        console.warn("Video recovery from IndexedDB failed:", recoveryError);
+                    }
+                };
+
+                const onLoadStart = () => {
+                    console.log("→ Video load started:", mediaAsset.name);
+                };
+
+                const onPlaying = () => {
+                    console.log("▶ Video is playing:", mediaAsset.name);
+                };
+
+                const onWaiting = () => {
+                    console.log("⏸ Video is waiting/buffering:", mediaAsset.name);
+                };
+
+                const onSuspend = () => {
+                    console.log("⏸ Video suspended:", mediaAsset.name);
+                };
+
+                const onStalled = () => {
+                    console.warn("⚠ Video stalled:", mediaAsset.name);
+                };
+
+                video.addEventListener("loadedmetadata", onLoadedMetadata);
+                video.addEventListener("loadeddata", onLoadedData);
+                video.addEventListener("canplay", onCanPlay);
+                video.addEventListener("error", onError);
+                video.addEventListener("loadstart", onLoadStart);
+                video.addEventListener("playing", onPlaying);
+                video.addEventListener("waiting", onWaiting);
+                video.addEventListener("suspend", onSuspend);
+                video.addEventListener("stalled", onStalled);
+
+                // CRITICAL: Append to global container BEFORE calling load()
+                const container = (window as any).globalVideoContainer;
+                if (container) {
+                    container.appendChild(video);
+                    console.log("✓ Video appended to global container:", mediaAsset.name);
+                } else {
+                    console.warn("⚠ Global video container not found! Video may not play correctly.");
                 }
+
+                // Explicitly start fetching media. Some environments delay loading
+                // unless load() is called after dynamic src assignment.
+                video.load();
+
+                // CRITICAL: Check readyState immediately in case it's already loaded/cached
+                // This ensures that if the video is already in memory, we update the state right away.
+                if (video.readyState >= 1) { // HAVE_METADATA
+                    console.log("→ Video already has metadata, triggering handler immediately");
+                    onLoadedMetadata();
+                }
+                if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+                    console.log("→ Video already has data, triggering handler immediately");
+                    onLoadedData();
+                }
+                if (video.readyState >= 3) { // HAVE_FUTURE_DATA
+                    console.log("→ Video already can play, triggering handler immediately");
+                    onCanPlay();
+                }
+
+                setLocalVideoElement(video);
+                videoRef.current = video;
+
+                return () => {
+                    console.log("Cleaning up video element:", mediaAsset.name);
+                    video.pause();
+                    video.removeEventListener("loadedmetadata", onLoadedMetadata);
+                    video.removeEventListener("loadeddata", onLoadedData);
+                    video.removeEventListener("canplay", onCanPlay);
+                    video.removeEventListener("error", onError);
+                    video.removeEventListener("loadstart", onLoadStart);
+                    video.removeEventListener("playing", onPlaying);
+                    video.removeEventListener("waiting", onWaiting);
+                    video.removeEventListener("suspend", onSuspend);
+                    video.removeEventListener("stalled", onStalled);
+                    if (video.parentNode) {
+                        video.parentNode.removeChild(video);
+                    }
+                    video.src = "";
+                    video.load(); // Release memory
+                    setLocalVideoElement(null);
+                    setVideoHasData(false);
+                    setVideoDimensionsReady(false);
+                    videoRef.current = null;
+                };
             };
 
-            const onLoadStart = () => {
-                console.log("→ Video load started:", mediaAsset.name);
-            };
+            // Wait for container to be ready
+            if ((window as any).globalVideoContainerReady) {
+                return createVideoElement();
+            } else {
+                console.log("⏳ Waiting for global video container to be ready...");
+                const handleContainerReady = () => {
+                    console.log("✓ Container ready, creating video element");
+                    createVideoElement();
+                };
+                window.addEventListener("video-container-ready", handleContainerReady, { once: true });
 
-            const onPlaying = () => {
-                console.log("▶ Video is playing:", mediaAsset.name);
-            };
+                // Fallback timeout in case event doesn't fire
+                const timeoutId = setTimeout(() => {
+                    if ((window as any).globalVideoContainer) {
+                        console.log("✓ Container ready (timeout fallback), creating video element");
+                        createVideoElement();
+                    }
+                }, 100);
 
-            const onWaiting = () => {
-                console.log("⏸ Video is waiting/buffering:", mediaAsset.name);
-            };
-
-            video.addEventListener("loadedmetadata", onLoadedMetadata);
-            video.addEventListener("canplay", onCanPlay);
-            video.addEventListener("error", onError);
-            video.addEventListener("loadstart", onLoadStart);
-            video.addEventListener("playing", onPlaying);
-            video.addEventListener("waiting", onWaiting);
-
-            // Explicitly start fetching media. Some environments delay loading
-            // unless load() is called after dynamic src assignment.
-            video.load();
-
-            setVideoElement(video);
-            videoRef.current = video;
-
-            return () => {
-                console.log("Cleaning up video element:", mediaAsset.name);
-                video.removeEventListener("loadedmetadata", onLoadedMetadata);
-                video.removeEventListener("canplay", onCanPlay);
-                video.removeEventListener("error", onError);
-                video.removeEventListener("loadstart", onLoadStart);
-                video.removeEventListener("playing", onPlaying);
-                video.removeEventListener("waiting", onWaiting);
-                video.pause();
-                video.src = "";
-                video.load(); // Release memory
-                setVideoElement(null);
-            };
+                return () => {
+                    window.removeEventListener("video-container-ready", handleContainerReady);
+                    clearTimeout(timeoutId);
+                };
+            }
         }
 
         if (mediaAsset.type === "webcam") {
@@ -236,9 +430,16 @@ export function Surface({ surface }: SurfaceProps) {
                     video.autoplay = true;
                     video.playsInline = true;
                     video.muted = true;
+
+                    // Wait for video to have data before setting state
+                    video.addEventListener("loadeddata", () => {
+                        console.log("✓ Webcam loaded data");
+                        setVideoHasData(true);
+                    }, { once: true });
+
                     await video.play().catch(e => console.warn("Video play failed", e));
 
-                    setVideoElement(video);
+                    setLocalVideoElement(video);
                     videoRef.current = video;
                     streamRef.current = stream;
                 } catch (e) {
@@ -251,7 +452,9 @@ export function Surface({ surface }: SurfaceProps) {
                     streamRef.current.getTracks().forEach(t => t.stop());
                     streamRef.current = null;
                 }
-                setVideoElement(null);
+                setLocalVideoElement(null);
+                setVideoHasData(false);
+                setVideoDimensionsReady(false);
             };
         }
     }, [mediaAsset?.id, mediaAsset?.type, resolvedUrl]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -261,79 +464,73 @@ export function Surface({ surface }: SurfaceProps) {
         const video = videoElement ?? videoRef.current;
         if (!video) return;
 
-        console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name);
+        console.log("Playback state changed:", isPlayingGlobal, "for video:", mediaAsset?.name, "readyState:", video.readyState);
 
         if (isPlayingGlobal) {
-            if (video.readyState >= 2) {
-                video.play().catch(err => {
-                    console.warn("Play failed:", err);
-                });
+            // CRITICAL: Wait for video to have enough data before playing
+            if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                if (video.paused) {
+                    console.log("→ Playing video (ready):", mediaAsset?.name);
+                    video.play().catch(err => {
+                        console.warn("✗ Play failed (ready):", mediaAsset?.name, err);
+                        // If it's a playback interaction error, we might need a user click
+                    });
+                }
+            } else if (video.readyState >= 2) { // HAVE_CURRENT_DATA
+                if (video.paused) {
+                    console.log("→ Playing video (current data):", mediaAsset?.name);
+                    video.play().catch(err => {
+                        console.warn("Play failed:", err);
+                    });
+                }
             } else {
-                console.log("Video not ready yet, waiting for canplay event");
+                console.log("Video not ready yet, waiting for canplay event. readyState:", video.readyState);
 
                 const handleCanPlayWhilePlaying = () => {
+                    console.log("→ Video canplay event fired, playing:", mediaAsset?.name);
                     video.play().catch(err => {
                         console.warn("Play failed after canplay:", err);
                     });
                 };
 
+                const handleLoadedData = () => {
+                    console.log("→ Video loadeddata event fired, playing:", mediaAsset?.name);
+                    video.play().catch(err => {
+                        console.warn("Play failed after loadeddata:", err);
+                    });
+                };
+
                 // If playback was requested before media became ready,
-                // start playback as soon as canplay fires.
+                // start playback as soon as canplay or loadeddata fires.
                 video.addEventListener("canplay", handleCanPlayWhilePlaying, { once: true });
+                video.addEventListener("loadeddata", handleLoadedData, { once: true });
 
                 return () => {
                     video.removeEventListener("canplay", handleCanPlayWhilePlaying);
+                    video.removeEventListener("loadeddata", handleLoadedData);
                 };
             }
         } else {
-            video.pause();
-        }
-    }, [isPlayingGlobal, mediaAsset?.name, videoElement]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    // Handle force video sync event
-    useEffect(() => {
-        const video = videoElement ?? videoRef.current;
-        if (!video || mediaAsset?.type !== "video") return;
-
-        const mapToVideoTime = (timelineTime: number) => {
-            const d = video.duration;
-            if (!Number.isFinite(d) || d <= 0) return Math.max(0, timelineTime);
-            // Keep timeline sync within valid media range.
-            return ((timelineTime % d) + d) % d;
-        };
-
-        const handleForceSync = (e: Event) => {
-            const customEvent = e as CustomEvent<{ time: number }>;
-            const targetTime = mapToVideoTime(customEvent.detail.time);
-
-            console.log("Force syncing video:", mediaAsset?.name, "to time:", targetTime);
-
-            // Set video time
-            video.currentTime = targetTime;
-
-            // If should be playing, ensure it's playing
-            if (isPlayingGlobal && video.paused) {
-                video.play().catch(err => {
-                    console.warn("Play failed during sync:", err);
-                });
+            if (!video.paused) {
+                console.log("→ Pausing video:", mediaAsset?.name);
+                video.pause();
             }
-        };
-
-        window.addEventListener("force-video-sync", handleForceSync);
-
-        return () => {
-            window.removeEventListener("force-video-sync", handleForceSync);
-        };
-    }, [mediaAsset?.type, mediaAsset?.name, videoElement, isPlayingGlobal]);
+        }
+    }, [isPlayingGlobal, mediaAsset?.name, videoElement, videoElement?.readyState]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Create texture from media
     const texture = useMemo(() => {
+        console.log("[TEXTURE MEMO] Running for:", mediaAsset?.name, "type:", mediaAsset?.type, "videoElement:", !!videoElement, "videoHasData:", videoHasData);
+
         // PRIORITY 1: Global Mixed Composition
         if (surface.useComposition && (window as any).compositionTexture) { // eslint-disable-line @typescript-eslint/no-explicit-any
             return (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
         }
 
-        if (!mediaAsset) return null;
+        if (!mediaAsset) {
+            console.log("[TEXTURE MEMO] No media asset");
+            return null;
+        }
 
         if (mediaAsset.type === "color") {
             const canvas = document.createElement("canvas");
@@ -349,15 +546,68 @@ export function Surface({ surface }: SurfaceProps) {
 
         if (mediaAsset.type === "image" && resolvedUrl) {
             const loader = new THREE.TextureLoader();
-            return loader.load(resolvedUrl);
+            const texture = loader.load(
+                resolvedUrl,
+                undefined, // onLoad
+                undefined, // onProgress
+                async (err) => {
+                    console.error("✗ Image load error:", mediaAsset.name, err);
+                    if (mediaAsset.id) {
+                        try {
+                            const { db } = await import("@/lib/db");
+                            const fileRecord = await db.files.get(mediaAsset.id);
+                            if (fileRecord?.blob) {
+                                const recoveredUrl = URL.createObjectURL(fileRecord.blob);
+                                console.log("↺ Recovered image URL from IndexedDB:", mediaAsset.name);
+                                setResolvedUrl(recoveredUrl);
+                            }
+                        } catch (recoveryErr) {
+                            console.warn("Image recovery failed:", recoveryErr);
+                        }
+                    }
+                }
+            );
+            return texture;
         }
 
         if ((mediaAsset.type === "video" || mediaAsset.type === "webcam") && videoElement) {
+            // CRITICAL: Only create texture if video has loaded data AND has valid dimensions
+            // Creating texture before video has dimensions results in blank/black texture
+            const hasValidDimensions = videoElement.videoWidth > 0 && videoElement.videoHeight > 0;
+
+            console.log("[TEXTURE DEBUG]", mediaAsset.name, {
+                hasVideoElement: !!videoElement,
+                videoHasData,
+                videoDimensionsReady,
+                readyState: videoElement.readyState,
+                videoWidth: videoElement.videoWidth,
+                videoHeight: videoElement.videoHeight,
+                hasValidDimensions,
+                src: videoElement.src?.substring(0, 50),
+                error: videoElement.error
+            });
+
+            if (!videoHasData && videoElement.readyState < 2) {
+                console.log("⏳ Video element exists but no data yet, waiting...", mediaAsset.name, "readyState:", videoElement.readyState);
+                return null;
+            }
+
+            if (!hasValidDimensions) {
+                console.log("⏳ Video has data but dimensions not ready yet:", mediaAsset.name,
+                    "videoWidth:", videoElement.videoWidth, "videoHeight:", videoElement.videoHeight,
+                    "readyState:", videoElement.readyState);
+                return null;
+            }
+
+            console.log("✓ Creating VideoTexture for:", mediaAsset.name,
+                "dimensions:", videoElement.videoWidth + "x" + videoElement.videoHeight,
+                "readyState:", videoElement.readyState);
             const tex = new THREE.VideoTexture(videoElement);
             tex.minFilter = THREE.LinearFilter;
             tex.magFilter = THREE.LinearFilter;
+            tex.generateMipmaps = false;
             tex.format = THREE.RGBAFormat;
-            tex.needsUpdate = true;
+            tex.needsUpdate = true; // Force initial update
             return tex;
         }
 
@@ -411,7 +661,77 @@ export function Surface({ surface }: SurfaceProps) {
         }
 
         return null;
-    }, [mediaAsset, videoElement, resolvedUrl, surface.useComposition, isPlayingGlobal]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [
+        mediaAsset?.id,
+        mediaAsset?.url,
+        mediaAsset?.type,
+        mediaAsset?.text,
+        mediaAsset?.fontSize,
+        mediaAsset?.fontFamily,
+        mediaAsset?.fontWeight,
+        mediaAsset?.fontStyle,
+        mediaAsset?.lineHeight,
+        mediaAsset?.letterSpacing,
+        mediaAsset?.textColor,
+        mediaAsset?.textAlign,
+        mediaAsset?.color,
+        videoElement,
+        videoHasData,
+        videoDimensionsReady,
+        resolvedUrl,
+        surface.useComposition,
+        surface.id
+    ]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Handle force video sync event
+    useEffect(() => {
+        const video = videoElement ?? videoRef.current;
+        if (!video || mediaAsset?.type !== "video") return;
+
+        const mapToVideoTime = (timelineTime: number) => {
+            const d = video.duration;
+            if (!Number.isFinite(d) || d <= 0) return Math.max(0, timelineTime);
+            // Keep timeline sync within valid media range.
+            return ((timelineTime % d) + d) % d;
+        };
+
+        const handleForceSync = (e: Event) => {
+            const customEvent = e as CustomEvent<{ time: number }>;
+            const targetTime = mapToVideoTime(customEvent.detail.time);
+
+            console.log("Force syncing video:", mediaAsset?.name, "to time:", targetTime);
+
+            // Set video time
+            video.currentTime = targetTime;
+
+            // Force texture refresh
+            if (texture && texture instanceof THREE.VideoTexture) {
+                texture.needsUpdate = true;
+            }
+
+            // If should be playing, ensure it's playing
+            if (isPlayingGlobal && video.paused) {
+                video.play().catch(err => {
+                    console.warn("Play failed during sync:", err);
+                });
+            }
+        };
+
+        const handleLoadedData = () => {
+            console.log(`[Surface ${surface.name}] Video loadeddata - forcing texture update`);
+            if (texture && texture instanceof THREE.VideoTexture) {
+                texture.needsUpdate = true;
+            }
+        };
+
+        window.addEventListener("force-video-sync", handleForceSync);
+        video.addEventListener("loadeddata", handleLoadedData);
+
+        return () => {
+            window.removeEventListener("force-video-sync", handleForceSync);
+            video.removeEventListener("loadeddata", handleLoadedData);
+        };
+    }, [mediaAsset?.type, mediaAsset?.name, videoElement, isPlayingGlobal, texture, surface.name]);
 
     // Calculate warping matrix or polygon geometry
     const isQuad = surface.corners.length === 4;
@@ -556,38 +876,40 @@ export function Surface({ surface }: SurfaceProps) {
             }
         }
 
+        // Log for debugging (only once in a while or on change)
+        if (!isOutput) {
+            // console.log(`[Surface ${surface.name}] aspect: ${surfaceAspect.toFixed(2)}, media: ${mediaAspect.toFixed(2)}, fit: ${settings.fit}, sx: ${sx.toFixed(2)}, sy: ${sy.toFixed(2)}`);
+        }
+
         // 4. Apply Manual Transforms
         const manualScaleX = settings.scale?.x ?? 1;
         const manualScaleY = settings.scale?.y ?? 1;
         const manualOffsetX = settings.offset?.x ?? 0;
         const manualOffsetY = settings.offset?.y ?? 0;
 
-        sx /= manualScaleX;
-        sy /= manualScaleY;
+        // 5. Build Texture Matrix (P' = T_back * S_total * R * T_forward * P)
+        matrix.identity();
 
-        // Flip
-        if (settings.flipX) sx *= -1;
-        if (settings.flipY) sy *= -1;
+        // Step 3: Move back to center (applied last)
+        matrix.translate(0.5, 0.5);
 
-        // 5. Build Texture Matrix
-        // Always center transforms around the UV center (0.5, 0.5) for local mapping
-        matrix.translate(-0.5, -0.5);
+        // Step 2: Apply Scale, Rotation (applied middle)
+        // Manual flip
+        const finalSx = sx / manualScaleX * (settings.flipX ? -1 : 1);
+        const finalSy = sy / manualScaleY * (settings.flipY ? -1 : 1);
+        matrix.scale(finalSx, finalSy);
 
-        // Rotation
         const rot = (settings.rotation || 0) * (Math.PI / 180);
         matrix.rotate(-rot);
 
-        // Scale
-        matrix.scale(sx, sy);
+        // Step 1: Move center to origin (applied first)
+        matrix.translate(-0.5, -0.5);
 
-        // Offset (Move UVs)
+        // Step 0: Apply manual offset (applied very first)
         matrix.translate(-manualOffsetX, -manualOffsetY);
 
-        // Restore center
-        matrix.translate(0.5, 0.5);
-
         return matrix;
-    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition]);
+    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition, metadataLoaded, mediaAsset?.width, mediaAsset?.height]);
 
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
@@ -783,86 +1105,80 @@ export function Surface({ surface }: SurfaceProps) {
     useFrame(() => {
         if (!meshRef.current) return;
 
-
         // Throttled Timeline/State access
+        const projectStore = useProjectStore.getState();
         const timelineState = useTimelineStore.getState();
-        const currentTime = timelineState.currentTime;
+        const renderSceneId = isOutput ? (projectStore.projectSettings.playingSceneId || projectStore.activeSceneId) : projectStore.activeSceneId;
+        const renderScene = projectStore.scenes.find(s => s.id === renderSceneId);
+
+        // Deterministic playback state for this surface based on its context (Output vs Editor)
+        // If in Output (isOutput), we follow the renderScene's stored state if it's NOT the active one.
+        // If it IS the active one, we follow useTimelineStore for perfect editor sync.
+        const isSelfActive = renderSceneId === projectStore.activeSceneId;
+        const currentTime = isSelfActive ? timelineState.currentTime : (renderScene?.currentTime || 0);
+        const isPlaying = isSelfActive ? timelineState.isPlaying : (renderScene?.isPlaying || false);
 
         // CRITICAL: Update composition texture every frame
-        // The compositor pings-pongs between two targets, so the texture instance changes every frame.
-        // We must update the uniform to point to the latest 'read' texture.
-        if (surface.useComposition && (window as any).compositionTexture && shaderMaterial) { // eslint-disable-line @typescript-eslint/no-explicit-any
-            shaderMaterial.uniforms.uTexture.value = (window as any).compositionTexture; // eslint-disable-line @typescript-eslint/no-explicit-any
+        if (surface.useComposition && (window as any).compositionTexture && shaderMaterial) {
+            shaderMaterial.uniforms.uTexture.value = (window as any).compositionTexture;
         }
 
         // CRITICAL: Update video texture only when playing or seeking + sync with timeline
         if (texture && texture instanceof THREE.VideoTexture && videoElement) {
-            // Always refresh once media has current frame data; this avoids black/frozen
-            // surfaces when play state transitions or timeline seeks happen between frames.
-            if (videoElement.readyState >= 2) {
+            // CRITICAL: Always mark texture for update when video element exists and has data
+            // This ensures the first frame is rendered even when paused
+            if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA or better
+                texture.needsUpdate = true;
+            } else if (videoElement.readyState === 1) { // HAVE_METADATA
+                // Even with just metadata, try to update (some browsers need this)
                 texture.needsUpdate = true;
             }
 
             // Sync video currentTime with timeline position
-            if (videoElement.readyState >= 2) { // HAVE_CURRENT_DATA
-                const timelineTargetTime = currentTime;
+            if (videoElement.readyState >= 1) { // At least HAVE_METADATA
                 const d = videoElement.duration;
                 const targetTime = Number.isFinite(d) && d > 0
-                    ? ((timelineTargetTime % d) + d) % d
-                    : Math.max(0, timelineTargetTime);
+                    ? ((currentTime % d) + d) % d
+                    : Math.max(0, currentTime);
                 const videoTime = videoElement.currentTime;
                 const drift = videoTime - targetTime;
                 const absDrift = Math.abs(drift);
 
                 // Detect massive jumps (scrubbing or loop)
                 const timelineJump = Math.abs(currentTime - lastTimelineTimeRef.current);
-                const isScrubbing = timelineJump > 0.5;
+                const isScrubbing = timelineJump > 0.1; // More sensitive scrubbing detection
 
-                if (!isPlayingGlobal) {
-                    // When paused, maintain exact sync for still preview.
+                if (!isPlaying) {
+                    // When paused, seek to exact frame
                     if (absDrift > 0.01) {
                         videoElement.currentTime = targetTime;
+                        // Force texture update after seek
+                        texture.needsUpdate = true;
                     }
-                    if (videoElement.playbackRate !== 1.0) {
-                        videoElement.playbackRate = 1.0;
-                    }
-                } else if (isScrubbing || absDrift > 2.0) {
-                    // While playing, only hard-seek on explicit scrubs or very large drift.
-                    // Frequent hard seeks can pin playback to the first frame.
+                    if (videoElement.playbackRate !== 1.0) videoElement.playbackRate = 1.0;
+                } else if (isScrubbing || absDrift > 0.5) { // Lower drift threshold for hard sync
                     videoElement.currentTime = targetTime;
                     videoElement.playbackRate = 1.0;
-
-                    // IMPORTANT: if playback was requested while the element is paused,
-                    // large-drift correction alone can keep the video stuck.
-                    if (videoElement.paused) {
-                        videoElement.play().catch(() => {
-                            // Ignore autoplay/runtime errors; timeline-seek fallback still updates frames.
-                        });
+                    texture.needsUpdate = true;
+                    if (videoElement.paused && videoElement.readyState >= 3) {
+                        videoElement.play().catch(() => { });
                     }
-                } else if (isPlayingGlobal && videoElement.paused) {
-                    // If playback got stuck/blocked, keep frame progression in sync
-                    // by seeking to timeline time and retrying play.
+                } else if (isPlaying && videoElement.paused) {
                     if (absDrift > 0.01) {
                         videoElement.currentTime = targetTime;
+                        texture.needsUpdate = true;
                     }
-                    videoElement.play().catch(() => {
-                        // Ignore autoplay/runtime errors; timeline-seek fallback still updates frames.
-                    });
-                } else if (isPlayingGlobal && absDrift > 0.03) {
-                    // Minor drift (> 30ms): Adjust playback rate to catch up smoothly
-                    // This prevents the "stutter" or "stuck" feel caused by frequent seeking
-                    if (drift > 0) {
-                        // Video is ahead, slow down slightly
-                        videoElement.playbackRate = 0.95;
-                    } else {
-                        // Video is behind, speed up slightly
-                        videoElement.playbackRate = 1.05;
+                    if (videoElement.readyState >= 3) { // HAVE_FUTURE_DATA
+                        videoElement.play().catch(err => {
+                            if (err.name !== "AbortError") {
+                                console.warn("⚠ Background play failed:", mediaAsset?.name, err);
+                            }
+                        });
                     }
+                } else if (isPlaying && absDrift > 0.03) {
+                    videoElement.playbackRate = drift > 0 ? 0.95 : 1.05;
                 } else {
-                    // In sync: Reset playback rate to normal
-                    if (videoElement.playbackRate !== 1.0) {
-                        videoElement.playbackRate = 1.0;
-                    }
+                    if (videoElement.playbackRate !== 1.0) videoElement.playbackRate = 1.0;
                 }
             }
             lastTimelineTimeRef.current = currentTime;
@@ -884,6 +1200,11 @@ export function Surface({ surface }: SurfaceProps) {
             if (surface.visible) {
                 if (groupRef.current.visible !== isInTimeRange) {
                     groupRef.current.visible = isInTimeRange;
+                    if (!isInTimeRange) {
+                        console.log(`[Surface ${surface.name}] Hidden: Current time (${currentTime.toFixed(2)}s) is outside range [${surface.startTime}s - ${endTime}s]`);
+                    } else {
+                        console.log(`[Surface ${surface.name}] Visible: Time reached range`);
+                    }
                 }
             } else {
                 if (groupRef.current.visible) {
@@ -959,6 +1280,15 @@ export function Surface({ surface }: SurfaceProps) {
         if (shaderMaterial) {
             // Efficiently update uniforms without recompiling shader
             const uniforms = shaderMaterial.uniforms;
+
+            // FORCED TEXTURE UPDATE: Some browser/Three combinations need this 
+            // especially when switching between local and group videos
+            if (uniforms.uTexture && texture) {
+                if (uniforms.uTexture.value !== texture) {
+                    console.log("↺ Swapping shader texture for:", surface.id, mediaAsset?.name);
+                    uniforms.uTexture.value = texture;
+                }
+            }
 
             // Allow for optimized updates by modifying uniform values directly
             if (uniforms.uTextureMatrix) uniforms.uTextureMatrix.value.copy(textureMatrix);

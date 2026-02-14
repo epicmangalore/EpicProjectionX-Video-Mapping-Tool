@@ -5,16 +5,22 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electron', {
     // Menu actions
     onMenuAction: (callback) => {
-        const handlers = {
-            'menu-new-project': () => callback('new-project'),
-            'menu-open-project': () => callback('open-project'),
-            'menu-save-project': () => callback('save-project'),
-            'menu-export': () => callback('export'),
-        };
+        const h1 = () => callback('new-project');
+        const h2 = () => callback('open-project');
+        const h3 = () => callback('save-project');
+        const h4 = () => callback('export');
 
-        Object.entries(handlers).forEach(([channel, handler]) => {
-            ipcRenderer.on(channel, handler);
-        });
+        ipcRenderer.on('menu-new-project', h1);
+        ipcRenderer.on('menu-open-project', h2);
+        ipcRenderer.on('menu-save-project', h3);
+        ipcRenderer.on('menu-export', h4);
+
+        return () => {
+            ipcRenderer.removeListener('menu-new-project', h1);
+            ipcRenderer.removeListener('menu-open-project', h2);
+            ipcRenderer.removeListener('menu-save-project', h3);
+            ipcRenderer.removeListener('menu-export', h4);
+        };
     },
 
     // Platform info
@@ -26,4 +32,8 @@ contextBridge.exposeInMainWorld('electron', {
         chrome: process.versions.chrome,
         electron: process.versions.electron,
     },
+
+    // Output window control
+    openOutputWindow: () => ipcRenderer.send('open-output-window'),
+    closeOutputWindow: () => ipcRenderer.send('close-output-window'),
 });

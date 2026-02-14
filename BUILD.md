@@ -1,4 +1,4 @@
-# Building ProjectionX for macOS
+# Building ProjectX by EPIC for macOS
 
 ## Prerequisites
 
@@ -43,9 +43,9 @@ This will:
 
 ### 3. Find your app:
 The built app will be in:
-- **DMG Installer**: `dist/ProjectionX-0.1.0.dmg`
-- **App Bundle**: `dist/mac/ProjectionX.app`
-- **ZIP Archive**: `dist/ProjectionX-0.1.0-mac.zip`
+- **DMG Installer**: `dist/ProjectX by EPIC-0.1.0.dmg`
+- **App Bundle**: `dist/mac/ProjectX by EPIC.app`
+- **ZIP Archive**: `dist/ProjectX by EPIC-0.1.0-mac.zip`
 
 ## Building for All Platforms
 
@@ -100,7 +100,7 @@ The output window opens in fullscreen on a secondary display (if available).
 ### "App is damaged and can't be opened" on macOS
 This happens with unsigned apps. To bypass Gatekeeper:
 ```bash
-xattr -cr /path/to/ProjectionX.app
+xattr -cr /path/to/ProjectX by EPIC.app
 ```
 
 ### Build fails on export

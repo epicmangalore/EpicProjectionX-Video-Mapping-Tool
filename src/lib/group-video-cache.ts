@@ -44,8 +44,27 @@ export function acquireGroupVideo(
     video.crossOrigin = "anonymous";
     video.loop = true;
     video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
+    video.autoplay = false;
     video.preload = "auto";
+    video.style.position = "absolute";
+    video.style.top = "0";
+    video.style.left = "0";
+    video.style.width = "100%";
+    video.style.height = "100%";
+    video.style.objectFit = "cover";
+
+    // CRITICAL: Append to global container to ensure it plays correctly
+    if (typeof window !== "undefined") {
+        const container = (window as any).globalVideoContainer;
+        if (container) {
+            container.appendChild(video);
+            console.log("✓ Group video appended to global container:", groupId);
+        } else {
+            console.warn("⚠ Global video container not found for group video!");
+        }
+    }
 
     cache.set(groupId, { video, refCount: 1, url });
     return video;

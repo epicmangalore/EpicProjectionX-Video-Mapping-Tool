@@ -1,8 +1,15 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const isDev = process.env.NODE_ENV === 'development';
 
 let mainWindow;
+let outputWindow;
+
+// Hardware acceleration is key for projection mapping
+app.commandLine.appendSwitch('ignore-gpu-blacklist');
+app.commandLine.appendSwitch('disable-http-cache');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -15,6 +22,7 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js'),
             webSecurity: true,
             allowRunningInsecureContent: false,
         },
@@ -22,8 +30,9 @@ function createWindow() {
     });
 
     // Load the app
+    const port = process.env.PORT || 3000;
     const startURL = isDev
-        ? 'http://localhost:3000'
+        ? `http://localhost:${port}`
         : `file://${path.join(__dirname, '../out/index.html')}`;
 
     mainWindow.loadURL(startURL);
@@ -38,10 +47,15 @@ function createWindow() {
         mainWindow.webContents.openDevTools();
     }
 
+    mainWindow.on('closed', () => {
+        mainWindow = null;
+        if (outputWindow) outputWindow.close();
+    });
+
     // Create application menu
     const template = [
         {
-            label: 'ProjectionX',
+            label: 'ProjectX by EPIC',
             submenu: [
                 { role: 'about' },
                 { type: 'separator' },
@@ -151,7 +165,12 @@ function createWindow() {
 }
 
 function createOutputWindow() {
-    const outputWindow = new BrowserWindow({
+    if (outputWindow) {
+        outputWindow.focus();
+        return;
+    }
+
+    outputWindow = new BrowserWindow({
         width: 1920,
         height: 1080,
         backgroundColor: '#000000',
@@ -159,6 +178,7 @@ function createOutputWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js'),
         },
     });
 
@@ -168,7 +188,20 @@ function createOutputWindow() {
 
     outputWindow.loadURL(outputURL);
     outputWindow.setFullScreen(true);
+
+    outputWindow.on('closed', () => {
+        outputWindow = null;
+    });
 }
+
+// IPC Handlers
+ipcMain.on('open-output-window', () => {
+    createOutputWindow();
+});
+
+ipcMain.on('close-output-window', () => {
+    if (outputWindow) outputWindow.close();
+});
 
 // App lifecycle
 app.whenReady().then(() => {
@@ -179,6 +212,11 @@ app.whenReady().then(() => {
             createWindow();
         }
     });
+
+    // Check for updates
+    if (!isDev) {
+        autoUpdater.checkForUpdatesAndNotify();
+    }
 });
 
 app.on('window-all-closed', () => {

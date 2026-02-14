@@ -1,6 +1,6 @@
 {
-    "name": "ProjectionX",
-    "short_name": "ProjectionX",
+    "name": "ProjectX by EPIC",
+    "short_name": "ProjectX",
     "description": "Web-based projection mapping tool for creative professionals",
     "start_url": "/",
     "display": "standalone",

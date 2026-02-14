@@ -9,7 +9,7 @@ import { ShaderEffectControls } from "./ShaderEffectControls";
 import { AudioMappingPanel } from "./AudioMappingPanel";
 import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
 import { EdgeBlendingControls } from "./EdgeBlendingControls";
-import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus, Wand2, Power } from "lucide-react";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus, Wand2, Power, Palette } from "lucide-react";
 import { toast } from "@/store/toast-store";
 import { MasterControls } from "./MasterControls";
 import { RotaryKnob } from "@/components/ui/RotaryKnob";
@@ -52,8 +52,10 @@ export function SurfaceProperties() {
         try {
             const mediaId = await processFile(file, addMediaAsset);
             updateSurface(selectedSurface.id, { mediaId });
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to import media:", error);
+            const errorMessage = error.message || 'Failed to import file';
+            toast.error(errorMessage, 8000);
         } finally {
             setIsImporting(false);
             if (e.target) e.target.value = "";
@@ -517,25 +519,28 @@ export function SurfaceProperties() {
                     </div>
 
                     {/* RGB Filters */}
-                    <div className="space-y-3 pt-2 border-t border-white/5">
-                        <div className="flex items-center justify-between">
-                            <label className="text-[9px] text-zinc-600 font-bold uppercase">Color Filters</label>
+                    <div className="space-y-3 pt-2 border-t border-white/5 bg-zinc-900/20 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <Palette className="w-3 h-3 text-zinc-500" />
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Color Tint</label>
+                            </div>
                             <button
                                 onClick={() => updateSurfaceEffect(selectedSurface!.id, { colorTint: { r: 1, g: 1, b: 1 } })}
-                                className="text-[8px] text-zinc-500 hover:text-zinc-300 uppercase tracking-tighter"
+                                className="text-[8px] text-zinc-500 hover:text-white uppercase font-bold tracking-tighter bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5 transition-colors"
                             >
                                 Reset
                             </button>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             {[
-                                { label: "Red", key: "r", color: "bg-red-500" },
-                                { label: "Green", key: "g", color: "bg-green-500" },
-                                { label: "Blue", key: "b", color: "bg-blue-500" },
+                                { label: "R", key: "r", color: "bg-red-500", accent: "accent-red-500" },
+                                { label: "G", key: "g", color: "bg-green-500", accent: "accent-green-500" },
+                                { label: "B", key: "b", color: "bg-blue-500", accent: "accent-blue-500" },
                             ].map((channel) => (
                                 <div key={channel.key} className="flex items-center gap-3">
-                                    <span className="text-[9px] text-zinc-500 w-8">{channel.label}</span>
-                                    <div className="flex-1 h-1 bg-zinc-900 rounded-full relative group">
+                                    <span className={`text-[10px] font-bold w-4 text-center rounded ${channel.color} text-black`}>{channel.label}</span>
+                                    <div className="flex-1 h-1.5 bg-zinc-900 rounded-full relative group">
                                         <input
                                             type="range"
                                             min="0"
@@ -548,15 +553,15 @@ export function SurfaceProperties() {
                                                     [channel.key]: parseFloat(e.target.value)
                                                 }
                                             })}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 ${channel.accent}`}
                                         />
                                         <div
-                                            className={`h-full rounded-full ${channel.color} transition-all`}
+                                            className={`h-full rounded-full ${channel.color} shadow-[0_0_8px_rgba(0,0,0,0.5)] transition-all`}
                                             style={{ width: `${(effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100}%` }}
                                         />
                                     </div>
-                                    <span className="text-[9px] text-zinc-600 font-mono w-6 text-right">
-                                        {Math.round((effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100)}
+                                    <span className="text-[10px] text-zinc-400 font-mono w-7 text-right">
+                                        {Math.round((effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100)}%
                                     </span>
                                 </div>
                             ))}

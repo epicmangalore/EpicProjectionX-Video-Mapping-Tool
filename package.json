@@ -1,6 +1,7 @@
 {
-  "name": "projectionx",
-  "version": "0.1.0",
+  "name": "projectx-by-epic",
+  "version": "0.1.1",
+  "description": "Professional projection mapping software for everyone.",
   "main": "electron/main.js",
   "private": true,
   "scripts": {
@@ -11,6 +12,8 @@
     "electron:dev": "NODE_ENV=development electron electron/main.js",
     "build:electron": "next build && node scripts/fix-paths.js",
     "package": "npm run build:electron && electron-builder build --mac --win --publish never",
+    "package:mac": "npm run build:electron && electron-builder build --mac --publish never",
+    "package:win": "npm run build:electron && electron-builder build --win --publish never",
     "package:all": "npm run build:electron && electron-builder build --mac --win --linux --publish never"
   },
   "dependencies": {
@@ -28,6 +31,7 @@
     "clsx": "^2.1.0",
     "dexie": "^3.2.4",
     "dexie-react-hooks": "^1.1.7",
+    "electron-updater": "^6.7.3",
     "file-saver": "^2.0.5",
     "gsap": "^3.12.5",
     "jszip": "^3.10.1",
@@ -53,7 +57,7 @@
     "@types/three": "^0.160.0",
     "@types/webmidi": "^2.1.0",
     "autoprefixer": "^10.0.1",
-    "electron": "^40.4.0",
+    "electron": "^31.0.0",
     "electron-builder": "^26.7.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.18",

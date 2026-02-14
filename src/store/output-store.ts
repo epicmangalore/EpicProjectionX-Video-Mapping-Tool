@@ -43,6 +43,13 @@ export const useOutputStore = create<OutputState>((set, get) => ({
 
     setIsOutput: (isOutput) => set({ isOutput }),
     openOutputWindow: () => {
+        // Use Electron IPC if available
+        if (typeof window !== 'undefined' && (window as any).electron?.openOutputWindow) {
+            (window as any).electron.openOutputWindow();
+            set({ outputWindowOpen: true });
+            return;
+        }
+
         const { resolution } = get();
         const outputWindow = window.open(
             "/output",
@@ -56,6 +63,13 @@ export const useOutputStore = create<OutputState>((set, get) => ({
     },
 
     closeOutputWindow: () => {
+        // Use Electron IPC if available
+        if (typeof window !== 'undefined' && (window as any).electron?.closeOutputWindow) {
+            (window as any).electron.closeOutputWindow();
+            set({ outputWindowOpen: false });
+            return;
+        }
+
         const { outputWindowRef } = get();
         if (outputWindowRef && !outputWindowRef.closed) {
             outputWindowRef.close();

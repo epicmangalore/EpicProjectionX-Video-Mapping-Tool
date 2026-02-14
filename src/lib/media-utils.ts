@@ -121,37 +121,34 @@ export const processFile = async (
                     height: img.naturalHeight,
                 });
 
-                // Only store in DB if it's a NEW asset
-                if (finalId === mediaId) {
-                    try {
-                        await db.files.add({
-                            id: mediaId,
-                            blob: file,
-                            timestamp: Date.now()
-                        });
-                    } catch (error: any) {
-                        console.error("Failed to store file in DB:", error);
+                // Always ensure blob is in DB, even if asset metadata was a duplicate.
+                // Use .put() instead of .add() to refresh/repair the blob.
+                try {
+                    await db.files.put({
+                        id: finalId,
+                        blob: file,
+                        timestamp: Date.now()
+                    });
 
-                        // Handle QuotaExceededError specifically
-                        if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
-                            alert(
-                                'Storage quota exceeded!\n\n' +
-                                'Your browser has run out of storage space for media files.\n\n' +
-                                'To fix this:\n' +
-                                '1. Open DevTools (F12)\n' +
-                                '2. Go to Application > Storage\n' +
-                                '3. Click "Clear site data"\n\n' +
-                                'Or run this in console:\n' +
-                                'await db.files.clear()'
-                            );
-                            throw new Error('Storage quota exceeded');
-                        }
-                        throw error;
+                    // If it was a duplicate, update its URL in the store to the new valid blob URL
+                    if (finalId !== mediaId) {
+                        const { useProjectStore } = await import("@/store/project-store");
+                        useProjectStore.getState().updateMediaAsset(finalId, { url });
                     }
-                } else {
-                    // Revoke the temporary URL if we're using an existing asset
-                    URL.revokeObjectURL(url);
+                } catch (error: any) {
+                    console.error("Failed to store file in DB:", error);
+                    if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
+                        const { useToastStore } = await import("@/store/toast-store");
+                        useToastStore.getState().addToast(
+                            "Storage quota exceeded! Please clear site data in your browser or delete some assets.",
+                            "error",
+                            10000
+                        );
+                        throw new Error('Storage quota exceeded');
+                    }
+                    throw error;
                 }
+
                 resolve(finalId);
             };
             img.onerror = () => reject(new Error("Image load failed"));
@@ -160,7 +157,7 @@ export const processFile = async (
             const video = document.createElement("video");
 
             // Timeout to prevent hanging on large/corrupt files
-            const metadataPromise = new Promise<{ width: number, height: number, duration: number }>((resolveMetadata) => {
+            const metadataPromise = new Promise<{ width: number, height: number, duration: number }>((resolveMetadata, rejectMetadata) => {
                 let resolved = false;
 
                 const safeResolve = (data: { width: number, height: number, duration: number }) => {
@@ -170,71 +167,107 @@ export const processFile = async (
                     }
                 };
 
+                const safeReject = (error: Error) => {
+                    if (!resolved) {
+                        resolved = true;
+                        rejectMetadata(error);
+                    }
+                };
+
                 const timeoutId = setTimeout(() => {
-                    console.warn(`Video metadata detection timed out for ${file.name}, using defaults.`);
-                    safeResolve({ width: 1920, height: 1080, duration: 10 });
-                }, 2000); // 2 second timeout
+                    console.warn(`Video metadata detection timed out for ${file.name}`);
+                    safeReject(new Error(`Video codec validation timed out. This file may use an unsupported codec.`));
+                }, 3000); // 3 second timeout
 
                 video.onloadedmetadata = () => {
                     clearTimeout(timeoutId);
-                    safeResolve({
-                        width: video.videoWidth || 1920,
-                        height: video.videoHeight || 1080,
-                        duration: video.duration || 10
-                    });
+                    // Check if video dimensions are valid (codec is supported)
+                    if (video.videoWidth > 0 && video.videoHeight > 0) {
+                        safeResolve({
+                            width: video.videoWidth,
+                            height: video.videoHeight,
+                            duration: video.duration || 10
+                        });
+                    } else {
+                        safeReject(new Error(`Video codec not supported. Please convert to H.264/MP4 format.`));
+                    }
                 };
 
-                video.onerror = () => {
+                video.onerror = (e: Event | string) => {
                     clearTimeout(timeoutId);
-                    console.warn(`Video metadata load failed for ${file.name}, using defaults.`);
-                    safeResolve({ width: 1920, height: 1080, duration: 10 });
+                    const mediaError = e instanceof Event ? (e.target as HTMLVideoElement)?.error : null;
+                    let errorMsg = `Video codec not supported`;
+                    
+                    if (mediaError) {
+                        switch (mediaError.code) {
+                            case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+                                errorMsg = `Video codec not supported. This file likely uses ProRes, DNxHD, or another professional codec. Please convert to H.264/MP4 format using FFmpeg, HandBrake, or Adobe Media Encoder.`;
+                                break;
+                            case 3: // MEDIA_ERR_DECODE
+                                errorMsg = `Video decode error. The codec may not be supported by your browser.`;
+                                break;
+                            case 2: // MEDIA_ERR_NETWORK
+                                errorMsg = `Network error loading video.`;
+                                break;
+                            case 1: // MEDIA_ERR_ABORTED
+                                errorMsg = `Video loading was aborted.`;
+                                break;
+                        }
+                    }
+                    
+                    console.error(`Video load error for ${file.name}:`, mediaError);
+                    safeReject(new Error(errorMsg));
                 };
 
                 video.src = url;
             });
 
-            metadataPromise.then(async (metadata) => {
-                const finalId = addMediaAsset({
-                    ...assetData,
-                    type: "video",
-                    width: metadata.width,
-                    height: metadata.height,
-                    duration: metadata.duration,
-                });
+            metadataPromise
+                .then(async (metadata) => {
+                    const finalId = addMediaAsset({
+                        ...assetData,
+                        type: "video",
+                        width: metadata.width,
+                        height: metadata.height,
+                        duration: metadata.duration,
+                    });
 
-                // Only store in DB if it's a NEW asset
-                if (finalId === mediaId) {
+                    // Always ensure blob is in DB, even if asset metadata was a duplicate.
+                    // Use .put() instead of .add() to refresh/repair the blob.
                     try {
-                        await db.files.add({
-                            id: mediaId,
+                        await db.files.put({
+                            id: finalId,
                             blob: file,
                             timestamp: Date.now()
                         });
+
+                        // If it was a duplicate, update its URL in the store to the new valid blob URL
+                        if (finalId !== mediaId) {
+                            const { useProjectStore } = await import("@/store/project-store");
+                            useProjectStore.getState().updateMediaAsset(finalId, { url });
+                        }
                     } catch (error: any) {
                         console.error("Failed to store file in DB:", error);
-
-                        // Handle QuotaExceededError specifically
                         if (error.name === 'QuotaExceededError' || error.message?.includes('quota')) {
-                            alert(
-                                'Storage quota exceeded!\n\n' +
-                                'Your browser has run out of storage space for media files.\n\n' +
-                                'To fix this:\n' +
-                                '1. Open DevTools (F12)\n' +
-                                '2. Go to Application > Storage\n' +
-                                '3. Click "Clear site data"\n\n' +
-                                'Or run this in console:\n' +
-                                'await db.files.clear()'
+                            const { useToastStore } = await import("@/store/toast-store");
+                            useToastStore.getState().addToast(
+                                "Storage quota exceeded! Your browser has run out of space. Try clearing site data or deleting old assets.",
+                                "error",
+                                10000
                             );
                             throw new Error('Storage quota exceeded');
                         }
                         throw error;
                     }
-                } else {
+
+                    video.remove();
+                    resolve(finalId);
+                })
+                .catch((error) => {
+                    video.remove();
                     URL.revokeObjectURL(url);
-                }
-                video.remove();
-                resolve(finalId);
-            });
+                    reject(error);
+                });
         }
     });
 };

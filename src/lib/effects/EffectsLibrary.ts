@@ -42,7 +42,7 @@ class EffectsLibrary {
     private manifest: Manifest | null = null;
     private shaderCache: Map<string, string> = new Map();
     private loading: Promise<Manifest> | null = null;
-    private basePath = "effects-library";
+    private basePath = "/effects-library";
 
     /** Load the manifest. Cached after first call. */
     async loadManifest(): Promise<Manifest> {

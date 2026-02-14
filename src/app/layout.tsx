@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-    title: "ProjectionX - Web-Based Projection Mapping",
+    title: "ProjectX by EPIC - Web-Based Projection Mapping",
     description: "Full-featured projection mapping application as a Progressive Web App",
     manifest: "/manifest.json",
 };

@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { projectManager } from "@/lib/project-manager";
 import { saveProjectFile, loadProjectFile } from "@/lib/project-file-manager";
 import { useProjectStore } from "@/store/project-store";
+import { useModalStore } from "@/store/modal-store";
+import { toast } from "@/store/toast-store";
 import {
     FileText,
     FolderOpen,
@@ -19,19 +21,33 @@ export function ProjectMenu() {
     const projectName = useProjectStore((state) => state.projectSettings.name);
     const updateProjectSettings = useProjectStore((state) => state.updateProjectSettings);
     const projectxInputRef = useRef<HTMLInputElement>(null);
+    const { confirm, prompt } = useModalStore();
 
     const handleNew = async () => {
-        if (confirm("Create a new project? Unsaved changes will be lost.")) {
+        const ok = await confirm({
+            title: "New Project",
+            message: "Create a new project? Unsaved changes will be lost.",
+            confirmLabel: "Create New",
+            cancelLabel: "Keep Current"
+        });
+        if (ok) {
             await projectManager.createNewProject();
             setIsOpen(false);
         }
     };
 
     const handleSaveAs = async () => {
-        const name = prompt("Enter project name:", projectName);
+        const name = await prompt({
+            title: "Save Project As",
+            message: "Enter project name:",
+            defaultValue: projectName,
+            confirmLabel: "Save",
+        });
+
         if (name) {
             updateProjectSettings({ name });
             await projectManager.saveProject(name);
+            toast.success(`Project saved as ${name}`);
             setIsOpen(false);
         }
     };
@@ -43,9 +59,10 @@ export function ProjectMenu() {
         try {
             const name = projectName || "Untitled Project";
             await saveProjectFile(name);
+            toast.success("Project exported successfully");
         } catch (err) {
             console.error("Failed to save .projectx:", err);
-            alert("Failed to save project file. Check console for details.");
+            toast.error("Failed to save project file.");
         } finally {
             setIsSaving(false);
             setIsOpen(false);
@@ -57,9 +74,10 @@ export function ProjectMenu() {
         try {
             const name = projectName || "Untitled Project";
             await saveProjectFile(name, { includeAssets: false });
+            toast.success("Project structure exported");
         } catch (err) {
             console.error("Failed to save .projectx:", err);
-            alert("Failed to save project file. Check console for details.");
+            toast.error("Failed to save project structure.");
         } finally {
             setIsSaving(false);
             setIsOpen(false);
@@ -67,6 +85,10 @@ export function ProjectMenu() {
     };
 
     const handleOpenProjectX = () => {
+        handleOpenInternal();
+    };
+
+    const handleOpenInternal = () => {
         projectxInputRef.current?.click();
     };
 
@@ -76,10 +98,11 @@ export function ProjectMenu() {
 
         try {
             await loadProjectFile(file);
+            toast.success("Project loaded successfully");
             setIsOpen(false);
         } catch (err: unknown) {
             console.error("Failed to load .projectx:", err);
-            alert(`Failed to load project: ${(err as Error).message}`);
+            toast.error(`Load failed: ${(err as Error).message}`);
         }
 
         // Reset input so the same file can be selected again

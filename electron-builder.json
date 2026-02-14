@@ -1,6 +1,6 @@
 {
-  "appId": "com.projectionx.app",
-  "productName": "ProjectionX",
+  "appId": "com.projectx-by-epic.app",
+  "productName": "ProjectX by EPIC",
   "copyright": "Copyright © 2024",
   "directories": {
     "output": "dist",
@@ -10,6 +10,13 @@
     "out/**/*",
     "electron/**/*",
     "package.json"
+  ],
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "epicmangalore",
+      "repo": "ProjectionX"
+    }
   ],
   "mac": {
     "category": "public.app-category.graphics-design",
@@ -30,7 +37,7 @@
       }
     ],
     "icon": "build/icon.png",
-    "hardenedRuntime": true,
+    "hardenedRuntime": false,
     "gatekeeperAssess": false,
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.plist"

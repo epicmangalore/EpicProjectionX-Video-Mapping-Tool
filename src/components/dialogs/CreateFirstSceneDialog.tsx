@@ -22,7 +22,7 @@ export function CreateFirstSceneDialog() {
                         <Plus className="w-6 h-6 text-electric-cyan" />
                     </div>
                     <h2 className="text-xl font-bold text-white">
-                        Welcome to ProjectionX
+                        Welcome to ProjectX by EPIC
                     </h2>
                 </div>
                 <p className="text-zinc-400 text-sm mb-6 leading-relaxed">

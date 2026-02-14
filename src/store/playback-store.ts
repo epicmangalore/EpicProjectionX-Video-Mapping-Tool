@@ -29,7 +29,7 @@ export const usePlaybackStore = create<PlaybackStore>((set, get) => ({
     // Initial state
     isPlaying: false,
     currentTime: 0,
-    duration: 60, // Default 60 seconds
+    duration: 300, // Default 300 seconds (5 minutes)
     loop: false,
     bpm: 120,
     bpmSyncEnabled: false,

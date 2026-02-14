@@ -2,8 +2,10 @@
 
 import { useProjectStore } from "@/store/project-store";
 import { useTimelineStore } from "@/store/timeline-store";
+import { useModalStore } from "@/store/modal-store";
 import { Plus, Play, Pause, Trash2, Edit2, Repeat } from "lucide-react";
 import { useState } from "react";
+import { useIsClient } from "@/hooks/useIsClient";
 import type { Scene } from "@/store/project-store";
 
 export function SceneList() {
@@ -13,6 +15,12 @@ export function SceneList() {
     const updateScene = useProjectStore((state) => state.updateScene);
     const deleteScene = useProjectStore((state) => state.deleteScene);
     const triggerScene = useProjectStore((state) => state.triggerScene);
+    const switchToScene = useProjectStore((state) => state.switchToScene);
+    const projectSettings = useProjectStore((state) => state.projectSettings);
+    const setPlayingSceneId = useProjectStore((state) => state.setPlayingSceneId);
+    const confirm = useModalStore((state) => state.confirm);
+    const isClient = useIsClient();
+    const hasHydrated = useProjectStore((state) => state._hasHydrated);
 
     // Timeline playback controls
     const isPlaying = useTimelineStore((state) => state.isPlaying);
@@ -55,6 +63,16 @@ export function SceneList() {
         setEditName("");
     };
 
+    if (!isClient || !hasHydrated) {
+        return (
+            <div className="w-full h-full flex flex-col bg-zinc-950 animate-pulse">
+                <div className="px-4 py-8 text-center text-zinc-600 text-xs">
+                    Hydrating Scenes...
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full h-full flex flex-col bg-zinc-950">
             {/* Header */}
@@ -90,14 +108,15 @@ export function SceneList() {
                     scenes.map((scene) => (
                         <div
                             key={scene.id}
-                            onClick={() => triggerScene(scene.id)}
-                            className={`rounded-md transition-colors cursor-pointer ${activeSceneId === scene.id
+                            className={`rounded-md transition-colors group ${projectSettings.playingSceneId === scene.id
                                 ? "bg-electric-cyan/10 border border-electric-cyan/30"
-                                : "bg-zinc-900/50 border border-white/5 hover:border-white/10"
+                                : activeSceneId === scene.id
+                                    ? "bg-zinc-800/80 border border-white/20"
+                                    : "bg-zinc-900/50 border border-white/5 hover:border-white/10"
                                 }`}
                         >
                             {/* Scene Header */}
-                            <div className="flex items-center gap-2 px-3 py-2">
+                            <div className="flex items-center gap-2 px-3 py-2 cursor-pointer" onClick={() => switchToScene(scene.id)}>
                                 {scene.hotkey && (
                                     <div className="w-5 h-5 rounded bg-zinc-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-zinc-400 shrink-0">
                                         {scene.hotkey}
@@ -118,48 +137,74 @@ export function SceneList() {
                                         autoFocus
                                     />
                                 ) : (
-                                    <span className="flex-1 text-xs font-medium truncate text-zinc-300">
+                                    <span className={`flex-1 text-xs font-bold truncate ${activeSceneId === scene.id ? "text-white" : "text-zinc-500"}`}>
                                         {scene.name}
+                                        {activeSceneId === scene.id && <span className="ml-2 text-[8px] text-electric-cyan uppercase tracking-widest font-bold">(ACTIVE)</span>}
                                     </span>
                                 )}
 
-                                <button
-                                    onClick={() => handleEditStart(scene)}
-                                    className="p-0.5 text-zinc-600 hover:text-zinc-300 transition-colors"
-                                    title="Edit name"
-                                >
-                                    <Edit2 className="w-3 h-3" />
-                                </button>
-                                <button
-                                    onClick={() => deleteScene(scene.id)}
-                                    className="p-0.5 text-zinc-600 hover:text-red-400 transition-colors"
-                                    title="Delete scene"
-                                >
-                                    <Trash2 className="w-3 h-3" />
-                                </button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditStart(scene);
+                                        }}
+                                        className="p-1 text-zinc-600 hover:text-zinc-300 transition-colors"
+                                        title="Edit name"
+                                    >
+                                        <Edit2 className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const ok = await confirm({
+                                                title: "Delete Scene",
+                                                message: `Are you sure you want to delete "${scene.name}"? This action cannot be undone.`,
+                                                confirmLabel: "Delete",
+                                                cancelLabel: "Cancel"
+                                            });
+                                            if (ok) {
+                                                deleteScene(scene.id);
+                                            }
+                                        }}
+                                        className="p-1 text-zinc-600 hover:text-red-400 transition-colors"
+                                        title="Delete scene"
+                                    >
+                                        <Trash2 className="w-3 h-3" />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Scene Playback Controls */}
-                            <div className="flex items-center gap-1.5 px-3 pb-2">
+                            <div className="flex items-center gap-1.5 px-3 pb-2 border-t border-white/5 pt-1.5 mt-0.5">
                                 <button
                                     onClick={async () => {
-                                        if (activeSceneId === scene.id && isPlaying) {
+                                        if (projectSettings.playingSceneId === scene.id) {
+                                            // Stop: pause the timeline, clear playing scene
                                             pause();
+                                            setPlayingSceneId(null);
+                                            updateScene(scene.id, { isPlaying: false });
                                         } else {
+                                            // Go Live: triggerScene already starts the timeline
                                             await triggerScene(scene.id);
-                                            play();
                                         }
                                     }}
-                                    className={`flex items-center justify-center w-7 h-7 rounded transition-all active:scale-90 ${activeSceneId === scene.id && isPlaying
+                                    className={`flex items-center justify-center gap-2 px-3 h-7 rounded text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 ${projectSettings.playingSceneId === scene.id
                                         ? "bg-electric-cyan text-zinc-950"
                                         : "bg-zinc-800 text-zinc-400 hover:text-white border border-white/5"
                                         }`}
-                                    title={activeSceneId === scene.id && isPlaying ? "Pause" : "Play"}
+                                    title={projectSettings.playingSceneId === scene.id ? "Stop live" : "Go live"}
                                 >
-                                    {activeSceneId === scene.id && isPlaying ? (
-                                        <Pause className="w-3.5 h-3.5 fill-current" />
+                                    {projectSettings.playingSceneId === scene.id ? (
+                                        <>
+                                            <Pause className="w-3 h-3 fill-current" />
+                                            Live
+                                        </>
                                     ) : (
-                                        <Play className="w-3.5 h-3.5 fill-current translate-x-0.5" />
+                                        <>
+                                            <Play className="w-3 h-3 fill-current translate-x-0.5" />
+                                            Go Live
+                                        </>
                                     )}
                                 </button>
                                 <button
@@ -174,7 +219,7 @@ export function SceneList() {
                                 </button>
                                 <div className="flex-1" />
                                 <span className="text-[9px] text-zinc-600">
-                                    Fade: {scene.transitionDuration}s
+                                    {scene.transitionDuration}s Fade
                                 </span>
                             </div>
                         </div>

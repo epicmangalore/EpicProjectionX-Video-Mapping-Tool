@@ -10,6 +10,7 @@ import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import { useUIStore } from "@/store/ui-store";
 import { useProjectStore } from "@/store/project-store";
 import { useOutputStore } from "@/store/output-store";
+import { useModalStore } from "@/store/modal-store";
 import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import { useSync } from "@/hooks/useSync";
@@ -24,10 +25,16 @@ import { LightBeamButton } from "@/components/ui/LightBeamButton";
 import { saveProjectFile } from "@/lib/project-file-manager";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ProjectHydration } from "@/components/layout/ProjectHydration";
-
+import { VideoContainer } from "@/components/layout/VideoContainer";
+import { GlobalModal } from "@/components/ui/GlobalModal";
+import { ToastContainer } from "@/components/ui/Toast";
+import { WittyUpdateUI } from "@/components/ui/WittyUpdateUI";
+import { useIsClient } from "@/hooks/useIsClient";
+import { projectManager } from "@/lib/project-manager";
 import { WarpControlBar } from "@/components/canvas/WarpControlBar";
 
 export default function Home() {
+    const isClient = useIsClient();
     const setToolMode = useUIStore((state) => state.setToolMode);
     const toolMode = useUIStore((state) => state.toolMode);
     const penSubMode = useUIStore((state) => state.penSubMode);
@@ -66,6 +73,7 @@ export default function Home() {
     const duplicateSurfaces = useProjectStore((state) => state.duplicateSurfaces);
     const bringToFront = useProjectStore((state) => state.bringToFront);
     const sendToBack = useProjectStore((state) => state.sendToBack);
+    const projectName = useProjectStore((state) => state.projectSettings.name);
     // const groupSurfaces = useProjectStore((state) => state.groupSurfaces); // TODO: Implement grouping
     // const ungroupSurfaces = useProjectStore((state) => state.ungroupSurfaces); // TODO: Implement ungrouping
 
@@ -183,13 +191,51 @@ export default function Home() {
         const isElectron = /Electron/.test(navigator.userAgent);
         const isMac = /Mac/.test(navigator.platform);
         setIsMacElectron(isElectron && isMac);
-    }, []);
+
+        // Listen for Electron Menu Actions
+        if (isElectron && (window as any).electron?.onMenuAction) {
+            const cleanup = (window as any).electron.onMenuAction((action: string) => {
+                console.log("ELECTRON_MENU_ACTION:", action);
+                const currentName = useProjectStore.getState().projectSettings.name;
+
+                switch (action) {
+                    case "new-project":
+                        useModalStore.getState().confirm({
+                            title: "New Project",
+                            message: "Create a new project? Unsaved changes will be lost.",
+                            confirmLabel: "Create New",
+                            cancelLabel: "Keep Current"
+                        }).then(ok => {
+                            if (ok) projectManager.createNewProject();
+                        });
+                        break;
+                    case "save-project":
+                        saveProjectFile(currentName || "Untitled Project");
+                        break;
+                    case "open-project":
+                        // Simulate click on the hidden input in ProjectMenu
+                        const fileInput = document.querySelector('input[accept=".projectx"]') as HTMLInputElement;
+                        fileInput?.click();
+                        break;
+                }
+            });
+            return cleanup;
+        }
+    }, []); // Only register once, internal logic uses getState()
 
     return (
         <TooltipProvider>
             <main className="h-screen w-screen overflow-hidden bg-zinc-950 flex flex-col text-zinc-100 font-sans">
+                <VideoContainer />
                 <ProjectHydration />
-                <OnboardingGuide />
+                {isClient && (
+                    <>
+                        <OnboardingGuide />
+                        <GlobalModal />
+                        <ToastContainer />
+                        <WittyUpdateUI />
+                    </>
+                )}
                 {/* Top Toolbar - Pro Minimalist */}
                 <header
                     className={`h-12 bg-zinc-900 border-b border-white/5 flex items-center gap-4 z-50 select-none ${isMacElectron ? "pl-20 pr-4" : "px-4"}`}
@@ -198,7 +244,7 @@ export default function Home() {
                     <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
                         <img
                             src="/editor-logo.png"
-                            alt="ProjectX"
+                            alt="ProjectX by EPIC"
                             className="h-8 w-auto pointer-events-none" // Adjust height to fit header
                         />
                     </div>
@@ -374,75 +420,77 @@ export default function Home() {
                 </header>
 
                 {/* Application Body */}
-                <div className="flex-1 flex overflow-hidden relative min-w-0">
-                    {/* Unified Left Sidebar */}
-                    <LeftSidebar />
+                {isClient && (
+                    <div className="flex-1 flex overflow-hidden relative min-w-0">
+                        {/* Unified Left Sidebar */}
+                        <LeftSidebar />
 
-                    {/* Main Workspace */}
-                    <div className="flex-1 flex flex-col relative min-w-0">
-                        <div className="flex-1 relative bg-zinc-900 overflow-hidden">
-                            {/* 3D Canvas */}
-                            {/* Centered canvas container with padding for "Artboard" feel */}
-                            <div className="absolute inset-4 bg-black border border-white/5 shadow-2xl rounded-sm overflow-hidden">
-                                <ProjectionCanvas />
-                                <WarpControlBar />
+                        {/* Main Workspace */}
+                        <div className="flex-1 flex flex-col relative min-w-0">
+                            <div className="flex-1 relative bg-zinc-900 overflow-hidden">
+                                {/* 3D Canvas */}
+                                {/* Centered canvas container with padding for "Artboard" feel */}
+                                <div className="absolute inset-4 bg-black border border-white/5 shadow-2xl rounded-sm overflow-hidden">
+                                    <ProjectionCanvas />
+                                    <WarpControlBar />
+                                </div>
+
+                                {/* Performance Monitor Overlay */}
+                                <PerformanceMonitor />
+
+                                {/* MIDI Panel Overlay */}
+                                {showMIDIPanel && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-64 z-50 animate-in slide-in-from-right-4 duration-300">
+                                        <MIDIMapper />
+                                    </div>
+                                )}
+
+                                {/* Canvas Settings Overlay */}
+                                {showSettings && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-72 z-50 animate-in slide-in-from-right-4 duration-300">
+                                        <CanvasSettings onClose={() => setShowSettings(false)} />
+                                    </div>
+                                )}
+
+                                {/* Effect Config Overlay */}
+                                {activeEffectConfig && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-80 z-[70] animate-in slide-in-from-right-4 duration-300">
+                                        <EffectConfigPanel />
+                                    </div>
+                                )}
+
+                                {/* Media Picker Overlay - Slides out from right panel */}
+                                {mediaPickerOpen && selectedSurface && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-96 z-[60] animate-in slide-in-from-right-4 duration-300">
+                                        <MediaPicker
+                                            currentMediaId={selectedSurface.mediaId}
+                                            onSelect={handleMediaSelect}
+                                            onClose={() => setMediaPickerOpen(false)}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Performance Monitor Overlay */}
-                            <PerformanceMonitor />
-
-                            {/* MIDI Panel Overlay */}
-                            {showMIDIPanel && (
-                                <div className="absolute top-4 right-4 bottom-4 w-64 z-50 animate-in slide-in-from-right-4 duration-300">
-                                    <MIDIMapper />
+                            {/* Bottom Panel: Timeline & Scenes */}
+                            <div className="h-64 border-t border-white/5 bg-zinc-900 relative z-30 flex">
+                                {/* Scenes Panel (Fixed Width) */}
+                                <div className="w-64 border-r border-white/5">
+                                    <SceneList />
                                 </div>
-                            )}
 
-                            {/* Canvas Settings Overlay */}
-                            {showSettings && (
-                                <div className="absolute top-4 right-4 bottom-4 w-72 z-50 animate-in slide-in-from-right-4 duration-300">
-                                    <CanvasSettings onClose={() => setShowSettings(false)} />
+                                {/* Timeline Panel (Flexible) */}
+                                <div className="flex-1 min-w-0">
+                                    <TimelinePanel />
                                 </div>
-                            )}
-
-                            {/* Effect Config Overlay */}
-                            {activeEffectConfig && (
-                                <div className="absolute top-4 right-4 bottom-4 w-80 z-[70] animate-in slide-in-from-right-4 duration-300">
-                                    <EffectConfigPanel />
-                                </div>
-                            )}
-
-                            {/* Media Picker Overlay - Slides out from right panel */}
-                            {mediaPickerOpen && selectedSurface && (
-                                <div className="absolute top-4 right-4 bottom-4 w-96 z-[60] animate-in slide-in-from-right-4 duration-300">
-                                    <MediaPicker
-                                        currentMediaId={selectedSurface.mediaId}
-                                        onSelect={handleMediaSelect}
-                                        onClose={() => setMediaPickerOpen(false)}
-                                    />
-                                </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Bottom Panel: Timeline & Scenes */}
-                        <div className="h-64 border-t border-white/5 bg-zinc-900 relative z-30 flex">
-                            {/* Scenes Panel (Fixed Width) */}
-                            <div className="w-64 border-r border-white/5">
-                                <SceneList />
-                            </div>
-
-                            {/* Timeline Panel (Flexible) */}
-                            <div className="flex-1 min-w-0">
-                                <TimelinePanel />
-                            </div>
+                        {/* Right Side: Properties */}
+                        <div className="w-80 border-l border-white/5 bg-zinc-900 flex flex-col">
+                            <SurfaceProperties />
                         </div>
                     </div>
-
-                    {/* Right Side: Properties */}
-                    <div className="w-80 border-l border-white/5 bg-zinc-900 flex flex-col">
-                        <SurfaceProperties />
-                    </div>
-                </div>
+                )}
             </main>
         </TooltipProvider>
     );

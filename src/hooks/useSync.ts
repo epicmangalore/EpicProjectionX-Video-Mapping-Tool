@@ -26,18 +26,41 @@ export function useSync() {
                 if (type === "STATE_UPDATE") {
                     if (data.project) useProjectStore.setState(data.project);
                     if (data.effects) useEffectsStore.setState(data.effects);
-                    if (data.timeline) {
-                        // Directly update store state without triggering listeners that might cause loops
-                        // We use setState to update the store internal state
-                        useTimelineStore.setState({
-                            currentTime: data.timeline.currentTime,
-                            isPlaying: data.timeline.isPlaying
-                        });
 
-                        // If holding a GSAP timeline instance, we might need to sync it too
-                        // But since the Output window likely doesn't run the GSAP timeline itself 
-                        // (it just renders based on state), we might just rely on currentTime.
-                        // However, Surface.tsx relies on useTimelineStore.getState().currentTime
+                    if (data.playbackSync) {
+                        // playbackSync is a Record<sceneId, { currentTime, isPlaying }>
+                        useProjectStore.setState((state) => ({
+                            scenes: state.scenes.map(s => {
+                                const sync = data.playbackSync[s.id];
+                                if (sync) {
+                                    return { ...s, currentTime: sync.currentTime, isPlaying: sync.isPlaying };
+                                }
+                                return s;
+                            })
+                        }));
+
+                        // Also update global timeline if the RENDERED scene was synced
+                        const currentProject = data.project || useProjectStore.getState();
+                        const activeSceneId = currentProject.activeSceneId;
+                        const projectSettings = currentProject.projectSettings;
+
+                        const renderSceneId = projectSettings?.playingSceneId || activeSceneId;
+                        const renderSync = renderSceneId ? data.playbackSync[renderSceneId] : null;
+
+                        if (renderSync) {
+                            // Find the scene in the CURRENT store state (which was updated above)
+                            const currentScenes = useProjectStore.getState().scenes;
+                            const nextScene = currentScenes.find(s => s.id === renderSceneId);
+
+                            if (nextScene) {
+                                useTimelineStore.getState().loadSceneState({
+                                    keyframes: nextScene.keyframes || [],
+                                    duration: nextScene.timelineDuration || 30,
+                                    currentTime: renderSync.currentTime,
+                                    isPlaying: renderSync.isPlaying
+                                }, useProjectStore.getState().updateSurface);
+                            }
+                        }
                     }
                 } else if (type === "AUDIO_UPDATE") {
                     if (data.levels) {
@@ -46,117 +69,153 @@ export function useSync() {
                 }
             };
         } else {
-            // Listen for sync requests from new output windows
+            // CONTROL WINDOW LOGIC
             channel.onmessage = (event) => {
                 if (event.data.type === "SYNC_REQUEST") {
-                    const projectData = {
-                        surfaces: useProjectStore.getState().surfaces,
-                        mediaAssets: useProjectStore.getState().mediaAssets,
-                        scenes: useProjectStore.getState().scenes,
-                        projectSettings: useProjectStore.getState().projectSettings,
-                        selectedSurfaceIds: [], // Don't sync selection to output
-                        currentProjectId: useProjectStore.getState().currentProjectId
-                    };
+                    const state = useProjectStore.getState();
+                    const effectsState = useEffectsStore.getState();
+                    const timelineState = useTimelineStore.getState();
+
+                    const playbackSync: Record<string, any> = {};
+                    state.scenes.forEach(s => {
+                        playbackSync[s.id] = {
+                            currentTime: s.id === state.activeSceneId ? timelineState.currentTime : s.currentTime,
+                            isPlaying: s.id === state.activeSceneId ? timelineState.isPlaying : s.isPlaying
+                        };
+                    });
 
                     channel.postMessage({
                         type: "STATE_UPDATE",
                         data: {
-                            project: projectData,
-                            effects: {
-                                surfaceEffects: useEffectsStore.getState().surfaceEffects,
-                                globalEffects: useEffectsStore.getState().globalEffects
+                            project: {
+                                surfaces: state.surfaces,
+                                mediaAssets: state.mediaAssets,
+                                scenes: state.scenes,
+                                projectSettings: state.projectSettings,
+                                activeSceneId: state.activeSceneId,
+                                currentProjectId: state.currentProjectId
                             },
-                            timeline: {
-                                currentTime: useTimelineStore.getState().currentTime,
-                                isPlaying: useTimelineStore.getState().isPlaying
-                            }
+                            effects: {
+                                surfaceEffects: effectsState.surfaceEffects,
+                                globalEffects: effectsState.globalEffects
+                            },
+                            playbackSync
                         }
                     });
                 }
             };
 
-            // Broadcast state updates from Control window
             let lastProjectStateStr = "";
             let lastEffectsStateStr = "";
-            let lastTimelineStateStr = "";
+            let lastPlaybackSyncStr = "";
+            let lastTimeRef = performance.now();
 
             const syncState = () => {
+                const now = performance.now();
+                const deltaTime = (now - lastTimeRef) / 1000;
+                lastTimeRef = now;
+
                 const projectState = useProjectStore.getState();
                 const effectsState = useEffectsStore.getState();
                 const timelineState = useTimelineStore.getState();
 
-                // 1. Sync Project State
+                const activeId = projectState.activeSceneId;
+                const playingId = projectState.projectSettings.playingSceneId;
+
+                // Sync the project and effects state (throttled by stringify check)
                 const projectData = {
                     surfaces: projectState.surfaces,
                     mediaAssets: projectState.mediaAssets,
-                    scenes: projectState.scenes,
+                    scenes: projectState.scenes.map(s => ({
+                        ...s,
+                        currentTime: undefined, // Omit from static sync
+                        isPlaying: undefined    // Omit from static sync
+                    })),
                     projectSettings: projectState.projectSettings,
-                    selectedSurfaceIds: [], // Don't sync selection
+                    activeSceneId: projectState.activeSceneId,
                     currentProjectId: projectState.currentProjectId
                 };
 
-                const effectsData = {
+                const currentProjectStr = JSON.stringify(projectData);
+                const currentEffectsStr = JSON.stringify({
                     surfaceEffects: effectsState.surfaceEffects,
                     globalEffects: effectsState.globalEffects
-                };
+                });
 
-                const timelineData = {
-                    currentTime: timelineState.currentTime,
-                    isPlaying: timelineState.isPlaying
-                };
-
-                // Simple check to avoid sending identical frames
-                // We use JSON stringify for comparison but send the object directly
-                // BroadcastChannel handles structured cloning efficiently
-                const currentProjectStr = JSON.stringify(projectData);
-                const currentEffectsStr = JSON.stringify(effectsData);
-                const currentTimelineStr = JSON.stringify(timelineData);
-
-                let hasUpdates = false;
                 const updateData: any = {};
+                let hasUpdates = false;
 
                 if (currentProjectStr !== lastProjectStateStr) {
                     updateData.project = projectData;
                     lastProjectStateStr = currentProjectStr;
                     hasUpdates = true;
                 }
-
                 if (currentEffectsStr !== lastEffectsStateStr) {
-                    updateData.effects = effectsData;
+                    updateData.effects = {
+                        surfaceEffects: effectsState.surfaceEffects,
+                        globalEffects: effectsState.globalEffects
+                    };
                     lastEffectsStateStr = currentEffectsStr;
                     hasUpdates = true;
                 }
 
-                // syncing timeline at 60fps might be heavy if stringifying every frame
-                // optimization: only stringify if isPlaying or if time changed
-                if (currentTimelineStr !== lastTimelineStateStr) {
-                    updateData.timeline = timelineData;
-                    lastTimelineStateStr = currentTimelineStr;
+                // HIGH FREQUENCY PLAYBACK SYNC
+                const playbackSync: Record<string, any> = {};
+                let advanceBackgroundTime = false;
+                const newBackgroundTimes: Record<string, number> = {};
+
+                projectState.scenes.forEach(scene => {
+                    if (scene.id === activeId) {
+                        playbackSync[scene.id] = {
+                            currentTime: timelineState.currentTime,
+                            isPlaying: timelineState.isPlaying
+                        };
+                    } else if (scene.id === playingId && scene.isPlaying) {
+                        // Advance time for the BACKGROUND live scene
+                        const cTime = (scene.currentTime + deltaTime) % (scene.timelineDuration || 30);
+                        playbackSync[scene.id] = { currentTime: cTime, isPlaying: true };
+                        newBackgroundTimes[scene.id] = cTime;
+                        advanceBackgroundTime = true;
+                    } else {
+                        playbackSync[scene.id] = {
+                            currentTime: scene.currentTime,
+                            isPlaying: scene.isPlaying
+                        };
+                    }
+                });
+
+                // Update the store with advanced background times (buffered to once per few frames if needed, but setState is fine)
+                if (advanceBackgroundTime) {
+                    useProjectStore.setState(state => ({
+                        scenes: state.scenes.map(s => {
+                            if (newBackgroundTimes[s.id] !== undefined) {
+                                return { ...s, currentTime: newBackgroundTimes[s.id] };
+                            }
+                            return s;
+                        })
+                    }));
+                }
+
+                const currentPlaybackStr = JSON.stringify(playbackSync);
+                if (currentPlaybackStr !== lastPlaybackSyncStr) {
+                    updateData.playbackSync = playbackSync;
+                    lastPlaybackSyncStr = currentPlaybackStr;
                     hasUpdates = true;
                 }
 
                 if (hasUpdates) {
-                    channel.postMessage({
-                        type: "STATE_UPDATE",
-                        data: updateData
-                    });
+                    channel.postMessage({ type: "STATE_UPDATE", data: updateData });
                 }
 
-                // 2. Sync Audio Levels (Separate high-frequency channel or same?)
-                // Audio updates are high frequency (every frame)
-                // We can just fire them if they change significantly or every frame
+                // Sync Audio Levels
                 const audioState = useAudioStore.getState();
                 if (audioState.isEnabled) {
-                    channel.postMessage({
-                        type: "AUDIO_UPDATE",
-                        data: { levels: audioState.levels }
-                    });
+                    channel.postMessage({ type: "AUDIO_UPDATE", data: { levels: audioState.levels } });
                 }
 
                 animationFrameId = requestAnimationFrame(syncState);
             };
 
-            // Start the sync loop
             syncState();
 
             return () => {

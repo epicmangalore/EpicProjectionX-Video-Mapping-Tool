@@ -2,6 +2,8 @@
 
 import { useRef, useState, useEffect } from "react";
 import { useProjectStore } from "@/store/project-store";
+import { useModalStore } from "@/store/modal-store";
+import { toast } from "@/store/toast-store";
 import { generateId } from "@/lib/utils";
 import { processFile } from "@/lib/media-utils";
 import { Image, Video, Palette, Type, Upload, X, Search, Plus, Webcam, Trash2 } from "lucide-react";
@@ -16,6 +18,7 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
     const mediaAssets = useProjectStore((state) => state.mediaAssets);
     const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
     const clearAllMedia = useProjectStore((state) => state.clearAllMedia);
+    const confirm = useModalStore((state) => state.confirm);
     const [searchQuery, setSearchQuery] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [hoveredAssetId, setHoveredAssetId] = useState<string | null>(null);
@@ -29,7 +32,13 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
         const files = e.target.files;
         if (files && files.length > 0) {
             for (const file of Array.from(files)) {
-                await processFile(file, addMediaAsset);
+                try {
+                    await processFile(file, addMediaAsset);
+                } catch (error: any) {
+                    console.error('Failed to process file:', file.name, error);
+                    const errorMessage = error.message || 'Failed to import file';
+                    toast.error(errorMessage, 8000);
+                }
             }
         }
     };
@@ -104,8 +113,14 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
                         COLOR
                     </button>
                     <button
-                        onClick={() => {
-                            if (window.confirm("Are you sure you want to clear all media? This will remove media from ALL surfaces in ALL scenes.")) {
+                        onClick={async () => {
+                            const ok = await confirm({
+                                title: "Clear Library",
+                                message: "Are you sure you want to clear all media? This will remove media from ALL surfaces in ALL scenes.",
+                                confirmLabel: "Clear All",
+                                cancelLabel: "Cancel"
+                            });
+                            if (ok) {
                                 clearAllMedia();
                             }
                         }}

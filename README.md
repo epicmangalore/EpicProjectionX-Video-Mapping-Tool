@@ -1,8 +1,8 @@
-# 🎥 ProjectionX - Professional & Playful Projection Mapping Studio
+# 🎥 ProjectX by EPIC - Professional & Playful Projection Mapping Studio
 
-ProjectionX is a cutting-edge Progressive Web App (PWA) designed for creating stunning projection mapping shows. It seamlessly blends professional-grade mapping tools (edge blending, N-point polygons, mesh warping) with an intuitive interface. Built with Next.js, React Three Fiber, and GLSL shaders.
+ProjectX by EPIC is a cutting-edge Progressive Web App (PWA) designed for creating stunning projection mapping shows. It seamlessly blends professional-grade mapping tools (edge blending, N-point polygons, mesh warping) with an intuitive interface. Built with Next.js, React Three Fiber, and GLSL shaders.
 
-![ProjectionX Showcase](https://your-screenshot-url-here.png) <!-- Ideally update this later -->
+![ProjectX by EPIC Showcase](https://your-screenshot-url-here.png) <!-- Ideally update this later -->
 
 ## 🚀 Key Features
 
@@ -32,8 +32,8 @@ ProjectionX is a cutting-edge Progressive Web App (PWA) designed for creating st
 ### Installation
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/epicmangalore/ProjectionX.git
-    cd ProjectionX
+    git clone https://github.com/epicmangalore/ProjectX by EPIC.git
+    cd ProjectX by EPIC
     ```
 2.  Install dependencies:
     ```bash

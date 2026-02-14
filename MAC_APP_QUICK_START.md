@@ -2,7 +2,7 @@
 
 ## ✅ Setup Complete!
 
-Your ProjectionX app is ready to be packaged for macOS! All the necessary files have been created:
+Your ProjectX by EPIC app is ready to be packaged for macOS! All the necessary files have been created:
 
 - ✓ Electron main process (`electron/main.js`)
 - ✓ Electron preload script (`electron/preload.js`)
@@ -19,9 +19,9 @@ npm run package
 ```
 
 This creates:
-- **DMG Installer**: `dist/ProjectionX-0.1.0.dmg` ← Share this!
-- **App Bundle**: `dist/mac/ProjectionX.app`
-- **ZIP Archive**: `dist/ProjectionX-0.1.0-mac.zip`
+- **DMG Installer**: `dist/ProjectX by EPIC-0.1.0.dmg` ← Share this!
+- **App Bundle**: `dist/mac/ProjectX by EPIC.app`
+- **ZIP Archive**: `dist/ProjectX by EPIC-0.1.0-mac.zip`
 
 ### All Platforms (Mac, Windows, Linux):
 ```bash
@@ -32,7 +32,7 @@ npm run package:all
 
 ### DMG Installer
 - Double-click to mount
-- Drag ProjectionX to Applications folder
+- Drag ProjectX by EPIC to Applications folder
 - Ready to distribute!
 
 ### .app Bundle
@@ -68,14 +68,14 @@ Opens the app in development mode with hot reload.
 ### Test Production Build:
 ```bash
 npm run package
-open dist/mac/ProjectionX.app
+open dist/mac/ProjectX by EPIC.app
 ```
 
 ## 📝 Known Limitations
 
 1. **First Run Warning**: macOS may show "App is damaged" for unsigned apps
    - **Fix**: Right-click → Open, then click "Open" in dialog
-   - Or: `xattr -cr /path/to/ProjectionX.app` in Terminal
+   - Or: `xattr -cr /path/to/ProjectX by EPIC.app` in Terminal
 
 2. **Code Signing**: App is not signed (requires Apple Developer account)
    - Works fine for personal use
@@ -92,7 +92,7 @@ npm run package
 
 ### App won't open?
 ```bash
-xattr -cr dist/mac/ProjectionX.app
+xattr -cr dist/mac/ProjectX by EPIC.app
 ```
 
 ### Need help?
