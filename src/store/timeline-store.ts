@@ -176,7 +176,7 @@ export const useTimelineStore = create<TimelineState>()(
 
                 // 1. Update basic state
                 set({
-                    keyframes: JSON.parse(JSON.stringify(data.keyframes || [])),
+                    keyframes: structuredClone(data.keyframes || []),
                     duration: data.duration || 30,
                     currentTime: data.currentTime || 0,
                     isPlaying: data.isPlaying || false

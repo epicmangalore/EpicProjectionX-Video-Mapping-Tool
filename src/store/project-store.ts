@@ -5,6 +5,7 @@ import { idbStorage } from "@/store/idb-storage";
 import { getShapePreset } from "@/lib/shapes/ShapeLibrary";
 import type { Keyframe } from "./timeline-store";
 import type { EffectSettings } from "./effects-store";
+import { useTimelineStore } from "./timeline-store";
 
 export interface Vector2 {
     x: number;
@@ -675,10 +676,10 @@ export const useProjectStore = create<ProjectStore>()(
                     if (ids.includes(surface.id)) {
                         const nextId = generateId();
                         const newSurface: Surface = {
-                            ...JSON.parse(JSON.stringify(surface)),
+                            ...structuredClone(surface),
                             id: nextId,
                             name: `${surface.name} (Copy)`,
-                            updatedAt: Date.now(),
+
                         };
                         updatedSurfaces.push(newSurface);
                         newSurfaces.push(newSurface);
@@ -690,7 +691,7 @@ export const useProjectStore = create<ProjectStore>()(
 
                         associatedKeyframes.forEach(kf => {
                             newKeyframes.push({
-                                ...JSON.parse(JSON.stringify(kf)),
+                                ...structuredClone(kf),
                                 id: generateId(),
                                 surfaceId: nextId,
                                 time: kf.time
@@ -716,15 +717,13 @@ export const useProjectStore = create<ProjectStore>()(
                 }));
 
                 // 3. Update the timeline store immediately
-                import("./timeline-store").then(({ useTimelineStore }) => {
-                    const scene = get().scenes.find(s => s.id === activeSceneId);
-                    if (scene) {
-                        useTimelineStore.setState({
-                            duration: scene.timelineDuration, // Duration doesn't change for stacking
-                            keyframes: JSON.parse(JSON.stringify(scene.keyframes || []))
-                        });
-                    }
-                });
+                const scene = get().scenes.find(s => s.id === activeSceneId);
+                if (scene) {
+                    useTimelineStore.setState({
+                        duration: scene.timelineDuration,
+                        keyframes: structuredClone(scene.keyframes || [])
+                    });
+                }
             },
 
             copySurface: (id) => {
@@ -734,7 +733,7 @@ export const useProjectStore = create<ProjectStore>()(
                 const activeScene = scenes.find(s => s.id === activeSceneId);
                 const surface = activeScene?.surfaces.find(s => s.id === id);
                 if (surface) {
-                    set({ clipboard: JSON.parse(JSON.stringify(surface)) });
+                    set({ clipboard: structuredClone(surface) });
                 }
             },
 
@@ -747,7 +746,7 @@ export const useProjectStore = create<ProjectStore>()(
 
                 get().saveHistory();
                 const newSurface: Surface = {
-                    ...JSON.parse(JSON.stringify(clipboard)),
+                    ...structuredClone(clipboard),
                     id: generateId(),
                     name: `${clipboard.name} (Pasted)`,
                     position: {
@@ -1056,7 +1055,7 @@ export const useProjectStore = create<ProjectStore>()(
                 if (activeSceneId === id) {
                     // Scene is already active — switchToScene would early-return.
                     // Directly start the timeline via the timeline store.
-                    const { useTimelineStore } = await import("./timeline-store");
+                    // Directly start the timeline via the timeline store.
                     useTimelineStore.getState().play();
                 } else {
                     // Switch to the new scene — loadSceneState handles playback.
@@ -1082,11 +1081,6 @@ export const useProjectStore = create<ProjectStore>()(
             },
 
             switchToScene: async (id) => {
-                // Import first, then re-read latest store state.
-                // This avoids race conditions where async scene switching overwrites
-                // shape/surface edits that happen while the import resolves.
-                const { useTimelineStore } = await import("./timeline-store");
-
                 const { scenes, activeSceneId } = get();
                 if (activeSceneId === id) return;
 
@@ -1096,7 +1090,7 @@ export const useProjectStore = create<ProjectStore>()(
                     if (scene.id === activeSceneId) {
                         return {
                             ...scene,
-                            keyframes: JSON.parse(JSON.stringify(timelineState.keyframes)),
+                            keyframes: structuredClone(timelineState.keyframes),
                             timelineDuration: timelineState.duration,
                             currentTime: timelineState.currentTime,
                             isPlaying: timelineState.isPlaying,

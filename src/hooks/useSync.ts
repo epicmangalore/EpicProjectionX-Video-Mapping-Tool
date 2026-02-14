@@ -40,7 +40,7 @@ export function useSync() {
                         }));
 
                         // Also update global timeline if the RENDERED scene was synced
-                        const currentProject = data.project || useProjectStore.getState();
+                        const currentProject = useProjectStore.getState();
                         const activeSceneId = currentProject.activeSceneId;
                         const projectSettings = currentProject.projectSettings;
 
@@ -48,17 +48,44 @@ export function useSync() {
                         const renderSync = renderSceneId ? data.playbackSync[renderSceneId] : null;
 
                         if (renderSync) {
-                            // Find the scene in the CURRENT store state (which was updated above)
-                            const currentScenes = useProjectStore.getState().scenes;
-                            const nextScene = currentScenes.find(s => s.id === renderSceneId);
+                            // If project structure updated (data.project was present), we full-load to ensure keyframes are fresh.
+                            // Otherwise, we just sync the clock (high-performance path).
+                            if (data.project) {
+                                const currentScenes = currentProject.scenes;
+                                const nextScene = currentScenes.find(s => s.id === renderSceneId);
 
-                            if (nextScene) {
-                                useTimelineStore.getState().loadSceneState({
-                                    keyframes: nextScene.keyframes || [],
-                                    duration: nextScene.timelineDuration || 30,
-                                    currentTime: renderSync.currentTime,
-                                    isPlaying: renderSync.isPlaying
-                                }, useProjectStore.getState().updateSurface);
+                                if (nextScene) {
+                                    useTimelineStore.getState().loadSceneState({
+                                        keyframes: nextScene.keyframes || [],
+                                        duration: nextScene.timelineDuration || 30,
+                                        currentTime: renderSync.currentTime,
+                                        isPlaying: renderSync.isPlaying
+                                    }, useProjectStore.getState().updateSurface);
+                                }
+                            } else {
+                                // Fast path: Sync time and playback only
+                                const timelineStore = useTimelineStore.getState();
+                                const timeline = timelineStore.timeline;
+
+                                if (timelineStore.currentTime !== renderSync.currentTime || timelineStore.isPlaying !== renderSync.isPlaying) {
+                                    useTimelineStore.setState({
+                                        currentTime: renderSync.currentTime,
+                                        isPlaying: renderSync.isPlaying
+                                    });
+                                }
+
+                                if (timeline) {
+                                    const timeDiff = Math.abs(timeline.time() - renderSync.currentTime);
+                                    if (timeDiff > 0.05) {
+                                        timeline.time(renderSync.currentTime);
+                                    }
+
+                                    if (renderSync.isPlaying) {
+                                        if (!timeline.isActive()) timeline.play();
+                                    } else {
+                                        if (timeline.isActive()) timeline.pause();
+                                    }
+                                }
                             }
                         }
                     }
@@ -105,9 +132,17 @@ export function useSync() {
                 }
             };
 
-            let lastProjectStateStr = "";
-            let lastEffectsStateStr = "";
-            let lastPlaybackSyncStr = "";
+            // Shallow reference tracking — avoids JSON.stringify per frame
+            let lastScenesRef: any = null;
+            let lastMediaRef: any = null;
+            let lastSettingsRef: any = null;
+            let lastActiveSceneId: any = null;
+            let lastCurrentProjectId: any = null;
+            let lastSurfaceEffectsRef: any = null;
+            let lastGlobalEffectsRef: any = null;
+            // Playback sync: track per-scene time/playing to avoid stringify
+            let lastPlaybackTimes: Record<string, number> = {};
+            let lastPlaybackPlaying: Record<string, boolean> = {};
             let lastTimeRef = performance.now();
 
             const syncState = () => {
@@ -122,40 +157,48 @@ export function useSync() {
                 const activeId = projectState.activeSceneId;
                 const playingId = projectState.projectSettings.playingSceneId;
 
-                // Sync the project and effects state (throttled by stringify check)
-                const projectData = {
-                    surfaces: projectState.surfaces,
-                    mediaAssets: projectState.mediaAssets,
-                    scenes: projectState.scenes.map(s => ({
-                        ...s,
-                        currentTime: undefined, // Omit from static sync
-                        isPlaying: undefined    // Omit from static sync
-                    })),
-                    projectSettings: projectState.projectSettings,
-                    activeSceneId: projectState.activeSceneId,
-                    currentProjectId: projectState.currentProjectId
-                };
-
-                const currentProjectStr = JSON.stringify(projectData);
-                const currentEffectsStr = JSON.stringify({
-                    surfaceEffects: effectsState.surfaceEffects,
-                    globalEffects: effectsState.globalEffects
-                });
-
                 const updateData: any = {};
                 let hasUpdates = false;
 
-                if (currentProjectStr !== lastProjectStateStr) {
-                    updateData.project = projectData;
-                    lastProjectStateStr = currentProjectStr;
+                // Check for meaningful scene changes (ignoring currentTime updates which don't bump updatedAt)
+                const scenesChanged =
+                    !lastScenesRef ||
+                    projectState.scenes.length !== lastScenesRef.length ||
+                    projectState.scenes.some((s, i) => s.updatedAt !== lastScenesRef[i]?.updatedAt);
+
+                const projectChanged =
+                    scenesChanged ||
+                    lastMediaRef !== projectState.mediaAssets ||
+                    lastSettingsRef !== projectState.projectSettings ||
+                    lastActiveSceneId !== projectState.activeSceneId ||
+                    lastCurrentProjectId !== projectState.currentProjectId;
+
+                if (projectChanged) {
+                    updateData.project = {
+                        surfaces: projectState.surfaces,
+                        mediaAssets: projectState.mediaAssets,
+                        scenes: projectState.scenes, // Send full objects, don't strip properties
+                        projectSettings: projectState.projectSettings,
+                        activeSceneId: projectState.activeSceneId,
+                        currentProjectId: projectState.currentProjectId
+                    };
+                    lastScenesRef = projectState.scenes;
+                    lastMediaRef = projectState.mediaAssets;
+                    lastSettingsRef = projectState.projectSettings;
+                    lastActiveSceneId = projectState.activeSceneId;
+                    lastCurrentProjectId = projectState.currentProjectId;
                     hasUpdates = true;
                 }
-                if (currentEffectsStr !== lastEffectsStateStr) {
+
+                // Shallow reference comparison for effects state
+                if (lastSurfaceEffectsRef !== effectsState.surfaceEffects ||
+                    lastGlobalEffectsRef !== effectsState.globalEffects) {
                     updateData.effects = {
                         surfaceEffects: effectsState.surfaceEffects,
                         globalEffects: effectsState.globalEffects
                     };
-                    lastEffectsStateStr = currentEffectsStr;
+                    lastSurfaceEffectsRef = effectsState.surfaceEffects;
+                    lastGlobalEffectsRef = effectsState.globalEffects;
                     hasUpdates = true;
                 }
 
@@ -163,28 +206,39 @@ export function useSync() {
                 const playbackSync: Record<string, any> = {};
                 let advanceBackgroundTime = false;
                 const newBackgroundTimes: Record<string, number> = {};
+                let playbackChanged = false;
 
                 projectState.scenes.forEach(scene => {
+                    let ct: number;
+                    let ip: boolean;
+
                     if (scene.id === activeId) {
-                        playbackSync[scene.id] = {
-                            currentTime: timelineState.currentTime,
-                            isPlaying: timelineState.isPlaying
-                        };
+                        ct = timelineState.currentTime;
+                        ip = timelineState.isPlaying;
                     } else if (scene.id === playingId && scene.isPlaying) {
                         // Advance time for the BACKGROUND live scene
-                        const cTime = (scene.currentTime + deltaTime) % (scene.timelineDuration || 30);
-                        playbackSync[scene.id] = { currentTime: cTime, isPlaying: true };
-                        newBackgroundTimes[scene.id] = cTime;
+                        ct = (scene.currentTime + deltaTime) % (scene.timelineDuration || 30);
+                        ip = true;
+                        newBackgroundTimes[scene.id] = ct;
                         advanceBackgroundTime = true;
                     } else {
-                        playbackSync[scene.id] = {
-                            currentTime: scene.currentTime,
-                            isPlaying: scene.isPlaying
-                        };
+                        ct = scene.currentTime;
+                        ip = scene.isPlaying;
+                    }
+
+                    playbackSync[scene.id] = { currentTime: ct, isPlaying: ip };
+
+                    // Epsilon comparison for time, direct comparison for playing
+                    if (!playbackChanged) {
+                        const prevTime = lastPlaybackTimes[scene.id];
+                        const prevPlaying = lastPlaybackPlaying[scene.id];
+                        if (prevTime === undefined || Math.abs(prevTime - ct) > 0.001 || prevPlaying !== ip) {
+                            playbackChanged = true;
+                        }
                     }
                 });
 
-                // Update the store with advanced background times (buffered to once per few frames if needed, but setState is fine)
+                // Update the store with advanced background times
                 if (advanceBackgroundTime) {
                     useProjectStore.setState(state => ({
                         scenes: state.scenes.map(s => {
@@ -196,10 +250,17 @@ export function useSync() {
                     }));
                 }
 
-                const currentPlaybackStr = JSON.stringify(playbackSync);
-                if (currentPlaybackStr !== lastPlaybackSyncStr) {
+                if (playbackChanged) {
                     updateData.playbackSync = playbackSync;
-                    lastPlaybackSyncStr = currentPlaybackStr;
+                    // Update tracking
+                    const nextTimes: Record<string, number> = {};
+                    const nextPlaying: Record<string, boolean> = {};
+                    for (const id in playbackSync) {
+                        nextTimes[id] = playbackSync[id].currentTime;
+                        nextPlaying[id] = playbackSync[id].isPlaying;
+                    }
+                    lastPlaybackTimes = nextTimes;
+                    lastPlaybackPlaying = nextPlaying;
                     hasUpdates = true;
                 }
 

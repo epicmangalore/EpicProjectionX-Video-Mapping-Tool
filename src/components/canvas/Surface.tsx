@@ -1200,11 +1200,6 @@ export function Surface({ surface }: SurfaceProps) {
             if (surface.visible) {
                 if (groupRef.current.visible !== isInTimeRange) {
                     groupRef.current.visible = isInTimeRange;
-                    if (!isInTimeRange) {
-                        console.log(`[Surface ${surface.name}] Hidden: Current time (${currentTime.toFixed(2)}s) is outside range [${surface.startTime}s - ${endTime}s]`);
-                    } else {
-                        console.log(`[Surface ${surface.name}] Visible: Time reached range`);
-                    }
                 }
             } else {
                 if (groupRef.current.visible) {
@@ -1285,7 +1280,6 @@ export function Surface({ surface }: SurfaceProps) {
             // especially when switching between local and group videos
             if (uniforms.uTexture && texture) {
                 if (uniforms.uTexture.value !== texture) {
-                    console.log("↺ Swapping shader texture for:", surface.id, mediaAsset?.name);
                     uniforms.uTexture.value = texture;
                 }
             }
