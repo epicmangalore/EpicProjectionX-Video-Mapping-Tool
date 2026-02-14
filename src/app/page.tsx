@@ -19,6 +19,7 @@ import { MediaPicker } from "@/components/panels/MediaPicker";
 import { CanvasSettings } from "@/components/panels/CanvasSettings";
 import { EffectConfigPanel } from "@/components/panels/EffectConfigPanel";
 import { OnboardingGuide } from "@/components/ui/OnboardingGuide";
+import { KeyboardShortcuts, KeyboardShortcutsButton } from "@/components/ui/KeyboardShortcuts";
 import { useState, useEffect } from "react";
 import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon, Pen, ChevronDown, ArrowRight } from "lucide-react";
 import { LightBeamButton } from "@/components/ui/LightBeamButton";
@@ -142,6 +143,14 @@ export default function Home() {
             }
         },
 
+        // Open (Cmd+O)
+        {
+            key: "o", ctrl: true, callback: () => {
+                const input = document.querySelector('input[accept=".projectx"]') as HTMLInputElement;
+                if (input) input.click();
+            }
+        },
+
         // Misc
         {
             key: "m", ctrl: true, callback: () => {
@@ -231,6 +240,7 @@ export default function Home() {
                 {isClient && (
                     <>
                         <OnboardingGuide />
+                        <KeyboardShortcuts />
                         <GlobalModal />
                         <ToastContainer />
                         <WittyUpdateUI />
@@ -408,6 +418,8 @@ export default function Home() {
                             <SettingsIcon className="w-4 h-4" />
                         </button>
 
+                        <KeyboardShortcutsButton />
+
                         <LightBeamButton
                             onClick={openOutputWindow}
                             className="ml-2 px-5 py-2 text-xs font-bold"
@@ -492,6 +504,6 @@ export default function Home() {
                     </div>
                 )}
             </main>
-        </TooltipProvider>
+        </TooltipProvider >
     );
 }
