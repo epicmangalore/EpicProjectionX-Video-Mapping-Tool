@@ -488,7 +488,6 @@ export async function loadProjectFile(file: File): Promise<string> {
                 effects: {},
                 keyframes: [],
                 timelineDuration: 30,
-                transitionDuration: 1.0,
                 currentTime: 0,
                 isPlaying: false,
                 createdAt: Date.now(),

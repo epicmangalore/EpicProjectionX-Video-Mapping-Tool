@@ -140,7 +140,6 @@ export interface Scene {
     effects: Record<string, EffectSettings>;
     keyframes: Keyframe[]; // Scene-specific timeline keyframes
     timelineDuration: number; // Scene-specific timeline duration
-    transitionDuration: number; // For scene switching
     currentTime: number; // Independent playback time
     isPlaying: boolean; // Independent playback state
     createdAt: number;
@@ -381,7 +380,6 @@ export const useProjectStore = create<ProjectStore>()(
                             effects: {},
                             keyframes: [],
                             timelineDuration: 30,
-                            transitionDuration: 1.0,
                             currentTime: 0,
                             isPlaying: false,
                             hotkey: undefined,
@@ -487,7 +485,6 @@ export const useProjectStore = create<ProjectStore>()(
                             effects: {},
                             keyframes: [],
                             timelineDuration: 30,
-                            transitionDuration: 1.0,
                             currentTime: 0,
                             isPlaying: false,
                             hotkey: undefined,
@@ -1013,7 +1010,6 @@ export const useProjectStore = create<ProjectStore>()(
                     effects: {},
                     keyframes: [],
                     timelineDuration: 30, // Default 30 seconds
-                    transitionDuration: 1.0, // Default 1s fade
                     hotkey: undefined, // Added missing property
                     currentTime: 0,
                     isPlaying: false,
@@ -1656,7 +1652,6 @@ export const useProjectStore = create<ProjectStore>()(
                             effects: {},
                             keyframes: [],
                             timelineDuration: 30,
-                            transitionDuration: 1.0,
                             currentTime: 0,
                             isPlaying: false,
                             hotkey: undefined,

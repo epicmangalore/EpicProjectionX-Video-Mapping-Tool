@@ -218,9 +218,6 @@ export function SceneList() {
                                     <Repeat className="w-3.5 h-3.5" />
                                 </button>
                                 <div className="flex-1" />
-                                <span className="text-[9px] text-zinc-600">
-                                    {scene.transitionDuration}s Fade
-                                </span>
                             </div>
                         </div>
                     ))
