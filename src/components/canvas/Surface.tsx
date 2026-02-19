@@ -839,9 +839,10 @@ export function Surface({ surface }: SurfaceProps) {
         });
         const surfaceWidth = maxX - minX;
         const surfaceHeight = maxY - minY;
-        const surfaceAspect = surfaceWidth / surfaceHeight;
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
+
+        // CRITICAL FIX: Include surface scale in aspect ratio calculation
+        // The visual aspect ratio depends on both the geometry (corners) and the transform scale
+        const surfaceAspect = (surfaceWidth * surface.scale.x) / (surfaceHeight * surface.scale.y);
 
         // 2. Get Media Aspect Ratio
         let mediaAspect = 1;
@@ -909,8 +910,7 @@ export function Surface({ surface }: SurfaceProps) {
         matrix.translate(-manualOffsetX, -manualOffsetY);
 
         return matrix;
-    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition, metadataLoaded, mediaAsset?.width, mediaAsset?.height]);
-
+    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition, metadataLoaded, mediaAsset?.width, mediaAsset?.height, surface.scale.x, surface.scale.y]);
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;
