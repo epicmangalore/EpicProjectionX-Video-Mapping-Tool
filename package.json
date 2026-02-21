@@ -1,6 +1,6 @@
 {
   "name": "projectx-by-epic",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Professional projection mapping software for everyone.",
   "main": "electron/main.js",
   "private": true,

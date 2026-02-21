@@ -219,25 +219,49 @@ app.whenReady().then(() => {
 
         autoUpdater.on('checking-for-update', () => {
             console.log('AUTO_UPDATER: Checking for update...');
+            mainWindow?.webContents.send('update-status', 'checking');
         });
         autoUpdater.on('update-available', (info) => {
             console.log('AUTO_UPDATER: Update available:', info);
+            mainWindow?.webContents.send('update-status', 'available', info);
         });
         autoUpdater.on('update-not-available', (info) => {
             console.log('AUTO_UPDATER: Update not available:', info);
+            mainWindow?.webContents.send('update-status', 'not-available');
         });
         autoUpdater.on('error', (err) => {
             console.error('AUTO_UPDATER: Error in auto-updater:', err);
+            mainWindow?.webContents.send('update-status', 'error', err.message);
         });
         autoUpdater.on('download-progress', (progressObj) => {
             console.log(`AUTO_UPDATER: Download progress: ${progressObj.percent}%`);
+            mainWindow?.webContents.send('update-status', 'downloading', progressObj.percent);
         });
         autoUpdater.on('update-downloaded', (info) => {
             console.log('AUTO_UPDATER: Update downloaded. Will install on quit.');
+            mainWindow?.webContents.send('update-status', 'downloaded');
         });
 
         autoUpdater.checkForUpdatesAndNotify();
     }
+});
+
+// IPC Handlers for Update Control
+ipcMain.on('check-for-updates', () => {
+    if (!isDev) {
+        autoUpdater.checkForUpdates();
+    } else {
+        mainWindow?.webContents.send('update-status', 'not-available');
+    }
+});
+
+ipcMain.on('quit-and-install', () => {
+    autoUpdater.quitAndInstall();
+});
+
+ipcMain.on('restart-app', () => {
+    app.relaunch();
+    app.exit();
 });
 
 app.on('window-all-closed', () => {

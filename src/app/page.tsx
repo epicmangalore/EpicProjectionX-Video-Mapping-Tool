@@ -6,6 +6,7 @@ import { TimelinePanel } from "@/components/panels/TimelinePanel";
 import { SceneList } from "@/components/panels/CueList";
 import { LeftSidebar } from "@/components/panels/LeftSidebar";
 import { ProjectMenu } from "@/components/ui/ProjectMenu";
+import { HelpMenu } from "@/components/ui/HelpMenu";
 import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
 import { useUIStore } from "@/store/ui-store";
 import { useProjectStore } from "@/store/project-store";
@@ -249,7 +250,7 @@ export default function Home() {
                             className="h-8 w-auto pointer-events-none" // Adjust height to fit header
                         />
                         <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5 uppercase tracking-widest">
-                            v1.0.0
+                            v1.0.1
                         </span>
                     </div>
 
@@ -361,7 +362,7 @@ export default function Home() {
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <Pen className="w-3.5 h-3.5" />
-                                                    <span>Draw Tool</span>
+                                                    <span>ProjectX v1.0.1</span>
                                                 </div>
                                                 <span className="text-[9px] opacity-40 font-mono">⌘F</span>
                                             </button>
@@ -386,15 +387,7 @@ export default function Home() {
                     </div>
 
                     <div className="flex gap-2 items-center relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
-                        <a
-                            href="https://wa.me/917411967696?text=HI%2C%20I%20need%20help%20with%20ProjectX"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-1.5 rounded transition-all text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
-                            title="WhatsApp Support"
-                        >
-                            Need Help
-                        </a>
+                        <HelpMenu />
                         <button
                             onClick={() => {
                                 setShowMIDIPanel(!showMIDIPanel);

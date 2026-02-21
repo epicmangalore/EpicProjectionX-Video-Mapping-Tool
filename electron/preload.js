@@ -36,4 +36,14 @@ contextBridge.exposeInMainWorld('electron', {
     // Output window control
     openOutputWindow: () => ipcRenderer.send('open-output-window'),
     closeOutputWindow: () => ipcRenderer.send('close-output-window'),
+
+    // Updates & Restart
+    checkForUpdates: () => ipcRenderer.send('check-for-updates'),
+    quitAndInstall: () => ipcRenderer.send('quit-and-install'),
+    restartApp: () => ipcRenderer.send('restart-app'),
+    onUpdateStatus: (callback) => {
+        const handler = (event, status, info) => callback(status, info);
+        ipcRenderer.on('update-status', handler);
+        return () => ipcRenderer.removeListener('update-status', handler);
+    }
 });
