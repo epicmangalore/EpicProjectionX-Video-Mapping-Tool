@@ -171,15 +171,6 @@ export default function Home() {
         { key: APP_HOTKEYS.SCENE_9, callback: () => { const s = useProjectStore.getState().scenes; if (s[8]) useProjectStore.getState().switchToScene(s[8].id); } },
     ]);
 
-    // Warn before leaving with unsaved changes
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            e.preventDefault();
-            e.returnValue = "";
-        };
-        window.addEventListener("beforeunload", handleBeforeUnload);
-        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-    }, []);
 
     const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
     const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);

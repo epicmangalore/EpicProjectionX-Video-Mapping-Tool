@@ -215,14 +215,33 @@ app.whenReady().then(() => {
 
     // Check for updates
     if (!isDev) {
+        autoUpdater.logger = console;
+
+        autoUpdater.on('checking-for-update', () => {
+            console.log('AUTO_UPDATER: Checking for update...');
+        });
+        autoUpdater.on('update-available', (info) => {
+            console.log('AUTO_UPDATER: Update available:', info);
+        });
+        autoUpdater.on('update-not-available', (info) => {
+            console.log('AUTO_UPDATER: Update not available:', info);
+        });
+        autoUpdater.on('error', (err) => {
+            console.error('AUTO_UPDATER: Error in auto-updater:', err);
+        });
+        autoUpdater.on('download-progress', (progressObj) => {
+            console.log(`AUTO_UPDATER: Download progress: ${progressObj.percent}%`);
+        });
+        autoUpdater.on('update-downloaded', (info) => {
+            console.log('AUTO_UPDATER: Update downloaded. Will install on quit.');
+        });
+
         autoUpdater.checkForUpdatesAndNotify();
     }
 });
 
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        app.quit();
-    }
+    app.quit();
 });
 
 // Handle any uncaught exceptions
