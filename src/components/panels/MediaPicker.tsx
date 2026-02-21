@@ -284,7 +284,7 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
             {/* Footer */}
             <div className="p-3 bg-zinc-900 border-t border-white/5 flex items-center justify-between text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
                 <span>{filteredAssets.length} Assets (+ {PRESET_MEDIA.length} Presets)</span>
-                <span className="text-zinc-700">LIBRARY V1.0</span>
+                <span className="text-zinc-700">LIBRARY V1.0.0</span>
             </div>
         </div>
     );

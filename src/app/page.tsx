@@ -257,6 +257,9 @@ export default function Home() {
                             alt="ProjectX by EPIC"
                             className="h-8 w-auto pointer-events-none" // Adjust height to fit header
                         />
+                        <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5 uppercase tracking-widest">
+                            v1.0.0
+                        </span>
                     </div>
 
                     <div className="h-4 w-px bg-white/10 mx-2" style={{ WebkitAppRegion: 'no-drag' } as any} />
