@@ -844,42 +844,52 @@ export function Surface({ surface }: SurfaceProps) {
         // The visual aspect ratio depends on both the geometry (corners) and the transform scale
         const surfaceAspect = (surfaceWidth * surface.scale.x) / (surfaceHeight * surface.scale.y);
 
-        // 2. Get Media Aspect Ratio
+        // 2. Get Media Aspect Ratio - prioritize stored dimensions, then texture dimensions
         let mediaAspect = 1;
-        if (mediaAsset.width && mediaAsset.height) {
+        if (mediaAsset.width && mediaAsset.height && mediaAsset.width > 0 && mediaAsset.height > 0) {
             mediaAspect = mediaAsset.width / mediaAsset.height;
-        } else {
-            const textureImage = texture?.image as { width?: number; height?: number; videoWidth?: number; videoHeight?: number } | undefined;
-            const textureWidth = textureImage?.videoWidth ?? textureImage?.width;
-            const textureHeight = textureImage?.videoHeight ?? textureImage?.height;
-            if (textureWidth && textureHeight) {
+        } else if (texture?.image) {
+            const textureImage = texture.image as { width?: number; height?: number; videoWidth?: number; videoHeight?: number };
+            const textureWidth = textureImage.videoWidth ?? textureImage.width ?? 0;
+            const textureHeight = textureImage.videoHeight ?? textureImage.height ?? 0;
+            if (textureWidth > 0 && textureHeight > 0) {
                 mediaAspect = textureWidth / textureHeight;
             }
         }
 
         // 3. Calculate Scale based on Fit Mode
+        // STRETCH: sx=1, sy=1 - texture stretches to fill surface (may distort)
+        // FILL/COVER: scale to cover entire surface, cropping overflow (maintains aspect)
+        // FIT/CONTAIN: scale to fit inside surface, with letterboxing (maintains aspect)
         let sx = 1;
         let sy = 1;
 
         if (settings.fit === "cover") {
-            // COVER: Zoom in until the whole surface is covered
+            // FILL: Scale media to cover entire surface, cropping overflow
+            // The smaller dimension of the media matches the surface, the other is cropped
             if (surfaceAspect > mediaAspect) {
+                // Surface is wider than media - media width matches, height gets cropped
                 sy = mediaAspect / surfaceAspect;
             } else {
+                // Surface is taller than media - media height matches, width gets cropped
                 sx = surfaceAspect / mediaAspect;
             }
         } else if (settings.fit === "contain") {
-            // CONTAIN: Zoom out until the whole media fits inside
+            // FIT: Scale media to fit entirely inside surface, with letterboxing
+            // The larger dimension of the media matches the surface, the other has letterboxing
             if (surfaceAspect > mediaAspect) {
+                // Surface is wider than media - letterbox on left/right
                 sx = surfaceAspect / mediaAspect;
             } else {
+                // Surface is taller than media - letterbox on top/bottom
                 sy = mediaAspect / surfaceAspect;
             }
         }
+        // For "stretch" mode, sx=1 and sy=1 means no aspect correction
 
-        // Log for debugging (only once in a while or on change)
-        if (!isOutput) {
-            // console.log(`[Surface ${surface.name}] aspect: ${surfaceAspect.toFixed(2)}, media: ${mediaAspect.toFixed(2)}, fit: ${settings.fit}, sx: ${sx.toFixed(2)}, sy: ${sy.toFixed(2)}`);
+        // Debug logging for fit mode
+        if (!isOutput && settings.fit !== "stretch") {
+            console.log(`[Fit Mode] ${surface.name}: fit=${settings.fit}, surfaceAspect=${surfaceAspect.toFixed(2)}, mediaAspect=${mediaAspect.toFixed(2)}, sx=${sx.toFixed(3)}, sy=${sy.toFixed(3)}`);
         }
 
         // 4. Apply Manual Transforms
@@ -910,7 +920,8 @@ export function Surface({ surface }: SurfaceProps) {
         matrix.translate(-manualOffsetX, -manualOffsetY);
 
         return matrix;
-    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition, metadataLoaded, mediaAsset?.width, mediaAsset?.height, surface.scale.x, surface.scale.y]);
+    }, [surface.corners, mediaAsset, texture, surface.textureSettings, surface.compositionMapping, surface.useComposition, metadataLoaded, mediaAsset?.width, mediaAsset?.height, surface.scale.x, surface.scale.y, videoDimensionsReady]);
+
     // Create shader material with uniforms - MEMOIZED to prevent recreation
     const shaderMaterial = useMemo(() => {
         if (!texture) return null;

@@ -163,6 +163,7 @@ export interface ProjectSettings {
     compositionMediaId?: string | null;
     showComposition?: boolean;
     playingSceneId?: string | null;
+    sequentialPlayback?: boolean;
 }
 
 interface ProjectStore {
@@ -238,6 +239,8 @@ interface ProjectStore {
     initializeMeshWarp: (surfaceId: string, gridSize?: number) => void;
     resetProject: () => void;
     setPlayingSceneId: (id: string | null) => void;
+    setSequentialPlayback: (enabled: boolean) => void;
+    triggerNextScene: () => Promise<void>;
 
     // History
     history: HistoryState[];
@@ -1051,11 +1054,40 @@ export const useProjectStore = create<ProjectStore>()(
                 if (activeSceneId === id) {
                     // Scene is already active — switchToScene would early-return.
                     // Directly start the timeline via the timeline store.
-                    // Directly start the timeline via the timeline store.
                     useTimelineStore.getState().play();
                 } else {
                     // Switch to the new scene — loadSceneState handles playback.
                     await get().switchToScene(id);
+                }
+            },
+
+            setSequentialPlayback: (enabled) => {
+                set((state) => ({
+                    projectSettings: { ...state.projectSettings, sequentialPlayback: enabled }
+                }));
+            },
+
+            triggerNextScene: async () => {
+                const { scenes, projectSettings } = get();
+                const currentId = projectSettings.playingSceneId;
+                if (!currentId) return;
+
+                const currentIndex = scenes.findIndex((s) => s.id === currentId);
+                if (currentIndex === -1) return;
+
+                const nextIndex = currentIndex + 1;
+                if (nextIndex < scenes.length) {
+                    const nextSceneId = scenes[nextIndex].id;
+                    await get().triggerScene(nextSceneId);
+                } else {
+                    // End of scenes — stop playback or loop back to first?
+                    // User said "play all timelines one after the other", usually once.
+                    // But if they have global project loop on, maybe it should loop?
+                    // For now, let's just stop at the end.
+                    useTimelineStore.getState().pause();
+                    set((state) => ({
+                        projectSettings: { ...state.projectSettings, playingSceneId: null }
+                    }));
                 }
             },
 

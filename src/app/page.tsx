@@ -392,6 +392,15 @@ export default function Home() {
                     </div>
 
                     <div className="flex gap-2 items-center relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <a
+                            href="https://wa.me/917411967696?text=HI%2C%20I%20need%20help%20with%20ProjectX"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded transition-all text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                            title="WhatsApp Support"
+                        >
+                            Need Help
+                        </a>
                         <button
                             onClick={() => {
                                 setShowMIDIPanel(!showMIDIPanel);

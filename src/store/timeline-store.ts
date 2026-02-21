@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import gsap from "gsap";
+import { useProjectStore } from "./project-store";
 
 export interface Keyframe {
     id: string;
@@ -116,7 +117,7 @@ export const useTimelineStore = create<TimelineState>()(
             },
 
             setDuration: (duration: number) => {
-                set({ duration: Math.max(300, duration) });
+                set({ duration: Math.min(600, Math.max(300, duration)) });
             },
 
             setSnapToGrid: (snapToGrid: boolean) => {
@@ -166,6 +167,15 @@ export const useTimelineStore = create<TimelineState>()(
                     onUpdate: () => {
                         set({ currentTime: tl.time() });
                     },
+                    onComplete: () => {
+                        // Sequential playback logic
+                        const projectStore = (useProjectStore as any).getState();
+                        const { projectSettings, triggerNextScene } = projectStore;
+
+                        if (projectSettings.sequentialPlayback && projectSettings.playingSceneId) {
+                            triggerNextScene();
+                        }
+                    }
                 });
                 set({ timeline: tl });
                 get().updateTimeline(updateSurface);

@@ -18,6 +18,7 @@ export function SceneList() {
     const switchToScene = useProjectStore((state) => state.switchToScene);
     const projectSettings = useProjectStore((state) => state.projectSettings);
     const setPlayingSceneId = useProjectStore((state) => state.setPlayingSceneId);
+    const setSequentialPlayback = useProjectStore((state) => state.setSequentialPlayback);
     const confirm = useModalStore((state) => state.confirm);
     const isClient = useIsClient();
     const hasHydrated = useProjectStore((state) => state._hasHydrated);
@@ -79,13 +80,26 @@ export function SceneList() {
             <div className="px-4 py-3 border-b border-white/5 bg-zinc-900/50">
                 <div className="flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-electric-cyan">Scenes</h2>
-                    <button
-                        onClick={handleAddScene}
-                        className="p-1 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded transition-colors"
-                        title="Add new scene"
-                    >
-                        <Plus className="w-3.5 h-3.5 text-zinc-300" />
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            onClick={() => setSequentialPlayback(!projectSettings.sequentialPlayback)}
+                            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider transition-all border ${projectSettings.sequentialPlayback
+                                    ? "bg-electric-purple/20 border-electric-purple/50 text-electric-purple"
+                                    : "bg-zinc-800 border-white/5 text-zinc-500 hover:text-zinc-300"
+                                }`}
+                            title={projectSettings.sequentialPlayback ? "Disable Play All" : "Enable Play All"}
+                        >
+                            <Repeat className="w-2.5 h-2.5" />
+                            {projectSettings.sequentialPlayback ? "Live All On" : "Play All"}
+                        </button>
+                        <button
+                            onClick={handleAddScene}
+                            className="p-1 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded transition-colors"
+                            title="Add new scene"
+                        >
+                            <Plus className="w-3.5 h-3.5 text-zinc-300" />
+                        </button>
+                    </div>
                 </div>
                 <p className="text-[10px] text-zinc-500 mt-1">
                     Press 1-9 to trigger scenes

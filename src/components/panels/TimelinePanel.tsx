@@ -43,6 +43,13 @@ export function TimelinePanel() {
     const initTimeline = useTimelineStore((state) => state.initTimeline);
     const updateTimeline = useTimelineStore((state) => state.updateTimeline);
 
+    const [durationInputValue, setDurationInputValue] = useState((duration / 60).toFixed(2));
+
+    // Sync local input value when duration changes externally
+    useEffect(() => {
+        setDurationInputValue((duration / 60).toFixed(2));
+    }, [duration]);
+
     const timelineRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -232,22 +239,25 @@ export function TimelinePanel() {
                         <div className="flex items-center">
                             <input
                                 type="number"
-                                defaultValue={Number((duration / 60).toFixed(2))} // Use defaultValue for better control
-                                key={duration} // Force re-render on external changes
+                                value={durationInputValue}
+                                onChange={(e) => setDurationInputValue(e.target.value)}
                                 step="0.1"
                                 onBlur={(e) => {
-                                    const mins = parseFloat(e.target.value) || 5;
-                                    setDuration(Math.min(43200, Math.max(300, mins * 60)));
+                                    const mins = parseFloat(e.target.value) || 0;
+                                    const secs = Math.min(600, Math.max(300, mins * 60));
+                                    setDuration(secs);
+                                    // The useEffect will sync back the capped value
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        const mins = parseFloat((e.target as HTMLInputElement).value) || 5;
-                                        setDuration(Math.min(43200, Math.max(300, mins * 60)));
+                                        const mins = parseFloat((e.target as HTMLInputElement).value) || 0;
+                                        const secs = Math.min(600, Math.max(300, mins * 60));
+                                        setDuration(secs);
                                         (e.target as HTMLInputElement).blur();
                                     }
                                 }}
                                 className="w-12 md:w-14 h-5 bg-zinc-800 border border-zinc-700 rounded-l text-[10px] font-mono text-zinc-200 px-1 focus:outline-none focus:border-electric-cyan"
-                                title="Max 12 hours (720m)"
+                                title="Max 10 minutes (600s), Min 5 minutes (300s)"
                             />
                             <span className="h-5 flex items-center px-1.5 bg-zinc-800 border border-l-0 border-zinc-700 rounded-r text-[9px] text-zinc-500 font-mono">m</span>
                         </div>
@@ -329,10 +339,10 @@ export function TimelinePanel() {
                                     <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M5.5 12L0 6V0H11V6L5.5 12Z" fill="#06b6d4" />
                                     </svg>
-                                </div >
+                                </div>
                                 <div className="absolute top-0 bottom-0 w-px bg-electric-cyan/50 -translate-x-[0.5px]" />
-                            </div >
-                        </div >
+                            </div>
+                        </div>
 
                         {/* Content Area with Surface Tracks */}
                         <div className="flex-1 flex flex-col relative bg-zinc-950/20 overflow-y-auto">
@@ -352,9 +362,9 @@ export function TimelinePanel() {
                                 style={{ left: currentTime * pixelsPerSecond }}
                             />
                         </div>
-                    </div >
-                </div >
+                    </div>
+                </div>
             )}
-        </div >
+        </div>
     );
 }

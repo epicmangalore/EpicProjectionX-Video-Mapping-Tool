@@ -7,6 +7,7 @@ import { toast } from "@/store/toast-store";
 import { generateId } from "@/lib/utils";
 import { processFile } from "@/lib/media-utils";
 import { Image, Video, Palette, Type, Upload, X, Search, Plus, Webcam, Trash2 } from "lucide-react";
+import { PRESET_MEDIA } from "@/lib/media/MediaPresets";
 
 interface MediaPickerProps {
     onSelect: (assetId: string | null) => void;
@@ -181,6 +182,53 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
                     </div>
                 </div>
 
+                {/* VJ Loops / Presets */}
+                <div>
+                    <h3 className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-3 pl-1">VJ Loops & Presets</h3>
+                    <div className="grid grid-cols-4 gap-2">
+                        {PRESET_MEDIA.map((preset) => (
+                            <button
+                                key={preset.id}
+                                onClick={() => {
+                                    // Check if this preset is already in the store
+                                    const exists = mediaAssets.some(a => a.id === preset.id);
+                                    if (!exists) {
+                                        // Add it to the store so the rest of the app can use it
+                                        addMediaAsset(preset);
+                                    }
+                                    onSelect(preset.id);
+                                }}
+                                onMouseEnter={() => setHoveredAssetId(preset.id)}
+                                onMouseLeave={() => setHoveredAssetId(null)}
+                                className={`group aspect-video rounded-lg border overflow-hidden relative transition-all bg-zinc-900/50 ${currentMediaId === preset.id ? 'border-electric-cyan bg-electric-cyan/5' : 'border-white/5 hover:border-white/20'}`}
+                            >
+                                <div className="absolute inset-0">
+                                    {preset.type === "video" && preset.url && (
+                                        <video
+                                            src={preset.url}
+                                            autoPlay={hoveredAssetId === preset.id}
+                                            muted
+                                            loop
+                                            preload="metadata"
+                                            className={`w-full h-full object-cover transition-opacity duration-300 ${hoveredAssetId !== preset.id ? 'opacity-80' : 'opacity-100'}`}
+                                        />
+                                    )}
+                                </div>
+
+                                {currentMediaId === preset.id && (
+                                    <div className="absolute inset-0 border-2 border-electric-cyan shadow-[inset_0_0_10px_rgba(6,182,212,0.3)] z-10" />
+                                )}
+
+                                <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-black/80 to-transparent">
+                                    <p className="text-[8px] font-bold text-white/90 truncate uppercase tracking-tighter">
+                                        {preset.name}
+                                    </p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Media Library */}
                 <div>
                     <h3 className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest mb-3 pl-1">Media Library</h3>
@@ -235,7 +283,7 @@ export function MediaPicker({ onSelect, onClose, currentMediaId }: MediaPickerPr
 
             {/* Footer */}
             <div className="p-3 bg-zinc-900 border-t border-white/5 flex items-center justify-between text-[9px] text-zinc-600 font-bold uppercase tracking-wider">
-                <span>{filteredAssets.length} Assets</span>
+                <span>{filteredAssets.length} Assets (+ {PRESET_MEDIA.length} Presets)</span>
                 <span className="text-zinc-700">LIBRARY V1.0</span>
             </div>
         </div>

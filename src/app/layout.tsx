@@ -25,7 +25,8 @@ export const metadata: Metadata = {
     manifest: "/manifest.json",
 };
 
-import { ToastContainer } from "@/components/ui/Toast";
+// Set maximum duration for Serverless Functions to 10 minutes (600 seconds)
+export const maxDuration = 600;
 
 export default function RootLayout({
     children,
@@ -38,7 +39,6 @@ export default function RootLayout({
                 className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased`}
             >
                 {children}
-                <ToastContainer />
             </body>
         </html>
     );
