@@ -59,6 +59,13 @@ export const useOutputStore = create<OutputState>((set, get) => ({
 
         if (outputWindow) {
             set({ outputWindowOpen: true, outputWindowRef: outputWindow });
+
+            const timer = setInterval(() => {
+                if (outputWindow.closed) {
+                    clearInterval(timer);
+                    set({ outputWindowOpen: false, outputWindowRef: null });
+                }
+            }, 1000);
         } else {
             console.warn("Could not open output window. Popups may be blocked by your browser.");
             if (typeof window !== 'undefined') {

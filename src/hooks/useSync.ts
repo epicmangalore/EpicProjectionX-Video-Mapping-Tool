@@ -17,8 +17,14 @@ export function useSync() {
         let animationFrameId: number;
 
         if (isOutput) {
-            // Request initial state
+            // Request initial state and inform control window
             channel.postMessage({ type: "SYNC_REQUEST" });
+            channel.postMessage({ type: "OUTPUT_MOUNTED" });
+
+            const handleUnload = () => {
+                channel.postMessage({ type: "OUTPUT_UNMOUNTED" });
+            };
+            window.addEventListener("beforeunload", handleUnload);
 
             // Listen for state updates in Output window
             channel.onmessage = (event) => {
@@ -98,7 +104,9 @@ export function useSync() {
         } else {
             // CONTROL WINDOW LOGIC
             channel.onmessage = (event) => {
-                if (event.data.type === "SYNC_REQUEST") {
+                const { type } = event.data;
+                if (type === "SYNC_REQUEST" || type === "OUTPUT_MOUNTED") {
+                    useOutputStore.setState({ outputWindowOpen: true });
                     const state = useProjectStore.getState();
                     const effectsState = useEffectsStore.getState();
                     const timelineState = useTimelineStore.getState();
@@ -129,6 +137,8 @@ export function useSync() {
                             playbackSync
                         }
                     });
+                } else if (type === "OUTPUT_UNMOUNTED") {
+                    useOutputStore.setState({ outputWindowOpen: false, outputWindowRef: null });
                 }
             };
 

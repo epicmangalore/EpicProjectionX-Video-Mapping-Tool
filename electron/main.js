@@ -189,8 +189,11 @@ function createOutputWindow() {
     outputWindow.loadURL(outputURL);
     outputWindow.setFullScreen(true);
 
+    mainWindow?.webContents.send('output-window-status', true);
+
     outputWindow.on('closed', () => {
         outputWindow = null;
+        mainWindow?.webContents.send('output-window-status', false);
     });
 }
 

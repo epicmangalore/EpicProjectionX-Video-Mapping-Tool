@@ -43,6 +43,18 @@ export default function Home() {
     const setPenSubMode = useUIStore((state) => state.setPenSubMode);
     const [penDropdownOpen, setPenDropdownOpen] = useState(false);
     const openOutputWindow = useOutputStore((state) => state.openOutputWindow);
+    const closeOutputWindow = useOutputStore((state) => state.closeOutputWindow);
+    const outputWindowOpen = useOutputStore((state) => state.outputWindowOpen);
+
+    // Listen for Electron output window status changes
+    useEffect(() => {
+        if (typeof window !== 'undefined' && (window as any).electron?.onOutputWindowStatus) {
+            const cleanup = (window as any).electron.onOutputWindowStatus((isOpen: boolean) => {
+                useOutputStore.setState({ outputWindowOpen: isOpen });
+            });
+            return cleanup;
+        }
+    }, []);
 
     // Activate Auto-Save and Sync
     useAutoSave();
@@ -416,14 +428,49 @@ export default function Home() {
 
                         <KeyboardShortcutsButton />
 
-                        <LightBeamButton
-                            onClick={openOutputWindow}
-                            className="ml-2 px-5 py-2 text-xs font-bold"
-                            gradientColors={["#00f0ff", "#8b5cf6", "#00f0ff"]}
-                            data-tour="launch-output"
-                        >
-                            LAUNCH OUTPUT <ArrowRight size={14} />
-                        </LightBeamButton>
+                        {outputWindowOpen && (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span className="tracking-wide">OUTPUT LIVE</span>
+                            </div>
+                        )}
+
+                        {outputWindowOpen ? (
+                            <div className="flex items-center gap-1 ml-1">
+                                <LightBeamButton
+                                    onClick={openOutputWindow}
+                                    className="px-4 py-2 text-xs font-bold bg-emerald-950/90 text-emerald-300 shadow-[0_0_20px_rgba(16,185,129,0.5)]"
+                                    gradientColors={["#10b981", "#06b6d4", "#10b981"]}
+                                    data-tour="launch-output"
+                                    title="Focus Output Window"
+                                >
+                                    <span className="relative flex h-2 w-2 mr-1">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+                                    </span>
+                                    OUTPUT ACTIVE
+                                </LightBeamButton>
+                                <button
+                                    onClick={closeOutputWindow}
+                                    className="px-2.5 py-1.5 text-xs font-semibold rounded-full bg-zinc-800/90 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-zinc-700/80 hover:border-red-500/50 transition-all shadow-sm"
+                                    title="Close Output Window"
+                                >
+                                    Close ✕
+                                </button>
+                            </div>
+                        ) : (
+                            <LightBeamButton
+                                onClick={openOutputWindow}
+                                className="ml-2 px-5 py-2 text-xs font-bold"
+                                gradientColors={["#00f0ff", "#8b5cf6", "#00f0ff"]}
+                                data-tour="launch-output"
+                            >
+                                LAUNCH OUTPUT <ArrowRight size={14} />
+                            </LightBeamButton>
+                        )}
                     </div>
                 </header>
 

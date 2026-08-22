@@ -36,6 +36,11 @@ contextBridge.exposeInMainWorld('electron', {
     // Output window control
     openOutputWindow: () => ipcRenderer.send('open-output-window'),
     closeOutputWindow: () => ipcRenderer.send('close-output-window'),
+    onOutputWindowStatus: (callback) => {
+        const handler = (event, isOpen) => callback(isOpen);
+        ipcRenderer.on('output-window-status', handler);
+        return () => ipcRenderer.removeListener('output-window-status', handler);
+    },
 
     // Updates & Restart
     checkForUpdates: () => ipcRenderer.send('check-for-updates'),
