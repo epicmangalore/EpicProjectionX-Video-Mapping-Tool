@@ -1,0 +1,764 @@
+"use client";
+
+import React, { useRef, useState } from "react";
+import { useProjectStore } from "@/store/project-store";
+import { useActiveSurfaces } from "@/hooks/useActiveSurfaces";
+import { useUIStore } from "@/store/ui-store";
+import { EffectsPanel } from "./EffectsPanel";
+import { ShaderEffectControls } from "./ShaderEffectControls";
+import { AudioMappingPanel } from "./AudioMappingPanel";
+import { useEffectsStore, defaultEffectSettings } from "@/store/effects-store";
+import { EdgeBlendingControls } from "./EdgeBlendingControls";
+import { Trash2, Copy, Type, Italic, AlignLeft, AlignCenter, AlignRight, Upload, AlignStartHorizontal, AlignCenterHorizontal, AlignEndHorizontal, AlignStartVertical, AlignCenterVertical, AlignEndVertical, Link2, MousePointer2, Layers, Video, ChevronRight, Plus, Wand2, Power, Palette } from "lucide-react";
+import { toast } from "@/store/toast-store";
+import { MasterControls } from "./MasterControls";
+import { RotaryKnob } from "@/components/ui/RotaryKnob";
+import { processFile } from "@/lib/media-utils";
+import { generateId, truncateMiddle } from "@/lib/utils";
+import { MediaPicker } from "./MediaPicker";
+
+// Group functionality removed
+
+export function SurfaceProperties() {
+    const surfaces = useActiveSurfaces();
+    const mediaAssets = useProjectStore((state) => state.mediaAssets);
+    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
+    const updateSurface = useProjectStore((state) => state.updateSurface);
+    const alignSurfaces = useProjectStore((state) => state.alignSurfaces);
+    const updateMediaAsset = useProjectStore((state) => state.updateMediaAsset);
+    const deleteSurface = useProjectStore((state) => state.deleteSurface);
+    const duplicateSurfaces = useProjectStore((state) => state.duplicateSurfaces);
+    const addMediaAsset = useProjectStore((state) => state.addMediaAsset);
+    const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
+    const toolMode = useUIStore((state) => state.toolMode);
+    const setToolMode = useUIStore((state) => state.setToolMode);
+    const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
+    const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);
+    const setActiveEffectConfig = useUIStore((state) => state.setActiveEffectConfig);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isImporting, setIsImporting] = useState(false);
+
+    const surfaceEffects = useEffectsStore((state) => state.surfaceEffects);
+    const updateSurfaceEffect = useEffectsStore((state) => state.updateSurfaceEffect);
+
+    const selectedSurface = surfaces.find((s) => selectedIds.includes(s.id));
+    const effects = selectedSurface ? (surfaceEffects[selectedSurface.id] || defaultEffectSettings) : defaultEffectSettings;
+
+    const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !selectedSurface) return;
+
+        setIsImporting(true);
+        try {
+            const mediaId = await processFile(file, addMediaAsset);
+            updateSurface(selectedSurface.id, { mediaId });
+        } catch (error: any) {
+            console.error("Failed to import media:", error);
+            const errorMessage = error.message || 'Failed to import file';
+            toast.error(errorMessage, 8000);
+        } finally {
+            setIsImporting(false);
+            if (e.target) e.target.value = "";
+        }
+    };
+
+    if (!selectedSurface) {
+        return (
+            <aside className="w-80 h-full bg-zinc-950 border-l border-white/5 flex flex-col">
+                <div className="panel-header">
+                    Properties
+                </div>
+                <div className="flex-1 p-4 flex items-center justify-center opacity-50">
+                    <div className="text-center">
+                        <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-white/5 flex items-center justify-center">
+                            <MousePointer2 className="w-5 h-5 text-zinc-600" />
+                        </div>
+                        <p className="text-sm text-zinc-500">Select a surface</p>
+                    </div>
+                </div>
+            </aside>
+        );
+    }
+
+    return (
+        <aside className="w-80 h-full bg-zinc-950 border-l border-white/5 flex flex-col font-sans">
+            <div className="panel-header">
+                Properties
+                <div className="flex gap-1">
+                    <button
+                        onClick={() => duplicateSurfaces([selectedSurface.id])}
+                        className="p-1.5 hover:bg-white/10 rounded text-zinc-400 hover:text-white transition-colors"
+                        title="Duplicate"
+                    >
+                        <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        onClick={() => deleteSurface(selectedSurface.id)}
+                        className="p-1.5 hover:bg-red-500/10 rounded text-zinc-400 hover:text-red-400 transition-colors"
+                        title="Delete"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-4">
+                {/* Surface Name */}
+                <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Name</label>
+                    <input
+                        type="text"
+                        value={selectedSurface.name}
+                        onChange={(e) =>
+                            updateSurface(selectedSurface.id, { name: e.target.value })
+                        }
+                        className="w-full px-3 py-2 bg-dark-800 border border-white/10 rounded-md text-sm focus:outline-none focus:border-electric-cyan"
+                    />
+                </div>
+
+                {/* Media Selector - Visual Picker */}
+                <div>
+                    <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs text-muted-foreground block">Media Source</label>
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isImporting}
+                            className="p-1 px-2 text-[10px] flex items-center gap-1.5 transition-all text-zinc-500 hover:text-white bg-zinc-900 border border-white/5 hover:border-white/20 rounded-md"
+                            title="Import and assign media"
+                        >
+                            {isImporting ? (
+                                <div className="w-3 h-3 border-2 border-electric-cyan/30 border-t-electric-cyan rounded-full animate-spin" />
+                            ) : (
+                                <Upload className="w-3 h-3" />
+                            )}
+                            {isImporting ? "Importing..." : "Import"}
+                        </button>
+                    </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileImport}
+                        className="hidden"
+                        accept="image/*,video/*"
+                    />
+                    <button
+                        onClick={() => setMediaPickerOpen(true)}
+                        className="w-full flex items-center justify-between gap-3 p-3 bg-zinc-900/50 hover:bg-zinc-800 border border-white/10 rounded-xl transition-all group"
+                    >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 rounded-lg bg-zinc-950 flex items-center justify-center shrink-0 border border-white/5 overflow-hidden">
+                                {selectedSurface.mediaId ? (
+                                    <>
+                                        {(() => {
+                                            const asset = mediaAssets.find(a => a.id === selectedSurface.mediaId);
+                                            if (asset?.type === "color") return <div className="w-full h-full" style={{ backgroundColor: asset.color }} />;
+                                            if (asset?.thumbnail) return <img src={asset.thumbnail} alt="" className="w-full h-full object-cover" />;
+                                            return <Video className="w-4 h-4 text-zinc-600" />;
+                                        })()}
+                                    </>
+                                ) : (
+                                    <Plus className="w-4 h-4 text-zinc-700" />
+                                )}
+                            </div>
+                            <div className="text-left overflow-hidden">
+                                <p className="text-xs font-bold text-zinc-200 truncate uppercase mt-0.5">
+                                    {selectedSurface.mediaId
+                                        ? mediaAssets.find(a => a.id === selectedSurface.mediaId)?.name || "Unknown Asset"
+                                        : "Assign Media"}
+                                </p>
+                                <p className="text-[9px] text-zinc-500 uppercase font-medium mt-0.5">
+                                    {selectedSurface.mediaId
+                                        ? mediaAssets.find(a => a.id === selectedSurface.mediaId)?.type || "Source"
+                                        : "Click to browse"}
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-electric-cyan transition-colors" />
+                    </button>
+
+                </div>
+
+
+                {/* Media Placement */}
+                <div className={`space-y-4 border-t border-white/5 pt-4 ${!selectedSurface.mediaId ? "opacity-30 pointer-events-none" : ""}`}>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Media Placement</h3>
+                    </div>
+
+                    {/* Fit Mode - Segmented Control */}
+                    <div className="flex bg-zinc-900 border border-white/10 rounded overflow-hidden">
+                        {[
+                            { id: "stretch", label: "STRETCH" },
+                            { id: "cover", label: "FILL" },
+                            { id: "contain", label: "FIT" }
+                        ].map((mode) => (
+                            <button
+                                key={mode.id}
+                                onClick={() => updateSurface(selectedSurface.id, {
+                                    textureSettings: {
+                                        ...selectedSurface.textureSettings,
+                                        fit: mode.id as any,
+                                        scale: { x: 1, y: 1 },
+                                        offset: { x: 0, y: 0 },
+                                        rotation: selectedSurface.textureSettings?.rotation ?? 0
+                                    }
+                                })}
+                                className={`flex-1 py-1.5 text-[10px] font-medium transition-colors border-r border-white/5 last:border-r-0 transform-gpu ${(selectedSurface.textureSettings?.fit || "stretch") === mode.id
+                                    ? "bg-zinc-800 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                                    }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Transform Deck - simplified */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Transform</h3>
+                        <div className="h-px bg-white/5 flex-1 ml-3" />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-0 justify-items-center items-end">
+                        {/* Scale Group with Lock */}
+                        <div className="col-span-2 flex items-center gap-1 pr-4 border-r border-white/5 mr-4 h-full pb-1">
+                            <RotaryKnob
+                                label="Scale X"
+                                value={selectedSurface.scale.x}
+                                min={0.1}
+                                max={5}
+                                step={0.1}
+                                color="#00f0ff"
+                                defaultValue={1}
+                                onChange={(val) => {
+                                    const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, x: val } };
+                                    if (selectedSurface.aspectRatioLocked) {
+                                        const ratio = selectedSurface.scale.y / selectedSurface.scale.x;
+                                        updates.scale!.y = val * ratio;
+                                    }
+                                    updateSurface(selectedSurface.id, updates);
+                                }}
+                            />
+
+                            {/* Aspect Lock */}
+                            <button
+                                onClick={() => updateSurface(selectedSurface.id, { aspectRatioLocked: !selectedSurface.aspectRatioLocked })}
+                                className={`p-1.5 rounded-full transition-all mb-5 ${selectedSurface.aspectRatioLocked
+                                    ? "bg-electric-cyan text-black"
+                                    : "text-zinc-600 hover:text-zinc-400"
+                                    }`}
+                                title="Lock Aspect Ratio"
+                            >
+                                <Link2 className="w-3 h-3" />
+                            </button>
+
+                            <RotaryKnob
+                                label="Scale Y"
+                                value={selectedSurface.scale.y}
+                                min={0.1}
+                                max={5}
+                                step={0.1}
+                                color="#00f0ff"
+                                defaultValue={1}
+                                onChange={(val) => {
+                                    const updates: Partial<typeof selectedSurface> = { scale: { ...selectedSurface.scale, y: val } };
+                                    if (selectedSurface.aspectRatioLocked) {
+                                        const ratio = selectedSurface.scale.x / selectedSurface.scale.y;
+                                        updates.scale!.x = val * ratio;
+                                    }
+                                    updateSurface(selectedSurface.id, updates);
+                                }}
+                            />
+                        </div>
+
+                        {/* Rotation */}
+                        <div className="pb-1">
+                            <RotaryKnob
+                                label="Rotate"
+                                value={selectedSurface.rotation}
+                                min={-Math.PI}
+                                max={Math.PI}
+                                step={0.05}
+                                color="#ff9900"
+                                defaultValue={0}
+                                formatValue={(v) => `${Math.round(v * (180 / Math.PI))}°`}
+                                onChange={(val) => updateSurface(selectedSurface.id, { rotation: val })}
+                            />
+                        </div>
+                    </div>
+
+
+                    <div className="mt-4 space-y-3 border-t border-white/5 pt-4">
+                        {/* Horizontal Alignment */}
+                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
+                            <button
+                                onClick={() => alignSurfaces("left")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Left"
+                            >
+                                <AlignStartVertical className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("center")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Center"
+                            >
+                                <AlignCenterVertical className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("right")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Right"
+                            >
+                                <AlignEndVertical className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* Vertical Alignment */}
+                        <div className="grid grid-cols-3 gap-1 bg-zinc-900/50 border border-white/5 rounded p-0.5">
+                            <button
+                                onClick={() => alignSurfaces("top")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Top"
+                            >
+                                <AlignStartHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("middle")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Middle"
+                            >
+                                <AlignCenterHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => alignSurfaces("bottom")}
+                                className="p-1.5 rounded hover:bg-white/5 text-zinc-500 hover:text-electric-cyan transition-all flex items-center justify-center"
+                                title="Align Bottom"
+                            >
+                                <AlignEndHorizontal className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Text Properties Deck */}
+                {(() => {
+                    const media = mediaAssets.find(m => m.id === selectedSurface.mediaId);
+                    if (media?.type === "text") {
+                        return (
+                            <div className="bg-zinc-950/50 border border-white/5 rounded p-3">
+                                <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-2">
+                                    <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Text Properties</h3>
+                                    <Type className="w-3 h-3 text-zinc-500" />
+                                </div>
+
+                                {/* Text Content */}
+                                <div className="mb-4">
+                                    <textarea
+                                        value={media.text || ""}
+                                        onChange={(e) => updateMediaAsset(media.id, { text: e.target.value })}
+                                        className="w-full bg-zinc-900 border border-white/10 rounded p-2 text-xs font-sans focus:outline-none focus:border-white/20 min-h-[60px] resize-y"
+                                        placeholder="Enter text..."
+                                    />
+                                </div>
+
+                                {/* Typography Controls */}
+                                <div className="space-y-3">
+                                    {/* Font & Style */}
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={media.fontFamily || "sans-serif"}
+                                            onChange={(e) => updateMediaAsset(media.id, { fontFamily: e.target.value })}
+                                            className="flex-1 bg-zinc-900 border border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none"
+                                        >
+                                            <option value="sans-serif">Sans Serif</option>
+                                            <option value="serif">Serif</option>
+                                            <option value="monospace">Monospace</option>
+                                            <option value="Inter">Inter</option>
+                                            <option value="Arial">Arial</option>
+                                        </select>
+                                        <button
+                                            onClick={() => updateMediaAsset(media.id, { fontStyle: media.fontStyle === "italic" ? "normal" : "italic" })}
+                                            className={`p-1.5 rounded border ${media.fontStyle === "italic" ? "bg-zinc-800 border-white/20 text-white" : "border-white/5 text-zinc-500 hover:text-zinc-300"}`}
+                                        >
+                                            <Italic className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+
+                                    {/* Weight & Size */}
+                                    <div className="flex gap-2">
+                                        <select
+                                            value={media.fontWeight || "normal"}
+                                            onChange={(e) => updateMediaAsset(media.id, { fontWeight: e.target.value })}
+                                            className="flex-1 bg-zinc-900 border border-white/10 rounded px-2 py-1.5 text-xs focus:outline-none"
+                                        >
+                                            <option value="light">Light</option>
+                                            <option value="normal">Regular</option>
+                                            <option value="bold">Bold</option>
+                                        </select>
+                                        <div className="flex items-center gap-1 bg-zinc-900 border border-white/10 rounded px-2 w-20">
+                                            <span className="text-[9px] text-zinc-600 font-bold">px</span>
+                                            <input
+                                                type="number"
+                                                value={media.fontSize || 80}
+                                                onChange={(e) => updateMediaAsset(media.id, { fontSize: parseInt(e.target.value) || 12 })}
+                                                className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Line Height & Spacing */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                            <span className="text-[10px] text-zinc-500">↕</span>
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                value={media.lineHeight || 1.2}
+                                                onChange={(e) => updateMediaAsset(media.id, { lineHeight: parseFloat(e.target.value) || 1.2 })}
+                                                className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1.5"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                            <span className="text-[10px] text-zinc-500">↔</span>
+                                            <input
+                                                type="number"
+                                                value={media.letterSpacing || 0}
+                                                onChange={(e) => updateMediaAsset(media.id, { letterSpacing: parseInt(e.target.value) || 0 })}
+                                                className="w-full bg-transparent border-none text-xs text-right focus:outline-none py-1.5"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Alignment & Color */}
+                                    <div className="flex gap-2">
+                                        <div className="flex bg-zinc-900 border border-white/10 rounded p-0.5">
+                                            {[
+                                                { align: "left", Icon: AlignLeft },
+                                                { align: "center", Icon: AlignCenter },
+                                                { align: "right", Icon: AlignRight },
+                                            ].map(({ align, Icon }) => (
+                                                <button
+                                                    key={align}
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                    onClick={() => updateMediaAsset(media.id, { textAlign: align as any })}
+                                                    className={`p-1.5 rounded-sm ${media.textAlign === align ? "bg-zinc-800 text-white shadow-sm" : "text-zinc-500 hover:text-zinc-300"}`}
+                                                >
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div className="flex-1 flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-2">
+                                            <div
+                                                className="w-4 h-4 rounded-sm border border-white/10 shadow-sm"
+                                                style={{ backgroundColor: media.textColor || "#ffffff" }}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={media.textColor || "#ffffff"}
+                                                onChange={(e) => updateMediaAsset(media.id, { textColor: e.target.value })}
+                                                className="flex-1 bg-transparent border-none text-xs font-mono focus:outline-none py-1.5"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
+
+                {/* Appearance Deck */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Appearance</h3>
+                        <div className="h-px bg-white/5 flex-1 ml-3" />
+                    </div>
+
+                    <div className="flex gap-4 justify-center">
+                        <RotaryKnob
+                            label="Opacity"
+                            value={selectedSurface.opacity}
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            color="#b400ff"
+                            defaultValue={1}
+                            formatValue={(v) => `${Math.round(v * 100)}%`}
+                            onChange={(val) => updateSurface(selectedSurface.id, { opacity: val })}
+                        />
+
+                        <div className="flex-1 flex flex-col justify-end gap-2">
+                            <div>
+                                <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Blend Mode</label>
+                                <select
+                                    value={selectedSurface.blendMode}
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    onChange={(e) => updateSurface(selectedSurface.id, { blendMode: e.target.value as any })}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs focus:outline-none focus:border-electric-purple"
+                                >
+                                    <option value="normal">Normal</option>
+                                    <option value="multiply">Multiply</option>
+                                    <option value="screen">Screen</option>
+                                    <option value="overlay">Overlay</option>
+                                    <option value="additive">Additive</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-[9px] text-zinc-600 font-bold uppercase mb-1 block">Layer Order</label>
+                                <input
+                                    type="number"
+                                    value={selectedSurface.zIndex}
+                                    onChange={(e) => updateSurface(selectedSurface.id, { zIndex: parseInt(e.target.value) || 0 })}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs font-mono focus:outline-none focus:border-electric-purple"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RGB Filters */}
+                    <div className="space-y-3 pt-2 border-t border-white/5 bg-zinc-900/20 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2">
+                                <Palette className="w-3 h-3 text-zinc-500" />
+                                <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Color Tint</label>
+                            </div>
+                            <button
+                                onClick={() => updateSurfaceEffect(selectedSurface!.id, { colorTint: { r: 1, g: 1, b: 1 } })}
+                                className="text-[8px] text-zinc-500 hover:text-white uppercase font-bold tracking-tighter bg-zinc-800 px-1.5 py-0.5 rounded border border-white/5 transition-colors"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { label: "R", key: "r", color: "bg-red-500", accent: "accent-red-500" },
+                                { label: "G", key: "g", color: "bg-green-500", accent: "accent-green-500" },
+                                { label: "B", key: "b", color: "bg-blue-500", accent: "accent-blue-500" },
+                            ].map((channel) => (
+                                <div key={channel.key} className="flex items-center gap-3">
+                                    <span className={`text-[10px] font-bold w-4 text-center rounded ${channel.color} text-black`}>{channel.label}</span>
+                                    <div className="flex-1 h-1.5 bg-zinc-900 rounded-full relative group">
+                                        <input
+                                            type="range"
+                                            min="0"
+                                            max="1"
+                                            step="0.01"
+                                            value={effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1}
+                                            onChange={(e) => updateSurfaceEffect(selectedSurface!.id, {
+                                                colorTint: {
+                                                    ...(effects.colorTint || defaultEffectSettings.colorTint),
+                                                    [channel.key]: parseFloat(e.target.value)
+                                                }
+                                            })}
+                                            className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 ${channel.accent}`}
+                                        />
+                                        <div
+                                            className={`h-full rounded-full ${channel.color} shadow-[0_0_8px_rgba(0,0,0,0.5)] transition-all`}
+                                            style={{ width: `${(effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] text-zinc-400 font-mono w-7 text-right">
+                                        {Math.round((effects.colorTint?.[channel.key as 'r' | 'g' | 'b'] ?? 1) * 100)}%
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Global Composition Source Toggle */}
+                <div className="pt-2 border-t border-white/5 space-y-2">
+                    <label className="flex items-center justify-between text-[11px] text-zinc-400 group cursor-pointer p-1 rounded hover:bg-white/5 transition-colors">
+                        <div className="flex items-center gap-2">
+                            <Layers className="w-3 h-3 group-hover:text-electric-cyan transition-colors" />
+                            <span>Use Mixed Composition</span>
+                        </div>
+                        <button
+                            onClick={() => updateSurface(selectedSurface.id, { useComposition: !selectedSurface.useComposition })}
+                            className={`w-8 h-4 rounded-full transition-all relative ${selectedSurface.useComposition ? 'bg-electric-cyan/30' : 'bg-zinc-800'}`}
+                        >
+                            <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all ${selectedSurface.useComposition ? 'right-0.5 bg-electric-cyan' : 'left-0.5 bg-zinc-500'}`} />
+                        </button>
+                    </label>
+                    <p className="text-[10px] text-zinc-500 leading-relaxed italic px-1">
+                        Override individual media with the global layer mix.
+                    </p>
+
+                    {selectedSurface.useComposition && (
+                        <div className="pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <label className="text-[9px] text-zinc-600 font-bold uppercase mb-2 block px-1">Mapping Mode</label>
+                            <div className="flex bg-zinc-900 border border-white/10 rounded p-0.5">
+                                {[
+                                    { id: "local", label: "Repeat (Local)", desc: "Each surface shows full mix" },
+                                    { id: "global", label: "Continue (Global)", desc: "Surfaces slice the mix" }
+                                ].map((mode) => (
+                                    <button
+                                        key={mode.id}
+                                        onClick={() => updateSurface(selectedSurface.id, {
+                                            compositionMapping: mode.id as "local" | "global"
+                                        })}
+                                        className={`flex-1 py-1.5 px-2 text-[10px] font-medium transition-all rounded-sm ${(selectedSurface.compositionMapping || "local") === mode.id
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-white/5"
+                                            }`}
+                                        title={mode.desc}
+                                    >
+                                        {mode.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Mesh Warp Settings (only visible when mesh warp tool is active) */}
+                {toolMode === "mesh-warp" && selectedSurface.meshWarp && (
+                    <div className="border-t border-white/5 pt-4">
+                        <div className="px-2 py-2 bg-electric-cyan/5 border border-electric-cyan/20 rounded">
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-[9px] text-electric-cyan font-bold uppercase">Grid Density</label>
+                                <span className="text-[9px] text-electric-cyan/70 font-mono">{selectedSurface.meshWarp.gridSize} x {selectedSurface.meshWarp.gridSize}</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="2"
+                                max="10"
+                                step="1"
+                                value={selectedSurface.meshWarp.gridSize}
+                                onChange={(e) => {
+                                    initializeMeshWarp(selectedSurface.id, parseInt(e.target.value));
+                                }}
+                                className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-electric-cyan"
+                            />
+                            <button
+                                onClick={() => {
+                                    updateSurface(selectedSurface.id, { meshWarp: null });
+                                    setToolMode("select");
+                                }}
+                                className="mt-2 w-full py-1 text-[9px] text-red-400 hover:text-red-300 border border-red-500/20 hover:bg-red-500/10 rounded"
+                            >
+                                Reset / Remove Warp
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+
+                {/* Active Effects List - Simplified */}
+                <div className="space-y-4 pt-4 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Active FX Stack</h3>
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-900 border border-white/5">
+                            <span className="text-[10px] font-bold text-zinc-500 font-mono">
+                                {(selectedSurface.shaderEffectIds?.length || 0) + (selectedSurface.effects?.filter(e => e.enabled).length || 0)}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        {/* Shader Effects */}
+                        {selectedSurface.shaderEffectIds?.map((effectId) => {
+                            const asset = mediaAssets.find(a => a.id === effectId);
+                            if (!asset || asset.type !== "shader") return null;
+
+                            return (
+                                <div
+                                    key={effectId}
+                                    className="group flex items-center justify-between gap-3 p-1.5 bg-zinc-900/50 hover:bg-zinc-800 border border-white/5 rounded-lg transition-all active:scale-[0.98]"
+                                >
+                                    <button
+                                        className="flex-1 flex items-center gap-2 cursor-pointer text-left"
+                                        onClick={() => setActiveEffectConfig({ type: "shader", effectId, surfaceId: selectedSurface.id })}
+                                    >
+                                        <div className="w-7 h-7 rounded bg-electric-purple/10 flex items-center justify-center group-hover:bg-electric-purple/20 transition-colors">
+                                            <Wand2 className="w-3.5 h-3.5 text-electric-purple" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-[11px] text-zinc-300 font-medium truncate block group-hover:text-white transition-colors">{asset.name}</span>
+                                            <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Shader FX</span>
+                                        </div>
+                                    </button>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                        <button
+                                            onClick={() => {
+                                                const nextIds = (selectedSurface.shaderEffectIds || []).filter(id => id !== effectId);
+                                                updateSurface(selectedSurface.id, { shaderEffectIds: nextIds });
+                                                toast.info(`Removed ${asset.name}`);
+                                            }}
+                                            className="p-1.5 hover:bg-red-500/10 rounded-md text-zinc-600 hover:text-red-400 transition-colors"
+                                            title="Remove Effect"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* Stackable Effects */}
+                        {selectedSurface.effects?.map((fx, index) => (
+                            <div
+                                key={fx.id}
+                                className={`group flex items-center justify-between gap-3 p-1.5 border rounded-lg transition-all active:scale-[0.98] ${fx.enabled ? 'bg-zinc-900/50 border-white/5 hover:bg-zinc-800' : 'bg-zinc-900/10 border-white/5 opacity-50'}`}
+                            >
+                                <button
+                                    className="flex-1 flex items-center gap-2 cursor-pointer text-left"
+                                    onClick={() => setActiveEffectConfig({ type: "stackable", effectId: fx.id, surfaceId: selectedSurface.id })}
+                                >
+                                    <div className="w-7 h-7 rounded bg-zinc-800 flex items-center justify-center group-hover:bg-zinc-700 transition-colors">
+                                        <span className="text-[10px] font-bold text-zinc-500">#{index + 1}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[11px] text-zinc-300 font-medium capitalize truncate block group-hover:text-white transition-colors">{fx.type.replace("-", " ")}</span>
+                                        <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-tighter">Native FX</span>
+                                    </div>
+                                </button>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                    <button
+                                        onClick={() => updateSurface(selectedSurface.id, {
+                                            effects: selectedSurface.effects.map(e => e.id === fx.id ? { ...e, enabled: !e.enabled } : e)
+                                        })}
+                                        className={`p-1.5 rounded-md transition-colors ${fx.enabled ? 'text-electric-cyan hover:bg-electric-cyan/10' : 'text-zinc-600 hover:bg-white/5'}`}
+                                        title={fx.enabled ? "Disable" : "Enable"}
+                                    >
+                                        <Power className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            updateSurface(selectedSurface.id, {
+                                                effects: selectedSurface.effects.filter(e => e.id !== fx.id)
+                                            });
+                                            toast.info(`Removed ${fx.type}`);
+                                        }}
+                                        className="p-1.5 hover:bg-red-500/10 rounded-md text-zinc-600 hover:text-red-400 transition-colors"
+                                        title="Remove Effect"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+
+                        {(!selectedSurface.shaderEffectIds?.length && !selectedSurface.effects?.length) && (
+                            <div className="py-4 text-center border border-dashed border-white/5 rounded-lg bg-zinc-900/20">
+                                <p className="text-[10px] text-zinc-600 uppercase tracking-tighter">No active effects applied</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div data-tour="audio-panel">
+                    <AudioMappingPanel />
+                </div>
+            </div>
+
+            {/* Global Master Controls */}
+            <div className="border-t border-white/10">
+                <MasterControls />
+            </div>
+        </aside >
+    );
+}

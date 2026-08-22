@@ -1,0 +1,505 @@
+"use client";
+
+import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
+import { SurfaceProperties } from "@/components/panels/SurfaceProperties";
+import { TimelinePanel } from "@/components/panels/TimelinePanel";
+import { SceneList } from "@/components/panels/CueList";
+import { LeftSidebar } from "@/components/panels/LeftSidebar";
+import { ProjectMenu } from "@/components/ui/ProjectMenu";
+import { HelpMenu } from "@/components/ui/HelpMenu";
+import { PerformanceMonitor } from "@/components/ui/PerformanceMonitor";
+import { useUIStore } from "@/store/ui-store";
+import { useProjectStore } from "@/store/project-store";
+import { useOutputStore } from "@/store/output-store";
+import { useModalStore } from "@/store/modal-store";
+import { useHotkeys, APP_HOTKEYS } from "@/hooks/useHotkeys";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { useSync } from "@/hooks/useSync";
+import { MIDIMapper } from "@/components/panels/MIDIMapper";
+import { MediaPicker } from "@/components/panels/MediaPicker";
+import { CanvasSettings } from "@/components/panels/CanvasSettings";
+import { EffectConfigPanel } from "@/components/panels/EffectConfigPanel";
+import { OnboardingGuide } from "@/components/ui/OnboardingGuide";
+import { KeyboardShortcuts, KeyboardShortcutsButton } from "@/components/ui/KeyboardShortcuts";
+import { useState, useEffect } from "react";
+import { MousePointer2, Move, Grid3x3, Monitor, Layers, Zap, Settings as SettingsIcon, Pen, ChevronDown, ArrowRight } from "lucide-react";
+import { LightBeamButton } from "@/components/ui/LightBeamButton";
+import { saveProjectFile } from "@/lib/project-file-manager";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ProjectHydration } from "@/components/layout/ProjectHydration";
+import { VideoContainer } from "@/components/layout/VideoContainer";
+import { GlobalModal } from "@/components/ui/GlobalModal";
+import { ToastContainer } from "@/components/ui/Toast";
+import { WittyUpdateUI } from "@/components/ui/WittyUpdateUI";
+import { useIsClient } from "@/hooks/useIsClient";
+import { projectManager } from "@/lib/project-manager";
+import { WarpControlBar } from "@/components/canvas/WarpControlBar";
+
+export default function Home() {
+    const isClient = useIsClient();
+    const setToolMode = useUIStore((state) => state.setToolMode);
+    const toolMode = useUIStore((state) => state.toolMode);
+    const penSubMode = useUIStore((state) => state.penSubMode);
+    const setPenSubMode = useUIStore((state) => state.setPenSubMode);
+    const [penDropdownOpen, setPenDropdownOpen] = useState(false);
+    const openOutputWindow = useOutputStore((state) => state.openOutputWindow);
+
+    // Activate Auto-Save and Sync
+    useAutoSave();
+    useSync();
+
+    // UI State for MIDI Panel
+    const [showMIDIPanel, setShowMIDIPanel] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
+
+    const deleteSurface = useProjectStore((state) => state.deleteSurface);
+    const surfaces = useProjectStore((state) => state.getActiveSurfaces());
+    const initializeMeshWarp = useProjectStore((state) => state.initializeMeshWarp);
+    const selectedIds = useProjectStore((state) => state.selectedSurfaceIds);
+    const deselectAll = useProjectStore((state) => state.deselectAll);
+
+    const handleMeshWarpClick = () => {
+        if (selectedIds.length > 0) {
+            const surface = surfaces.find(s => s.id === selectedIds[0]);
+            if (surface && !surface.meshWarp) {
+                initializeMeshWarp(surface.id);
+            }
+        }
+        setToolMode("mesh-warp");
+    };
+
+    const undo = useProjectStore((state) => state.undo);
+    const redo = useProjectStore((state) => state.redo);
+    const copySurface = useProjectStore((state) => state.copySurface);
+    const pasteSurface = useProjectStore((state) => state.pasteSurface);
+    const duplicateSurfaces = useProjectStore((state) => state.duplicateSurfaces);
+    const bringToFront = useProjectStore((state) => state.bringToFront);
+    const sendToBack = useProjectStore((state) => state.sendToBack);
+    const projectName = useProjectStore((state) => state.projectSettings.name);
+    // const groupSurfaces = useProjectStore((state) => state.groupSurfaces); // TODO: Implement grouping
+    // const ungroupSurfaces = useProjectStore((state) => state.ungroupSurfaces); // TODO: Implement ungrouping
+
+    // Initialize Global Hotkeys
+    useHotkeys([
+        // Tools
+        { key: APP_HOTKEYS.SELECT_MODE, callback: () => setToolMode("select") },
+        { key: APP_HOTKEYS.CORNER_PIN_MODE, callback: () => setToolMode("corner-pin") },
+        { key: APP_HOTKEYS.MESH_WARP_MODE, callback: () => setToolMode("mesh-warp") },
+        { key: APP_HOTKEYS.PEN_MODE, callback: () => setToolMode("pen") },
+        { key: APP_HOTKEYS.PEN_DRAW.key, ctrl: APP_HOTKEYS.PEN_DRAW.ctrl, callback: () => setPenSubMode("draw") },
+        { key: APP_HOTKEYS.PEN_EDIT.key, ctrl: APP_HOTKEYS.PEN_EDIT.ctrl, callback: () => setPenSubMode("edit") },
+        { key: APP_HOTKEYS.HAND_MODE, callback: () => setToolMode("hand") }, // Placeholder if not impl yet
+
+        // Clipboard & Edit
+        {
+            key: APP_HOTKEYS.DELETE, callback: () => {
+                selectedIds.forEach(id => deleteSurface(id));
+                deselectAll();
+            }
+        },
+        {
+            key: APP_HOTKEYS.DUPLICATE.key,
+            ctrl: APP_HOTKEYS.DUPLICATE.ctrl,
+            callback: () => duplicateSurfaces(selectedIds)
+        },
+        {
+            key: APP_HOTKEYS.COPY.key,
+            ctrl: APP_HOTKEYS.COPY.ctrl,
+            callback: () => {
+                if (selectedIds.length > 0) copySurface(selectedIds[0]); // Currently only single copy support
+            }
+        },
+        {
+            key: APP_HOTKEYS.PASTE.key,
+            ctrl: APP_HOTKEYS.PASTE.ctrl,
+            callback: () => pasteSurface()
+        },
+        {
+            key: APP_HOTKEYS.CUT.key,
+            ctrl: APP_HOTKEYS.CUT.ctrl,
+            callback: () => {
+                if (selectedIds.length > 0) {
+                    copySurface(selectedIds[0]);
+                    deleteSurface(selectedIds[0]);
+                }
+            }
+        },
+        { key: APP_HOTKEYS.SELECT_ALL.key, ctrl: APP_HOTKEYS.SELECT_ALL.ctrl, callback: () => useProjectStore.getState().selectAll() },
+
+        // Undo / Redo
+        { key: APP_HOTKEYS.UNDO.key, ctrl: APP_HOTKEYS.UNDO.ctrl, shift: false, callback: () => undo() },
+        { key: APP_HOTKEYS.REDO.key, ctrl: APP_HOTKEYS.REDO.ctrl, shift: true, callback: () => redo() },
+
+        // Arrangement
+        { key: APP_HOTKEYS.BRING_FORWARD.key, ctrl: APP_HOTKEYS.BRING_FORWARD.ctrl, callback: () => selectedIds.forEach(id => bringToFront(id)) },
+        { key: APP_HOTKEYS.SEND_BACKWARD.key, ctrl: APP_HOTKEYS.SEND_BACKWARD.ctrl, callback: () => selectedIds.forEach(id => sendToBack(id)) },
+
+        // Selection
+        { key: APP_HOTKEYS.DESELECT_ALL, callback: () => deselectAll() },
+
+        // Save
+        {
+            key: APP_HOTKEYS.SAVE.key, ctrl: APP_HOTKEYS.SAVE.ctrl, callback: () => {
+                saveProjectFile().catch(err => console.error("Save failed:", err));
+            }
+        },
+
+        // Open (Cmd+O)
+        {
+            key: "o", ctrl: true, callback: () => {
+                const input = document.querySelector('input[accept=".projectx"]') as HTMLInputElement;
+                if (input) input.click();
+            }
+        },
+
+        // Misc
+        {
+            key: "m", ctrl: true, callback: () => {
+                setShowMIDIPanel((prev) => !prev);
+                setShowSettings(false);
+            }
+        }, // Ctrl+M for MIDI
+
+        // Scene Switching (1-9)
+        { key: APP_HOTKEYS.SCENE_1, callback: () => { const s = useProjectStore.getState().scenes; if (s[0]) useProjectStore.getState().switchToScene(s[0].id); } },
+        { key: APP_HOTKEYS.SCENE_2, callback: () => { const s = useProjectStore.getState().scenes; if (s[1]) useProjectStore.getState().switchToScene(s[1].id); } },
+        { key: APP_HOTKEYS.SCENE_3, callback: () => { const s = useProjectStore.getState().scenes; if (s[2]) useProjectStore.getState().switchToScene(s[2].id); } },
+        { key: APP_HOTKEYS.SCENE_4, callback: () => { const s = useProjectStore.getState().scenes; if (s[3]) useProjectStore.getState().switchToScene(s[3].id); } },
+        { key: APP_HOTKEYS.SCENE_5, callback: () => { const s = useProjectStore.getState().scenes; if (s[4]) useProjectStore.getState().switchToScene(s[4].id); } },
+        { key: APP_HOTKEYS.SCENE_6, callback: () => { const s = useProjectStore.getState().scenes; if (s[5]) useProjectStore.getState().switchToScene(s[5].id); } },
+        { key: APP_HOTKEYS.SCENE_7, callback: () => { const s = useProjectStore.getState().scenes; if (s[6]) useProjectStore.getState().switchToScene(s[6].id); } },
+        { key: APP_HOTKEYS.SCENE_8, callback: () => { const s = useProjectStore.getState().scenes; if (s[7]) useProjectStore.getState().switchToScene(s[7].id); } },
+        { key: APP_HOTKEYS.SCENE_9, callback: () => { const s = useProjectStore.getState().scenes; if (s[8]) useProjectStore.getState().switchToScene(s[8].id); } },
+    ]);
+
+
+    const mediaPickerOpen = useUIStore((state) => state.mediaPickerOpen);
+    const setMediaPickerOpen = useUIStore((state) => state.setMediaPickerOpen);
+
+    const handleMediaSelect = (mediaId: string | null) => {
+        if (selectedIds.length > 0) {
+            useProjectStore.getState().updateSurface(selectedIds[0], { mediaId });
+            setMediaPickerOpen(false);
+        }
+    };
+
+    const activeEffectConfig = useUIStore((state) => state.activeEffectConfig);
+    const selectedSurface = surfaces.find(s => selectedIds.includes(s.id));
+
+    const [isMacElectron, setIsMacElectron] = useState(false);
+
+    useEffect(() => {
+        const isElectron = /Electron/.test(navigator.userAgent);
+        const isMac = /Mac/.test(navigator.platform);
+        setIsMacElectron(isElectron && isMac);
+
+        // Listen for Electron Menu Actions
+        if (isElectron && (window as any).electron?.onMenuAction) {
+            const cleanup = (window as any).electron.onMenuAction((action: string) => {
+                console.log("ELECTRON_MENU_ACTION:", action);
+                const currentName = useProjectStore.getState().projectSettings.name;
+
+                switch (action) {
+                    case "new-project":
+                        useModalStore.getState().confirm({
+                            title: "New Project",
+                            message: "Create a new project? Unsaved changes will be lost.",
+                            confirmLabel: "Create New",
+                            cancelLabel: "Keep Current"
+                        }).then(ok => {
+                            if (ok) projectManager.createNewProject();
+                        });
+                        break;
+                    case "save-project":
+                        saveProjectFile(currentName || "Untitled Project");
+                        break;
+                    case "open-project":
+                        // Simulate click on the hidden input in ProjectMenu
+                        const fileInput = document.querySelector('input[accept=".projectx"]') as HTMLInputElement;
+                        fileInput?.click();
+                        break;
+                }
+            });
+            return cleanup;
+        }
+    }, []); // Only register once, internal logic uses getState()
+
+    return (
+        <TooltipProvider>
+            <main className="h-screen w-screen overflow-hidden bg-zinc-950 flex flex-col text-zinc-100 font-sans">
+                <VideoContainer />
+                <ProjectHydration />
+                {isClient && (
+                    <>
+                        <OnboardingGuide />
+                        <KeyboardShortcuts />
+                        <GlobalModal />
+                        <ToastContainer />
+                        <WittyUpdateUI />
+                    </>
+                )}
+                {/* Top Toolbar - Pro Minimalist */}
+                <header
+                    className={`h-12 bg-zinc-900 border-b border-white/5 flex items-center gap-4 z-50 select-none ${isMacElectron ? "pl-20 pr-4" : "px-4"}`}
+                    style={{ WebkitAppRegion: 'drag' } as any}
+                >
+                    <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <img
+                            src="/editor-logo.png"
+                            alt="ProjectX by EPIC"
+                            className="h-8 w-auto pointer-events-none" // Adjust height to fit header
+                        />
+                        <span className="text-[10px] font-bold text-zinc-600 bg-zinc-800/50 px-1.5 py-0.5 rounded border border-white/5 uppercase tracking-widest">
+                            v1.0.1
+                        </span>
+                    </div>
+
+                    <div className="h-4 w-px bg-white/10 mx-2" style={{ WebkitAppRegion: 'no-drag' } as any} />
+
+                    {/* File Menu Component */}
+                    <div style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <ProjectMenu />
+                    </div>
+
+                    <div className="flex-1 flex justify-center h-full items-center">
+                        {/* Tool Modes - Flat Segmented Control */}
+                        <div
+                            className="flex bg-zinc-950/50 rounded p-0.5 border border-white/5"
+                            data-tour="toolbar"
+                            style={{ WebkitAppRegion: 'no-drag' } as any}
+                        >
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setToolMode("select")}
+                                        className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "select"
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                            }`}
+                                    >
+                                        <MousePointer2 className="w-3 h-3" />
+                                        <span className="hidden lg:inline">Select</span>
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Select (V)</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setToolMode("corner-pin")}
+                                        className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "corner-pin"
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                            }`}
+                                        data-tour="corner-pin"
+                                    >
+                                        <Grid3x3 className="w-3 h-3" />
+                                        <span className="hidden lg:inline">Corner Pin</span>
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Corner Pin (C)</TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={handleMeshWarpClick}
+                                        className={`px-3 py-1 rounded-sm text-xs transition-colors flex items-center gap-2 ${toolMode === "mesh-warp"
+                                            ? "bg-zinc-800 text-white shadow-sm"
+                                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                            }`}
+                                    >
+                                        <Layers className="w-3 h-3" />
+                                        <span className="hidden lg:inline">Mesh Warp</span>
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Mesh Warp (M)</TooltipContent>
+                            </Tooltip>
+
+                            {/* Pen Tool with Draw/Edit Dropdown */}
+                            <div className="relative">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex items-center">
+                                            <button
+                                                onClick={() => setToolMode("pen")}
+                                                className={`px-2 py-1 rounded-sm text-xs transition-colors flex items-center gap-1.5 ${toolMode === "pen"
+                                                    ? "bg-zinc-800 text-white shadow-sm"
+                                                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+                                                    }`}
+                                            >
+                                                <Pen className="w-3 h-3" />
+                                                <span className="hidden lg:inline">{penSubMode === "draw" ? "Draw" : "Pen"}</span>
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setPenDropdownOpen(!penDropdownOpen);
+                                                }}
+                                                className={`px-1 py-1 rounded-sm text-xs transition-colors ${toolMode === "pen"
+                                                    ? "bg-zinc-800 text-white/50 hover:text-white"
+                                                    : "text-zinc-600 hover:text-zinc-400"
+                                                    }`}
+                                            >
+                                                <ChevronDown className="w-2.5 h-2.5" />
+                                            </button>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>{penSubMode === "draw" ? "Pen Draw Tool" : "Pen Edit Tool"} (P)</TooltipContent>
+                                </Tooltip>
+
+                                {penDropdownOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setPenDropdownOpen(false)} />
+                                        <div className="absolute top-full left-0 mt-1 w-44 bg-zinc-900/95 border border-white/10 rounded-lg shadow-2xl backdrop-blur-md z-50 py-1">
+                                            <button
+                                                onClick={() => {
+                                                    setPenSubMode("draw");
+                                                    setPenDropdownOpen(false);
+                                                }}
+                                                className={`w-full px-3 py-2 text-xs text-left hover:bg-white/10 flex items-center justify-between ${penSubMode === "draw" ? "text-electric-cyan" : "text-zinc-300"}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Pen className="w-3.5 h-3.5" />
+                                                    <span>ProjectX v1.0.1</span>
+                                                </div>
+                                                <span className="text-[9px] opacity-40 font-mono">⌘F</span>
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setPenSubMode("edit");
+                                                    setPenDropdownOpen(false);
+                                                }}
+                                                className={`w-full px-3 py-2 text-xs text-left hover:bg-white/10 flex items-center justify-between ${penSubMode === "edit" ? "text-electric-cyan" : "text-zinc-300"}`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Pen className="w-3.5 h-3.5" />
+                                                    <span>Edit Tool</span>
+                                                </div>
+                                                <span className="text-[9px] opacity-40 font-mono">⌘E</span>
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 items-center relative" style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <HelpMenu />
+                        <button
+                            onClick={() => {
+                                setShowMIDIPanel(!showMIDIPanel);
+                                if (!showMIDIPanel) setShowSettings(false);
+                            }}
+                            className={`p-1.5 rounded transition-all ${showMIDIPanel
+                                ? "bg-electric-cyan text-black"
+                                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
+                            title="MIDI Mapping"
+                        >
+                            <Zap className="w-4 h-4" />
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                setShowSettings(!showSettings);
+                                if (!showSettings) setShowMIDIPanel(false);
+                            }}
+                            className={`p-1.5 rounded transition-all ${showSettings
+                                ? "bg-zinc-800 text-white"
+                                : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"}`}
+                            title="Canvas Settings"
+                        >
+                            <SettingsIcon className="w-4 h-4" />
+                        </button>
+
+                        <KeyboardShortcutsButton />
+
+                        <LightBeamButton
+                            onClick={openOutputWindow}
+                            className="ml-2 px-5 py-2 text-xs font-bold"
+                            gradientColors={["#00f0ff", "#8b5cf6", "#00f0ff"]}
+                            data-tour="launch-output"
+                        >
+                            LAUNCH OUTPUT <ArrowRight size={14} />
+                        </LightBeamButton>
+                    </div>
+                </header>
+
+                {/* Application Body */}
+                {isClient && (
+                    <div className="flex-1 flex overflow-hidden relative min-w-0">
+                        {/* Unified Left Sidebar */}
+                        <LeftSidebar />
+
+                        {/* Main Workspace */}
+                        <div className="flex-1 flex flex-col relative min-w-0">
+                            <div className="flex-1 relative bg-zinc-900 overflow-hidden">
+                                {/* 3D Canvas */}
+                                {/* Centered canvas container with padding for "Artboard" feel */}
+                                <div className="absolute inset-4 bg-black border border-white/5 shadow-2xl rounded-sm overflow-hidden">
+                                    <ProjectionCanvas />
+                                    <WarpControlBar />
+                                </div>
+
+                                {/* Performance Monitor Overlay */}
+                                <PerformanceMonitor />
+
+                                {/* MIDI Panel Overlay */}
+                                {showMIDIPanel && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-64 z-50 animate-in slide-in-from-right-4 duration-300">
+                                        <MIDIMapper />
+                                    </div>
+                                )}
+
+                                {/* Canvas Settings Overlay */}
+                                {showSettings && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-72 z-50 animate-in slide-in-from-right-4 duration-300">
+                                        <CanvasSettings onClose={() => setShowSettings(false)} />
+                                    </div>
+                                )}
+
+                                {/* Effect Config Overlay */}
+                                {activeEffectConfig && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-80 z-[70] animate-in slide-in-from-right-4 duration-300">
+                                        <EffectConfigPanel />
+                                    </div>
+                                )}
+
+                                {/* Media Picker Overlay - Slides out from right panel */}
+                                {mediaPickerOpen && selectedSurface && (
+                                    <div className="absolute top-4 right-4 bottom-4 w-96 z-[60] animate-in slide-in-from-right-4 duration-300">
+                                        <MediaPicker
+                                            currentMediaId={selectedSurface.mediaId}
+                                            onSelect={handleMediaSelect}
+                                            onClose={() => setMediaPickerOpen(false)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Bottom Panel: Timeline & Scenes */}
+                            <div className="h-64 border-t border-white/5 bg-zinc-900 relative z-30 flex">
+                                {/* Scenes Panel (Fixed Width) */}
+                                <div className="w-64 border-r border-white/5">
+                                    <SceneList />
+                                </div>
+
+                                {/* Timeline Panel (Flexible) */}
+                                <div className="flex-1 min-w-0">
+                                    <TimelinePanel />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Properties */}
+                        <div className="w-80 border-l border-white/5 bg-zinc-900 flex flex-col">
+                            <SurfaceProperties />
+                        </div>
+                    </div>
+                )}
+            </main>
+        </TooltipProvider >
+    );
+}

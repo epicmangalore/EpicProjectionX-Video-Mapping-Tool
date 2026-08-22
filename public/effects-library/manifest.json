@@ -1,0 +1,2801 @@
+{
+  "version": "1.0.0",
+  "name": "ProjectionX Effects Library",
+  "categories": [
+    {
+      "id": "glitch",
+      "name": "Glitch",
+      "icon": "Zap",
+      "description": "Digital glitch and data corruption effects"
+    },
+    {
+      "id": "color",
+      "name": "Color",
+      "icon": "Palette",
+      "description": "Color manipulation and grading effects"
+    },
+    {
+      "id": "blur",
+      "name": "Blur",
+      "icon": "Droplets",
+      "description": "Blur and focus effects"
+    },
+    {
+      "id": "distortion",
+      "name": "Distortion",
+      "icon": "Waves",
+      "description": "Geometric distortion and warping effects"
+    },
+    {
+      "id": "retro",
+      "name": "Retro",
+      "icon": "Monitor",
+      "description": "Vintage and retro display effects"
+    },
+    {
+      "id": "artistic",
+      "name": "Artistic",
+      "icon": "Brush",
+      "description": "Painterly and artistic rendering effects"
+    },
+    {
+      "id": "generators",
+      "name": "Generators",
+      "icon": "Sparkles",
+      "description": "Procedural pattern and texture generators"
+    }
+  ],
+  "effects": [
+    {
+      "id": "rgb-split",
+      "name": "RGB Split",
+      "category": "glitch",
+      "description": "Splits RGB channels with offset for chromatic separation",
+      "shader": "shaders/glitch/rgb-split.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uAmount": {
+          "type": "float",
+          "default": 0.01,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Amount"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Angle"
+        }
+      },
+      "tags": [
+        "glitch",
+        "rgb",
+        "chromatic"
+      ]
+    },
+    {
+      "id": "digital-glitch",
+      "name": "Digital Glitch",
+      "category": "glitch",
+      "description": "Random block displacement and color corruption",
+      "shader": "shaders/glitch/digital-glitch.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Intensity"
+        },
+        "uBlockSize": {
+          "type": "float",
+          "default": 16.0,
+          "min": 4.0,
+          "max": 64.0,
+          "label": "Block Size"
+        }
+      },
+      "tags": [
+        "glitch",
+        "digital",
+        "blocks"
+      ]
+    },
+    {
+      "id": "scan-lines",
+      "name": "Scan Lines",
+      "category": "glitch",
+      "description": "Horizontal scan line overlay with flicker",
+      "shader": "shaders/glitch/scan-lines.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uDensity": {
+          "type": "float",
+          "default": 200.0,
+          "min": 50.0,
+          "max": 500.0,
+          "label": "Density"
+        },
+        "uOpacity": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Opacity"
+        },
+        "uFlicker": {
+          "type": "float",
+          "default": 0.03,
+          "min": 0.0,
+          "max": 0.2,
+          "label": "Flicker"
+        }
+      },
+      "tags": [
+        "glitch",
+        "scanlines",
+        "crt"
+      ]
+    },
+    {
+      "id": "vhs-distortion",
+      "name": "VHS Distortion",
+      "category": "glitch",
+      "description": "Authentic VHS tape degradation with tracking errors",
+      "shader": "shaders/glitch/vhs-distortion.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Intensity"
+        }
+      },
+      "tags": [
+        "glitch",
+        "vhs",
+        "tape",
+        "retro"
+      ]
+    },
+    {
+      "id": "pixel-sort",
+      "name": "Pixel Sort",
+      "category": "glitch",
+      "description": "Threshold-based pixel sorting glitch art",
+      "shader": "shaders/glitch/pixel-sort.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uThreshold": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Threshold"
+        },
+        "uDirection": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Direction"
+        }
+      },
+      "tags": [
+        "glitch",
+        "sort",
+        "art"
+      ]
+    },
+    {
+      "id": "chromatic-aberration",
+      "name": "Chromatic Aberration",
+      "category": "color",
+      "description": "Lens-style radial color fringing",
+      "shader": "shaders/color/chromatic-aberration.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Strength"
+        },
+        "uFalloff": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Falloff"
+        }
+      },
+      "tags": [
+        "color",
+        "chromatic",
+        "lens"
+      ]
+    },
+    {
+      "id": "color-grading",
+      "name": "Color Grading",
+      "category": "color",
+      "description": "Lift/gamma/gain color correction",
+      "shader": "shaders/color/color-grading.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uBrightness": {
+          "type": "float",
+          "default": 0.0,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Brightness"
+        },
+        "uContrast": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Contrast"
+        },
+        "uSaturation": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Saturation"
+        },
+        "uTemperature": {
+          "type": "float",
+          "default": 0.0,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Temperature"
+        }
+      },
+      "tags": [
+        "color",
+        "grading",
+        "correction"
+      ]
+    },
+    {
+      "id": "hue-shift",
+      "name": "Hue Shift",
+      "category": "color",
+      "description": "Rotates hue of the entire image",
+      "shader": "shaders/color/hue-shift.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uShift": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Shift"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Speed"
+        }
+      },
+      "tags": [
+        "color",
+        "hue",
+        "rainbow"
+      ]
+    },
+    {
+      "id": "posterize",
+      "name": "Posterize",
+      "category": "color",
+      "description": "Reduces color levels for poster-art look",
+      "shader": "shaders/color/posterize.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uLevels": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 16.0,
+          "label": "Levels"
+        },
+        "uGamma": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 2.0,
+          "label": "Gamma"
+        }
+      },
+      "tags": [
+        "color",
+        "posterize",
+        "levels"
+      ]
+    },
+    {
+      "id": "duotone",
+      "name": "Duotone",
+      "category": "color",
+      "description": "Maps image to two-color gradient",
+      "shader": "shaders/color/duotone.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uShadowColor": {
+          "type": "color",
+          "default": [
+            0.1,
+            0.0,
+            0.3
+          ],
+          "label": "Shadow Color"
+        },
+        "uHighlightColor": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.8,
+            0.0
+          ],
+          "label": "Highlight Color"
+        }
+      },
+      "tags": [
+        "color",
+        "duotone",
+        "tint"
+      ]
+    },
+    {
+      "id": "gaussian-blur",
+      "name": "Gaussian Blur",
+      "category": "blur",
+      "description": "Smooth Gaussian blur with configurable radius",
+      "shader": "shaders/blur/gaussian-blur.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0.0,
+          "max": 10.0,
+          "label": "Strength"
+        },
+        "uDirection": {
+          "type": "vec2",
+          "default": [
+            1.0,
+            1.0
+          ],
+          "label": "Direction"
+        }
+      },
+      "tags": [
+        "blur",
+        "gaussian",
+        "smooth"
+      ]
+    },
+    {
+      "id": "radial-blur",
+      "name": "Radial Blur",
+      "category": "blur",
+      "description": "Circular blur emanating from center point",
+      "shader": "shaders/blur/radial-blur.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 0.5,
+          "label": "Strength"
+        },
+        "uCenter": {
+          "type": "vec2",
+          "default": [
+            0.5,
+            0.5
+          ],
+          "label": "Center"
+        }
+      },
+      "tags": [
+        "blur",
+        "radial",
+        "zoom"
+      ]
+    },
+    {
+      "id": "motion-blur",
+      "name": "Motion Blur",
+      "category": "blur",
+      "description": "Directional motion blur effect",
+      "shader": "shaders/blur/motion-blur.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 0.02,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Strength"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Angle"
+        }
+      },
+      "tags": [
+        "blur",
+        "motion",
+        "directional"
+      ]
+    },
+    {
+      "id": "zoom-blur",
+      "name": "Zoom Blur",
+      "category": "blur",
+      "description": "Radial zoom blur from center outward",
+      "shader": "shaders/blur/zoom-blur.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 0.5,
+          "label": "Strength"
+        },
+        "uCenter": {
+          "type": "vec2",
+          "default": [
+            0.5,
+            0.5
+          ],
+          "label": "Center"
+        }
+      },
+      "tags": [
+        "blur",
+        "zoom",
+        "radial"
+      ]
+    },
+    {
+      "id": "kaleidoscope",
+      "name": "Kaleidoscope",
+      "category": "distortion",
+      "description": "Radial symmetry kaleidoscope effect",
+      "shader": "shaders/distortion/kaleidoscope.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uSegments": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 16.0,
+          "label": "Segments"
+        },
+        "uRotation": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 6.28,
+          "label": "Rotation"
+        }
+      },
+      "tags": [
+        "distortion",
+        "kaleidoscope",
+        "symmetry"
+      ]
+    },
+    {
+      "id": "mirror",
+      "name": "Mirror",
+      "category": "distortion",
+      "description": "Horizontal/vertical mirror reflection",
+      "shader": "shaders/distortion/mirror.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uMode": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Mode"
+        }
+      },
+      "tags": [
+        "distortion",
+        "mirror",
+        "reflection"
+      ]
+    },
+    {
+      "id": "fisheye",
+      "name": "Fisheye",
+      "category": "distortion",
+      "description": "Barrel/pincushion lens distortion",
+      "shader": "shaders/distortion/fisheye.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 0.5,
+          "min": -1.0,
+          "max": 1.0,
+          "label": "Strength"
+        }
+      },
+      "tags": [
+        "distortion",
+        "fisheye",
+        "lens"
+      ]
+    },
+    {
+      "id": "wave-distortion",
+      "name": "Wave Distortion",
+      "category": "distortion",
+      "description": "Animated sine wave displacement",
+      "shader": "shaders/distortion/wave-distortion.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uAmplitude": {
+          "type": "float",
+          "default": 0.02,
+          "min": 0.0,
+          "max": 0.1,
+          "label": "Amplitude"
+        },
+        "uFrequency": {
+          "type": "float",
+          "default": 10.0,
+          "min": 1.0,
+          "max": 50.0,
+          "label": "Frequency"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
+      },
+      "tags": [
+        "distortion",
+        "wave",
+        "animated"
+      ]
+    },
+    {
+      "id": "swirl",
+      "name": "Swirl",
+      "category": "distortion",
+      "description": "Twisting vortex distortion from center",
+      "shader": "shaders/distortion/swirl.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uStrength": {
+          "type": "float",
+          "default": 3.0,
+          "min": -10.0,
+          "max": 10.0,
+          "label": "Strength"
+        },
+        "uRadius": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 1.0,
+          "label": "Radius"
+        }
+      },
+      "tags": [
+        "distortion",
+        "swirl",
+        "vortex"
+      ]
+    },
+    {
+      "id": "crt-screen",
+      "name": "CRT Screen",
+      "category": "retro",
+      "description": "CRT monitor with curvature, phosphors, and vignette",
+      "shader": "shaders/retro/crt-screen.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uCurvature": {
+          "type": "float",
+          "default": 3.0,
+          "min": 0.0,
+          "max": 10.0,
+          "label": "Curvature"
+        },
+        "uScanlineIntensity": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Scanlines"
+        }
+      },
+      "tags": [
+        "retro",
+        "crt",
+        "monitor",
+        "vintage"
+      ]
+    },
+    {
+      "id": "led-matrix",
+      "name": "LED Matrix",
+      "category": "retro",
+      "description": "LED dot matrix display simulation",
+      "shader": "shaders/retro/led-matrix.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 2.0,
+          "max": 32.0,
+          "label": "LED Size"
+        },
+        "uBrightness": {
+          "type": "float",
+          "default": 1.5,
+          "min": 0.5,
+          "max": 3.0,
+          "label": "Brightness"
+        }
+      },
+      "tags": [
+        "retro",
+        "led",
+        "matrix",
+        "dots"
+      ]
+    },
+    {
+      "id": "pixelate",
+      "name": "Pixelate",
+      "category": "retro",
+      "description": "Reduces resolution for pixel art look",
+      "shader": "shaders/retro/pixelate.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uPixelSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 2.0,
+          "max": 64.0,
+          "label": "Pixel Size"
+        }
+      },
+      "tags": [
+        "retro",
+        "pixel",
+        "mosaic",
+        "8bit"
+      ]
+    },
+    {
+      "id": "ascii-art",
+      "name": "ASCII Art",
+      "category": "retro",
+      "description": "Character-based image rendering",
+      "shader": "shaders/retro/ascii-art.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uCharSize": {
+          "type": "float",
+          "default": 8.0,
+          "min": 4.0,
+          "max": 24.0,
+          "label": "Char Size"
+        }
+      },
+      "tags": [
+        "retro",
+        "ascii",
+        "text",
+        "art"
+      ]
+    },
+    {
+      "id": "oil-painting",
+      "name": "Oil Painting",
+      "category": "artistic",
+      "description": "Kuwahara filter for painterly look",
+      "shader": "shaders/artistic/oil-painting.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uRadius": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1.0,
+          "max": 8.0,
+          "label": "Radius"
+        }
+      },
+      "tags": [
+        "artistic",
+        "painting",
+        "oil",
+        "kuwahara"
+      ]
+    },
+    {
+      "id": "edge-detection",
+      "name": "Edge Detection",
+      "category": "artistic",
+      "description": "Sobel operator for line art look",
+      "shader": "shaders/artistic/edge-detection.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uThreshold": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Threshold"
+        },
+        "uEdgeColor": {
+          "type": "color",
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "label": "Edge Color"
+        },
+        "uBgColor": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "label": "Background"
+        }
+      },
+      "tags": [
+        "artistic",
+        "edge",
+        "lines",
+        "sobel"
+      ]
+    },
+    {
+      "id": "watercolor",
+      "name": "Watercolor",
+      "category": "artistic",
+      "description": "Wet paint bleeding and paper texture",
+      "shader": "shaders/artistic/watercolor.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uWetness": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Wetness"
+        },
+        "uGranulation": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Granulation"
+        }
+      },
+      "tags": [
+        "artistic",
+        "watercolor",
+        "paint"
+      ]
+    },
+    {
+      "id": "halftone",
+      "name": "Halftone",
+      "category": "artistic",
+      "description": "CMYK-style dot pattern printing",
+      "shader": "shaders/artistic/halftone.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uDotSize": {
+          "type": "float",
+          "default": 6.0,
+          "min": 2.0,
+          "max": 20.0,
+          "label": "Dot Size"
+        },
+        "uAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.57,
+          "label": "Angle"
+        }
+      },
+      "tags": [
+        "artistic",
+        "halftone",
+        "dots",
+        "print"
+      ]
+    },
+    {
+      "id": "perlin-noise",
+      "name": "Perlin Noise",
+      "category": "generators",
+      "description": "Classic smooth noise for organic textures",
+      "shader": "shaders/generators/perlin-noise.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uScale": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1.0,
+          "max": 20.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Speed"
+        },
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.2
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.8,
+            1.0
+          ],
+          "label": "Color 2"
+        }
+      },
+      "tags": [
+        "generator",
+        "noise",
+        "organic"
+      ]
+    },
+    {
+      "id": "voronoi",
+      "name": "Voronoi",
+      "category": "generators",
+      "description": "Procedural cellular patterns with customizable cells and borders",
+      "shader": "shaders/generators/voronoi.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.51,
+            0.28
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.96,
+            0.24
+          ],
+          "label": "Color 2"
+        },
+        "uGlowColor": {
+          "type": "color",
+          "default": [
+            0,
+            0,
+            0
+          ],
+          "label": "Glow Color"
+        },
+        "uGapColor": {
+          "type": "color",
+          "default": [
+            0,
+            0,
+            0
+          ],
+          "label": "Gap Color"
+        },
+        "uStepsPerColor": {
+          "type": "float",
+          "default": 3.0,
+          "min": 1,
+          "max": 10,
+          "label": "Steps per Color"
+        },
+        "uCellDistortion": {
+          "type": "float",
+          "default": 0.4,
+          "min": 0,
+          "max": 1,
+          "label": "Cell Distortion"
+        },
+        "uGapSize": {
+          "type": "float",
+          "default": 0.04,
+          "min": 0,
+          "max": 0.5,
+          "label": "Gap Size"
+        },
+        "uGlowIntensity": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 2,
+          "label": "Glow Intensity"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "generator",
+        "voronoi",
+        "cells",
+        "organic",
+        "patterns"
+      ]
+    },
+    {
+      "id": "plasma",
+      "name": "Plasma",
+      "category": "generators",
+      "description": "Classic demoscene plasma effect",
+      "shader": "shaders/generators/plasma.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uScale": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 5.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
+      },
+      "tags": [
+        "generator",
+        "plasma",
+        "demoscene"
+      ]
+    },
+    {
+      "id": "fractal",
+      "name": "Fractal",
+      "category": "generators",
+      "description": "Animated Julia set fractal",
+      "shader": "shaders/generators/fractal.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uScale": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.5,
+          "max": 3.0,
+          "label": "Scale"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 3.0,
+          "label": "Speed"
+        },
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.6,
+            1.0
+          ],
+          "label": "Color 2"
+        }
+      },
+      "tags": [
+        "generator",
+        "fractal",
+        "julia",
+        "math"
+      ]
+    },
+    {
+      "id": "border-glow",
+      "name": "Border & Glow",
+      "category": "artistic",
+      "description": "Customizable surface border with glow and animations",
+      "shader": "shaders/color/border-glow.frag",
+      "isGenerator": false,
+      "animated": true,
+      "uniforms": {
+        "uBorderColor": {
+          "type": "color",
+          "default": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "label": "Color"
+        },
+        "uBorderWidth": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0.0,
+          "max": 20.0,
+          "label": "Width"
+        },
+        "uBorderOpacity": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Opacity"
+        },
+        "uGlowIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Glow"
+        },
+        "uAnimationStyle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 4.0,
+          "label": "Animation"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Speed"
+        }
+      },
+      "tags": [
+        "color",
+        "border",
+        "glow",
+        "outline"
+      ]
+    },
+    {
+      "id": "edge-blend",
+      "name": "Edge Blending",
+      "category": "color",
+      "description": "Smooth overlapping edges for multi-projector setups",
+      "shader": "shaders/color/edge-blend.frag",
+      "isGenerator": false,
+      "uniforms": {
+        "uBlendZones": {
+          "type": "vec2",
+          "default": [
+            0.1,
+            0.1
+          ],
+          "label": "Zones (L, R)"
+        },
+        "uBlendFeather": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Feather"
+        },
+        "uBlendGamma": {
+          "type": "float",
+          "default": 2.2,
+          "min": 1.0,
+          "max": 4.0,
+          "label": "Gamma"
+        }
+      },
+      "tags": [
+        "color",
+        "blending",
+        "edge",
+        "multi-projector"
+      ]
+    },
+    {
+      "id": "mesh-gradient",
+      "name": "Mesh Gradient",
+      "category": "generators",
+      "description": "Premium animated mesh gradient with 4 colors and noise distortion",
+      "shader": "shaders/generators/mesh-gradient.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.87,
+            0.91,
+            1.0
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.14,
+            0.11,
+            0.6
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.96,
+            0.31,
+            0.57
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            0.62,
+            0.31,
+            0.82
+          ],
+          "label": "Color 4"
+        },
+        "uDistortion": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0.0,
+          "max": 2.0,
+          "label": "Distortion"
+        },
+        "uSwirl": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Swirl"
+        },
+        "uGrainMix": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Grain Mix"
+        },
+        "uGrainOverlay": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0.0,
+          "max": 1.0,
+          "label": "Grain Overlay"
+        },
+        "uSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.0,
+          "max": 5.0,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "generator",
+        "gradient",
+        "mesh",
+        "animated"
+      ]
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "category": "generators",
+      "description": "Photorealistic animated water surface with caustics",
+      "shader": "shaders/generators/water.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uHighlightColor": {
+          "type": "color",
+          "default": [
+            0.8,
+            0.9,
+            1.0
+          ],
+          "label": "Highlight Color"
+        },
+        "uHighlights": {
+          "type": "float",
+          "default": 0.07,
+          "min": 0,
+          "max": 1,
+          "label": "Highlights"
+        },
+        "uLayerDepth": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "label": "Layer Depth"
+        },
+        "uEdgeDefinition": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Definition"
+        },
+        "uWave": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Wave"
+        },
+        "uCausticEffect": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0,
+          "max": 1,
+          "label": "Caustic Effect"
+        },
+        "uWaterSize": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.1,
+          "max": 5.0,
+          "label": "Water Size"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "water",
+        "waves",
+        "generator",
+        "procedural",
+        "caustics",
+        "liquid"
+      ]
+    },
+    {
+      "id": "dot-orbit",
+      "name": "Dot Orbit",
+      "category": "generators",
+      "description": "Drifting animated dots with multi-color palette",
+      "shader": "shaders/generators/dot-orbit.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.77,
+            0.42
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.38,
+            0.0
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.18,
+            0.0
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            0.26,
+            0.07,
+            0.0
+          ],
+          "label": "Color 4"
+        },
+        "uColor5": {
+          "type": "color",
+          "default": [
+            0.1,
+            0.0,
+            0.0
+          ],
+          "label": "Color 5"
+        },
+        "uStepsPerColor": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1,
+          "max": 10,
+          "label": "Steps per Color"
+        },
+        "uDotSize": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Dot Size"
+        },
+        "uSizeVariation": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Size Variation"
+        },
+        "uDotSpreading": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Dot Spreading"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.5,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "dots",
+        "grid",
+        "orbit",
+        "generator",
+        "pattern",
+        "drifting"
+      ]
+    },
+    {
+      "id": "simplex-noise",
+      "name": "Simplex Noise",
+      "category": "generators",
+      "description": "Stepped contour noise with multi-color layers",
+      "shader": "shaders/generators/simplex-noise.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.27,
+            0.29,
+            0.81
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.82,
+            0.88
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.98,
+            0.26,
+            0.27
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.84,
+            0.23
+          ],
+          "label": "Color 4"
+        },
+        "uColor5": {
+          "type": "color",
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "label": "Color 5"
+        },
+        "uStepsPerColor": {
+          "type": "float",
+          "default": 2.0,
+          "min": 1,
+          "max": 5,
+          "label": "Steps per Color"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Softness"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 3,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "noise",
+        "simplex",
+        "texture",
+        "generator",
+        "contour",
+        "organic"
+      ]
+    },
+    {
+      "id": "liquid-metal",
+      "name": "Liquid Metal",
+      "category": "generators",
+      "description": "Reflective SDF shapes with chromatic aberration",
+      "shader": "shaders/generators/liquid-metal.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uMetalTintColor": {
+          "type": "color",
+          "default": [
+            0,
+            0,
+            0
+          ],
+          "label": "Metal Tint Color"
+        },
+        "uBaseShape": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 2,
+          "label": "Base Shape"
+        },
+        "uShapeRepetition": {
+          "type": "float",
+          "default": 2.0,
+          "min": 1,
+          "max": 10,
+          "label": "Shape Repetition"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Softness"
+        },
+        "uRedChannelShift": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Red Channel Shift"
+        },
+        "uBlueChannelShift": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Blue Channel Shift"
+        },
+        "uDistortion": {
+          "type": "float",
+          "default": 0.07,
+          "min": 0,
+          "max": 1,
+          "label": "Distortion"
+        },
+        "uContourDefinition": {
+          "type": "float",
+          "default": 0.4,
+          "min": 0,
+          "max": 1,
+          "label": "Contour Definition"
+        },
+        "uRotationAngle": {
+          "type": "float",
+          "default": 70.0,
+          "min": 0,
+          "max": 360,
+          "label": "Rotation Angle"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "metal",
+        "sdf",
+        "distortion",
+        "generator",
+        "liquid",
+        "reflective",
+        "chromatic"
+      ]
+    },
+    {
+      "id": "god-rays",
+      "name": "God Rays",
+      "category": "generators",
+      "description": "Volumetric light rays with bloom and animated density",
+      "shader": "shaders/generators/god-rays.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.65,
+            0.38,
+            1.0
+          ],
+          "label": "Ray Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.38,
+            0.12,
+            1.0
+          ],
+          "label": "Ray Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "label": "Ray Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            0.2,
+            1.0,
+            0.96
+          ],
+          "label": "Ray Color 4"
+        },
+        "uBloomColor": {
+          "type": "color",
+          "default": [
+            0,
+            0,
+            0
+          ],
+          "label": "Bloom Color"
+        },
+        "uBloomIntensity": {
+          "type": "float",
+          "default": 0.4,
+          "min": 0,
+          "max": 1,
+          "label": "Bloom"
+        },
+        "uRayIntensity": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0,
+          "max": 2,
+          "label": "Ray Intensity"
+        },
+        "uRayDensity": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Ray Density"
+        },
+        "uSpottyEffect": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Spotty Effect"
+        },
+        "uMidSize": {
+          "type": "float",
+          "default": 0.2,
+          "min": 0,
+          "max": 1,
+          "label": "Mid Size"
+        },
+        "uMidIntensity": {
+          "type": "float",
+          "default": 0.4,
+          "min": 0,
+          "max": 1,
+          "label": "Mid Intensity"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.75,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uVerticalOffset": {
+          "type": "float",
+          "default": -0.55,
+          "min": -2,
+          "max": 1,
+          "label": "Vertical Offset"
+        }
+      },
+      "tags": [
+        "light",
+        "rays",
+        "volumetric",
+        "generator",
+        "bloom",
+        "sun",
+        "glow"
+      ]
+    },
+    {
+      "id": "grain-gradient",
+      "name": "Grain Gradient",
+      "category": "generators",
+      "description": "Soft multi-color gradients with heavy film grain",
+      "shader": "shaders/generators/grain-gradient.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.45,
+            0.0,
+            1.0
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.92,
+            0.66,
+            1.0
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.0,
+            0.75,
+            1.0
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            0.17,
+            0.0,
+            1.0
+          ],
+          "label": "Color 4"
+        },
+        "uGradientSoftness": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "label": "Gradient Softness"
+        },
+        "uGrainIntensity": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "label": "Grain Intensity"
+        },
+        "uNoise": {
+          "type": "float",
+          "default": 0.25,
+          "min": 0,
+          "max": 1,
+          "label": "Noise"
+        },
+        "uGradientShape": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 2,
+          "label": "Gradient Shape"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 3,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "gradient",
+        "grain",
+        "noise",
+        "generator",
+        "texture",
+        "soft"
+      ]
+    },
+    {
+      "id": "spiral",
+      "name": "Spiral",
+      "category": "generators",
+      "description": "Rotating Archimedean spiral with geometric controls",
+      "shader": "shaders/generators/spiral.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uSpiralColor": {
+          "type": "color",
+          "default": [
+            0.4,
+            0.8,
+            1.0
+          ],
+          "label": "Spiral Color"
+        },
+        "uSpiralDensity": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0.1,
+          "max": 5.0,
+          "label": "Spiral Density"
+        },
+        "uDistortion": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 2,
+          "label": "Distortion"
+        },
+        "uStrokeWidth": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.01,
+          "max": 1,
+          "label": "Stroke Width"
+        },
+        "uStrokeTapering": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Stroke Tapering"
+        },
+        "uStrokeCapRoundness": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Stroke Cap Roundness"
+        },
+        "uNoise": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Noise"
+        },
+        "uNoiseFrequency": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 10,
+          "label": "Noise Frequency"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Softness"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "spiral",
+        "geometric",
+        "generator",
+        "spinning",
+        "lines"
+      ]
+    },
+    {
+      "id": "swirl-gen",
+      "name": "Swirl Generator",
+      "category": "generators",
+      "description": "Hypnotic multi-color swirling bands",
+      "shader": "shaders/generators/swirl.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.86,
+            0.82
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.54,
+            0.54
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.4,
+            0.0,
+            0.0
+          ],
+          "label": "Color 3"
+        },
+        "uNumBands": {
+          "type": "float",
+          "default": 4.0,
+          "min": 1,
+          "max": 10,
+          "label": "Number of Bands"
+        },
+        "uTwist": {
+          "type": "float",
+          "default": 0.1,
+          "min": -1,
+          "max": 1,
+          "label": "Twist"
+        },
+        "uCenterSize": {
+          "type": "float",
+          "default": 0.2,
+          "min": 0,
+          "max": 1,
+          "label": "Center Size"
+        },
+        "uColorProportion": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "label": "Color Proportion"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Softness"
+        },
+        "uNoise": {
+          "type": "float",
+          "default": 0.2,
+          "min": 0,
+          "max": 1,
+          "label": "Noise"
+        },
+        "uNoiseFrequency": {
+          "type": "float",
+          "default": 0.4,
+          "min": 0,
+          "max": 10,
+          "label": "Noise Frequency"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.32,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "generator",
+        "swirl",
+        "vortex",
+        "bands",
+        "hypnotic"
+      ]
+    },
+    {
+      "id": "waves",
+      "name": "Waves",
+      "category": "generators",
+      "description": "Rhythmic procedural wave patterns",
+      "shader": "shaders/generators/waves.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uWaveColor": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.51,
+            0.16
+          ],
+          "label": "Wave Color"
+        },
+        "uWaveFrequency": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 5.0,
+          "label": "Wave Frequency"
+        },
+        "uWaveAmplitude": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 2.0,
+          "label": "Wave Amplitude"
+        },
+        "uWaveSpacing": {
+          "type": "float",
+          "default": 1.2,
+          "min": 0.5,
+          "max": 5.0,
+          "label": "Wave Spacing"
+        },
+        "uWaveProportion": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0,
+          "max": 1,
+          "label": "Wave Proportion"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Softness"
+        },
+        "uWaveShape": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0,
+          "max": 2,
+          "label": "Wave Shape"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "waves",
+        "sine",
+        "pattern",
+        "generator",
+        "procedural",
+        "motion"
+      ]
+    },
+    {
+      "id": "color-panels",
+      "name": "Color Panels",
+      "category": "generators",
+      "description": "Overlapping animated 3D color slices",
+      "shader": "shaders/generators/color-panels.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            1,
+            0.61,
+            0
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.99,
+            0.31,
+            0.19
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.5,
+            0.65,
+            1
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            0.43,
+            0.18,
+            1
+          ],
+          "label": "Color 4"
+        },
+        "uColor5": {
+          "type": "color",
+          "default": [
+            0.2,
+            0.23,
+            1
+          ],
+          "label": "Color 5"
+        },
+        "uColor6": {
+          "type": "color",
+          "default": [
+            0.95,
+            0.08,
+            1
+          ],
+          "label": "Color 6"
+        },
+        "uColor7": {
+          "type": "color",
+          "default": [
+            1,
+            0.93,
+            0.34
+          ],
+          "label": "Color 7"
+        },
+        "uPanelDensity": {
+          "type": "float",
+          "default": 3.0,
+          "min": 1,
+          "max": 10,
+          "label": "Panel Density"
+        },
+        "uPrimaryAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 360,
+          "label": "Primary Angle"
+        },
+        "uSecondaryAngle": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 360,
+          "label": "Secondary Angle"
+        },
+        "uPanelLength": {
+          "type": "float",
+          "default": 1.1,
+          "min": 0.1,
+          "max": 5.0,
+          "label": "Panel Length"
+        },
+        "uEdgeDefinition": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0,
+          "max": 1,
+          "label": "Edge Definition"
+        },
+        "uBlur": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Blur"
+        },
+        "uFadeIn": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 1,
+          "label": "Fade In"
+        },
+        "uFadeOut": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Fade Out"
+        },
+        "uGradient": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Gradient"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "panels",
+        "3d",
+        "slices",
+        "generator",
+        "color",
+        "layers"
+      ]
+    },
+    {
+      "id": "smoke-ring",
+      "name": "Smoke Ring",
+      "category": "generators",
+      "description": "Procedural volumetric smoke ring",
+      "shader": "shaders/generators/smoke-ring.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uSmokeColor": {
+          "type": "color",
+          "default": [
+            1,
+            1,
+            1
+          ],
+          "label": "Smoke Color"
+        },
+        "uNoiseScale": {
+          "type": "float",
+          "default": 3.0,
+          "min": 0.1,
+          "max": 10.0,
+          "label": "Noise Scale"
+        },
+        "uNoiseDetail": {
+          "type": "float",
+          "default": 8.0,
+          "min": 1,
+          "max": 8,
+          "label": "Noise Detail"
+        },
+        "uRingRadius": {
+          "type": "float",
+          "default": 0.25,
+          "min": 0,
+          "max": 1,
+          "label": "Ring Radius"
+        },
+        "uRingThickness": {
+          "type": "float",
+          "default": 0.65,
+          "min": 0.01,
+          "max": 1.0,
+          "label": "Ring Thickness"
+        },
+        "uInnerShape": {
+          "type": "float",
+          "default": 0.7,
+          "min": 0,
+          "max": 1,
+          "label": "Inner Shape"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.8,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        }
+      },
+      "tags": [
+        "smoke",
+        "ring",
+        "noise",
+        "generator",
+        "volumetric",
+        "hollow"
+      ]
+    },
+    {
+      "id": "pulsing-border",
+      "name": "Pulsing Border",
+      "category": "generators",
+      "description": "Animated border with spots and smoke",
+      "shader": "shaders/generators/pulsing-border.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            0.05,
+            0.86,
+            1.0
+          ],
+          "label": "Border Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.85,
+            0.08,
+            0.94
+          ],
+          "label": "Border Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.2,
+            0.18
+          ],
+          "label": "Border Color 3"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        },
+        "uOverallScale": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Overall Scale"
+        },
+        "uPulseIntensity": {
+          "type": "float",
+          "default": 0.2,
+          "min": 0,
+          "max": 1,
+          "label": "Pulse Intensity"
+        },
+        "uCornerRoundness": {
+          "type": "float",
+          "default": 0.25,
+          "min": 0,
+          "max": 1,
+          "label": "Corner Roundness"
+        },
+        "uBorderThickness": {
+          "type": "float",
+          "default": 0.1,
+          "min": 0.01,
+          "max": 1.0,
+          "label": "Border Thickness"
+        },
+        "uEdgeSoftness": {
+          "type": "float",
+          "default": 0.75,
+          "min": 0.01,
+          "max": 1.0,
+          "label": "Edge Softness"
+        },
+        "uAspectRatio": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 3,
+          "label": "Aspect Ratio"
+        },
+        "uBloom": {
+          "type": "float",
+          "default": 0.25,
+          "min": 0,
+          "max": 1,
+          "label": "Bloom"
+        },
+        "uNumSpots": {
+          "type": "float",
+          "default": 4.0,
+          "min": 0,
+          "max": 8,
+          "label": "Number of Spots"
+        },
+        "uSpotSize": {
+          "type": "float",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 1.0,
+          "label": "Spot Size"
+        },
+        "uPulse": {
+          "type": "float",
+          "default": 0.25,
+          "min": 0,
+          "max": 1,
+          "label": "Pulse"
+        },
+        "uSmoke": {
+          "type": "float",
+          "default": 0.3,
+          "min": 0,
+          "max": 1,
+          "label": "Smoke"
+        },
+        "uSmokeSize": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0.1,
+          "max": 2.0,
+          "label": "Smoke Size"
+        },
+        "uLeftMargin": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 0.5,
+          "label": "Left Margin"
+        },
+        "uRightMargin": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 0.5,
+          "label": "Right Margin"
+        },
+        "uTopMargin": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 0.5,
+          "label": "Top Margin"
+        },
+        "uBottomMargin": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 0.5,
+          "label": "Bottom Margin"
+        }
+      },
+      "tags": [
+        "border",
+        "pulse",
+        "glow",
+        "generator",
+        "frame",
+        "utility"
+      ]
+    },
+    {
+      "id": "static-mesh-gradient",
+      "name": "Static Mesh Gradient",
+      "category": "generators",
+      "description": "Smooth 4-color wavy gradient with grain texture",
+      "shader": "shaders/generators/static-mesh-gradient.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uColor1": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.68,
+            0.04
+          ],
+          "label": "Color 1"
+        },
+        "uColor2": {
+          "type": "color",
+          "default": [
+            0.38,
+            0.12,
+            1.0
+          ],
+          "label": "Color 2"
+        },
+        "uColor3": {
+          "type": "color",
+          "default": [
+            0.89,
+            0.64,
+            1.0
+          ],
+          "label": "Color 3"
+        },
+        "uColor4": {
+          "type": "color",
+          "default": [
+            1.0,
+            0.6,
+            0.99
+          ],
+          "label": "Color 4"
+        },
+        "uColorPositions": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0,
+          "max": 5.0,
+          "label": "Color Positions"
+        },
+        "uHorizontalWave": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5.0,
+          "label": "Horizontal Wave"
+        },
+        "uHWaveShift": {
+          "type": "float",
+          "default": 0.6,
+          "min": 0,
+          "max": 6.28,
+          "label": "H Wave Shift"
+        },
+        "uVerticalWave": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5.0,
+          "label": "Vertical Wave"
+        },
+        "uVWaveShift": {
+          "type": "float",
+          "default": 0.21,
+          "min": 0,
+          "max": 6.28,
+          "label": "V Wave Shift"
+        },
+        "uColorMixing": {
+          "type": "float",
+          "default": 0.93,
+          "min": 0,
+          "max": 2.0,
+          "label": "Color Mixing"
+        },
+        "uGrainMix": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Grain Mix"
+        },
+        "uGrainOverlay": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Grain Overlay"
+        },
+        "uRotationAngle": {
+          "type": "float",
+          "default": 270.0,
+          "min": 0,
+          "max": 360,
+          "label": "Rotation Angle"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 0.2,
+          "min": 0,
+          "max": 2,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "gradient",
+        "mesh",
+        "grain",
+        "generator",
+        "wavy"
+      ]
+    },
+    {
+      "id": "dot-grid",
+      "name": "Dot Grid",
+      "category": "generators",
+      "description": "Geometrical repeating dot grid with variation",
+      "shader": "shaders/generators/dot-grid.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uDotFillColor": {
+          "type": "color",
+          "default": [
+            1,
+            1,
+            1
+          ],
+          "label": "Dot Fill Color"
+        },
+        "uDotStrokeColor": {
+          "type": "color",
+          "default": [
+            1,
+            1,
+            1
+          ],
+          "label": "Dot Stroke Color"
+        },
+        "uDotSize": {
+          "type": "float",
+          "default": 2.0,
+          "min": 0.1,
+          "max": 10.0,
+          "label": "Dot Size"
+        },
+        "uHorizontalGap": {
+          "type": "float",
+          "default": 32.0,
+          "min": 4.0,
+          "max": 128.0,
+          "label": "Horizontal Gap"
+        },
+        "uVerticalGap": {
+          "type": "float",
+          "default": 32.0,
+          "min": 4.0,
+          "max": 128.0,
+          "label": "Vertical Gap"
+        },
+        "uStrokeWidth": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 5,
+          "label": "Stroke Width"
+        },
+        "uSizeVariation": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Size Variation"
+        },
+        "uOpacityVariation": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Opacity Variation"
+        },
+        "uDotShape": {
+          "type": "float",
+          "default": 0.0,
+          "min": 0,
+          "max": 1,
+          "label": "Dot Shape"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "dots",
+        "grid",
+        "pattern",
+        "generator",
+        "geometric",
+        "matrix"
+      ]
+    },
+    {
+      "id": "neuro-noise",
+      "name": "Neuro Noise",
+      "category": "generators",
+      "description": "Electric synapse-like animated noise",
+      "shader": "shaders/generators/neuro-noise.frag",
+      "isGenerator": true,
+      "animated": true,
+      "uniforms": {
+        "uForegroundColor": {
+          "type": "color",
+          "default": [
+            0.1,
+            0.4,
+            0.7
+          ],
+          "label": "Foreground Color"
+        },
+        "uMidColor": {
+          "type": "color",
+          "default": [
+            0.05,
+            0.2,
+            0.4
+          ],
+          "label": "Mid Color"
+        },
+        "uBrightness": {
+          "type": "float",
+          "default": 0.05,
+          "min": -1,
+          "max": 2,
+          "label": "Brightness"
+        },
+        "uContrast": {
+          "type": "float",
+          "default": 0.3,
+          "min": -1,
+          "max": 2,
+          "label": "Contrast"
+        },
+        "uAnimationSpeed": {
+          "type": "float",
+          "default": 1.0,
+          "min": 0,
+          "max": 5,
+          "label": "Animation Speed"
+        }
+      },
+      "tags": [
+        "noise",
+        "neuro",
+        "electric",
+        "generator",
+        "synapse",
+        "brain"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+build
+.DS_Store
+*.log
+.env*.local
+.vercel
+.turbo
+
+# PWA
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
