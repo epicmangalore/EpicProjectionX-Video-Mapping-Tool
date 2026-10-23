@@ -66,6 +66,7 @@ export function ProjectionCanvas() {
 
     return (
         <div
+            data-projection-canvas
             className="w-full h-full"
             onPointerEnter={() => setCanvasHovered(true)}
             onPointerLeave={() => setCanvasHovered(false)}
@@ -143,6 +144,7 @@ export function ProjectionCanvas() {
 
                 {/* Background & Global Mix Logic */}
                 <GlobalStageMixer />
+
 
                 {/* Surfaces rendering */}
                 <SpacebarPan />

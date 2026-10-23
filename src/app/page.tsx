@@ -428,16 +428,6 @@ export default function Home() {
 
                         <KeyboardShortcutsButton />
 
-                        {outputWindowOpen && (
-                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold shadow-[0_0_15px_rgba(16,185,129,0.3)] animate-pulse">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                <span className="tracking-wide">OUTPUT LIVE</span>
-                            </div>
-                        )}
-
                         {outputWindowOpen ? (
                             <div className="flex items-center gap-1 ml-1">
                                 <LightBeamButton

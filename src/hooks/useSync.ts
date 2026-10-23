@@ -6,6 +6,7 @@ import { useEffectsStore } from "@/store/effects-store";
 import { useOutputStore } from "@/store/output-store";
 import { useAudioStore } from "@/store/audio-store";
 import { useTimelineStore } from "@/store/timeline-store";
+import { beginSceneTransition } from "@/lib/scene-transition";
 
 const SYNC_CHANNEL = "projectionx_sync";
 
@@ -30,7 +31,26 @@ export function useSync() {
             channel.onmessage = (event) => {
                 const { type, data } = event.data;
                 if (type === "STATE_UPDATE") {
-                    if (data.project) useProjectStore.setState(data.project);
+                    if (data.project) {
+                        // The output window renders `playingSceneId || activeSceneId`.
+                        // If either changed, snapshot the outgoing frame before the
+                        // new scene paints so the crossfade starts from the old one.
+                        const before = useProjectStore.getState();
+                        const prevRenderId =
+                            before.projectSettings?.playingSceneId || before.activeSceneId;
+                        const nextRenderId =
+                            data.project.projectSettings?.playingSceneId ||
+                            data.project.activeSceneId;
+
+                        if (prevRenderId && nextRenderId && prevRenderId !== nextRenderId) {
+                            beginSceneTransition(
+                                data.project.projectSettings?.backgroundColor ||
+                                before.projectSettings?.backgroundColor
+                            );
+                        }
+
+                        useProjectStore.setState(data.project);
+                    }
                     if (data.effects) useEffectsStore.setState(data.effects);
 
                     if (data.playbackSync) {

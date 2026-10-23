@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import gsap from "gsap";
-import { useProjectStore } from "./project-store";
+import { useProjectStore, type Surface } from "./project-store";
 
 export interface Keyframe {
     id: string;
@@ -17,6 +17,31 @@ export interface Track {
     propertyName: string;
     keyframes: Keyframe[];
     isExpanded: boolean;
+}
+
+/**
+ * While a scene is being restored, GSAP fires onUpdate for every tween between
+ * 0 and the target time. Persisting each of those values separately caused
+ * hundreds of IndexedDB writes and a ~1s main-thread freeze on scene switch,
+ * so collect them here and apply a single batched update once the seek ends.
+ */
+let isRestoringScene = false;
+const pendingSurfaceUpdates = new Map<string, Partial<Surface>>();
+
+function queueSurfaceUpdate(surfaceId: string, updates: Partial<Surface>) {
+    const current = pendingSurfaceUpdates.get(surfaceId) || {};
+    const merged: Partial<Surface> = { ...current, ...updates };
+    if (updates.position) {
+        merged.position = current.position
+            ? { ...current.position, ...updates.position }
+            : updates.position;
+    }
+    if (updates.scale) {
+        merged.scale = current.scale
+            ? { ...current.scale, ...updates.scale }
+            : updates.scale;
+    }
+    pendingSurfaceUpdates.set(surfaceId, merged);
 }
 
 interface TimelineState {
@@ -192,13 +217,28 @@ export const useTimelineStore = create<TimelineState>()(
                     isPlaying: data.isPlaying || false
                 });
 
-                // 2. Rebuild the GSAP timeline with new keyframes
-                get().updateTimeline(updateSurface);
-
-                // 3. Re-seek the new timeline to the target time
+                // 2. Rebuild and seek without writing to the project store on
+                // every tween. GSAP renders all tweens up to the target time,
+                // which previously produced one persisted store write each.
+                const targetTime = data.currentTime || 0;
+                pendingSurfaceUpdates.clear();
+                isRestoringScene = true;
+                try {
+                    get().updateTimeline(updateSurface);
+                    get().timeline?.time(targetTime);
+                } finally {
+                    isRestoringScene = false;
+                }
                 const newTimeline = get().timeline;
+
+                // 3. Apply the final value of every animated track in one write.
+                if (pendingSurfaceUpdates.size > 0) {
+                    const updates = Object.fromEntries(pendingSurfaceUpdates);
+                    pendingSurfaceUpdates.clear();
+                    useProjectStore.getState().applySurfaceUpdates(updates);
+                }
+
                 if (newTimeline) {
-                    newTimeline.time(data.currentTime || 0);
                     if (data.isPlaying) {
                         newTimeline.play();
                     } else {
@@ -251,14 +291,14 @@ export const useTimelineStore = create<TimelineState>()(
                                 // Bridge to project store
                                 // Split propertyPath (e.g., "position.x" -> ["position", "x"])
                                 const parts = propertyPath.split(".");
-                                if (parts.length === 2) {
-                                    // Handle object properties like position: {x, y}
-                                    updateSurface(surfaceId, {
-                                        [parts[0]]: { [parts[1]]: target.value }
-                                    });
+                                const updates = parts.length === 2
+                                    ? { [parts[0]]: { [parts[1]]: target.value } }
+                                    : { [propertyPath]: target.value };
+
+                                if (isRestoringScene) {
+                                    queueSurfaceUpdate(surfaceId, updates);
                                 } else {
-                                    // Handle simple properties like opacity
-                                    updateSurface(surfaceId, { [propertyPath]: target.value });
+                                    updateSurface(surfaceId, updates);
                                 }
                             }
                         }, prevKf.time);

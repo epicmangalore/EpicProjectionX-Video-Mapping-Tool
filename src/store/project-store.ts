@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { generateId } from "@/lib/utils";
 import { idbStorage } from "@/store/idb-storage";
 import { getShapePreset } from "@/lib/shapes/ShapeLibrary";
+import { beginSceneTransition } from "@/lib/scene-transition";
 import type { Keyframe } from "./timeline-store";
 import type { EffectSettings } from "./effects-store";
 import { useTimelineStore } from "./timeline-store";
@@ -188,6 +189,7 @@ interface ProjectStore {
     batchAddSurfaces: (surfaces: Partial<Surface>[]) => void;
     updateSurface: (id: string, updates: Partial<Surface>) => void;
     updateSurfaces: (ids: string[], updates: Partial<Surface>) => void;
+    applySurfaceUpdates: (updates: Record<string, Partial<Surface>>) => void;
     deleteSurface: (id: string) => void;
     duplicateSurfaces: (ids: string[]) => void;
     updateActiveSceneSurfaces: (surfaces: Surface[]) => void;
@@ -259,6 +261,18 @@ interface HistoryState {
     scenes: Scene[];
     activeSceneId: string | null;
     projectSettings: ProjectSettings;
+}
+
+/**
+ * Merge surface updates without clobbering sibling nested properties.
+ * Timeline tracks update `position.x` / `scale.x` independently, so a shallow
+ * merge would drop the matching `y` value on every animation frame.
+ */
+function mergeSurfaceUpdates(surface: Surface, updates: Partial<Surface>): Surface {
+    const merged = { ...surface, ...updates };
+    if (updates.position) merged.position = { ...surface.position, ...updates.position };
+    if (updates.scale) merged.scale = { ...surface.scale, ...updates.scale };
+    return merged;
 }
 
 const defaultProjectSettings: ProjectSettings = {
@@ -594,10 +608,9 @@ export const useProjectStore = create<ProjectStore>()(
                         scene.id === activeSceneId
                             ? {
                                 ...scene,
-                                surfaces: scene.surfaces.map((s) => {
-                                    if (s.id !== id) return s;
-                                    return { ...s, ...updates };
-                                }),
+                                surfaces: scene.surfaces.map((s) =>
+                                    s.id === id ? mergeSurfaceUpdates(s, updates) : s
+                                ),
                                 updatedAt: Date.now(),
                             }
                             : scene
@@ -629,8 +642,28 @@ export const useProjectStore = create<ProjectStore>()(
                             ? {
                                 ...scene,
                                 surfaces: scene.surfaces.map((s) =>
-                                    idSet.has(s.id) ? { ...s, ...updates } : s
+                                    idSet.has(s.id) ? mergeSurfaceUpdates(s, updates) : s
                                 ),
+                                updatedAt: Date.now(),
+                            }
+                            : scene
+                    ),
+                }));
+            },
+
+            applySurfaceUpdates: (updates) => {
+                const { activeSceneId } = get();
+                if (!activeSceneId) return;
+
+                set((state) => ({
+                    scenes: state.scenes.map(scene =>
+                        scene.id === activeSceneId
+                            ? {
+                                ...scene,
+                                surfaces: scene.surfaces.map((s) => {
+                                    const surfaceUpdates = updates[s.id];
+                                    return surfaceUpdates ? mergeSurfaceUpdates(s, surfaceUpdates) : s;
+                                }),
                                 updatedAt: Date.now(),
                             }
                             : scene
@@ -1112,6 +1145,11 @@ export const useProjectStore = create<ProjectStore>()(
                 const { scenes, activeSceneId } = get();
                 if (activeSceneId === id) return;
 
+                // Capture the outgoing frame before any state changes. The
+                // snapshot overlay must already be painted when the incoming
+                // scene first renders, otherwise the switch shows a hard cut.
+                beginSceneTransition(get().projectSettings.backgroundColor);
+
                 // 1. Save current timeline state to the OLD scene
                 const timelineState = useTimelineStore.getState();
                 const updatedScenes = scenes.map(scene => {
@@ -1128,7 +1166,16 @@ export const useProjectStore = create<ProjectStore>()(
                     return scene;
                 });
 
-                // 2. Load NEW scene state into the timeline store via the new sync action
+                // 2. Activate the new scene BEFORE restoring its timeline. The
+                // timeline seek applies keyframe values through updateSurface,
+                // which always targets the active scene.
+                set({
+                    scenes: updatedScenes,
+                    activeSceneId: id,
+                    selectedSurfaceIds: [], // Clear selection on switch
+                });
+
+                // 3. Load NEW scene state into the timeline store via the new sync action
                 const nextScene = updatedScenes.find(s => s.id === id);
                 if (nextScene) {
                     useTimelineStore.getState().loadSceneState({
@@ -1138,12 +1185,6 @@ export const useProjectStore = create<ProjectStore>()(
                         isPlaying: nextScene.isPlaying || false
                     }, get().updateSurface);
                 }
-
-                set({
-                    scenes: updatedScenes,
-                    activeSceneId: id,
-                    selectedSurfaceIds: [], // Clear selection on switch
-                });
             },
 
             // Helper methods
