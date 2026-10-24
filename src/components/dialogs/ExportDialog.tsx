@@ -42,7 +42,7 @@ export function ExportDialog({ isOpen, onClose }: ExportDialogProps) {
                     height: projectSettings.resolution.height
                 },
                 selectedScenes: selectedSceneIds.length > 0 ? selectedSceneIds : undefined,
-                projectName: `ProjectionX_${currentProjectId || 'Export'}`
+                projectName: `ProjectX_${currentProjectId || 'Export'}`
             };
 
             const scenesToExport = selectedSceneIds.length > 0

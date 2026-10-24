@@ -27,7 +27,7 @@ export interface DBSetting {
     value: string;
 }
 
-class ProjectionXDB extends Dexie {
+class ProjectXDB extends Dexie {
     files!: Table<FileRecord>;
     projects!: Table<DBProject>;
     assets!: Table<DBAsset>;
@@ -57,4 +57,4 @@ class ProjectionXDB extends Dexie {
     }
 }
 
-export const db = new ProjectionXDB();
+export const db = new ProjectXDB();

@@ -153,7 +153,7 @@ function createWindow() {
                     label: 'Documentation',
                     click: async () => {
                         const { shell } = require('electron');
-                        await shell.openExternal('https://github.com/yourusername/projectionx');
+                        await shell.openExternal('https://github.com/epicmangalore/ProjectionX');
                     }
                 }
             ]

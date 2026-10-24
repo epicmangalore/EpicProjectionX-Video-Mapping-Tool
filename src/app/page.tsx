@@ -257,7 +257,7 @@ export default function Home() {
                 >
                     <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as any}>
                         <img
-                            src="/editor-logo.png"
+                            src="/projectx-logo.svg"
                             alt="ProjectX by EPIC"
                             className="h-8 w-auto pointer-events-none" // Adjust height to fit header
                         />

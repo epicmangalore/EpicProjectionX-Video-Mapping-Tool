@@ -87,7 +87,7 @@ export const EASING_MAP: Record<string, { inInfluence: number; outInfluence: num
 };
 
 /**
- * Blend mode mapping from ProjectionX to After Effects
+ * Blend mode mapping from ProjectX to After Effects
  */
 export const BLEND_MODE_MAP: Record<string, string> = {
     "normal": "NORMAL",

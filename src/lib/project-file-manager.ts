@@ -119,7 +119,7 @@ async function requestSaveFileHandle(suggestedName: string): Promise<SaveFilePic
             suggestedName,
             types: [
                 {
-                    description: "ProjectionX Project File",
+                    description: "ProjectX Project File",
                     accept: {
                         "application/zip": [FILE_EXTENSION],
                     },

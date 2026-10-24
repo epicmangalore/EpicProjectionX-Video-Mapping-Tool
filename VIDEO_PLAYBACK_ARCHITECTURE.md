@@ -2,7 +2,7 @@
 
 ## Critical Requirements for Video Playback
 
-This document outlines the essential architecture for video playback in ProjectionX to prevent blank screens and playback failures.
+This document outlines the essential architecture for video playback in ProjectX to prevent blank screens and playback failures.
 
 ## 1. Global Video Container
 

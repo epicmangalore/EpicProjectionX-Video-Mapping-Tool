@@ -26,7 +26,7 @@ function processDirectory(dir) {
             content = content.replace(/(href|src)="\/_next\//g, '$1="_next/');
             content = content.replace(/(href|src)="\/favicon\.ico"/g, '$1="favicon.ico"');
             content = content.replace(/(href|src)="\/logo\.png"/g, '$1="logo.png"');
-            content = content.replace(/(href|src)="\/editor-logo\.png"/g, '$1="editor-logo.png"');
+            content = content.replace(/(href|src)="\/projectx-logo\.svg"/g, '$1="projectx-logo.svg"');
             content = content.replace(/(href|src)="\/manifest\.json"/g, '$1="manifest.json"');
 
             // Handle font preloads

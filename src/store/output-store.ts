@@ -53,7 +53,7 @@ export const useOutputStore = create<OutputState>((set, get) => ({
         const { resolution } = get();
         const outputWindow = window.open(
             "/output",
-            "ProjectionX Output",
+            "ProjectX Output",
             `width=${resolution.width},height=${resolution.height},menubar=no,toolbar=no,location=no,status=no`
         );
 
