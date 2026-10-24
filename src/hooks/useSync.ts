@@ -8,7 +8,7 @@ import { useAudioStore } from "@/store/audio-store";
 import { useTimelineStore } from "@/store/timeline-store";
 import { beginSceneTransition } from "@/lib/scene-transition";
 
-const SYNC_CHANNEL = "projectionx_sync";
+const SYNC_CHANNEL = "projectx_sync";
 
 export function useSync() {
     const isOutput = useOutputStore((state) => state.isOutput);

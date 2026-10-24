@@ -1,9 +1,10 @@
 import { StateStorage } from "zustand/middleware";
-import { db } from "@/lib/db";
+import { db, dbReady } from "@/lib/db";
 
 export const idbStorage: StateStorage = {
     getItem: async (name: string): Promise<string | null> => {
         if (typeof window === 'undefined') return null;
+        await dbReady;
         try {
             const entry = await db.settings.get(name);
             return entry?.value || null;
@@ -14,6 +15,7 @@ export const idbStorage: StateStorage = {
     },
     setItem: async (name: string, value: string): Promise<void> => {
         if (typeof window === 'undefined') return;
+        await dbReady;
         try {
             await db.settings.put({ key: name, value });
         } catch (error: unknown) {
@@ -27,6 +29,7 @@ export const idbStorage: StateStorage = {
     },
     removeItem: async (name: string): Promise<void> => {
         if (typeof window === 'undefined') return;
+        await dbReady;
         try {
             await db.settings.delete(name);
         } catch (error) {

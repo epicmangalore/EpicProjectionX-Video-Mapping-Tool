@@ -321,7 +321,7 @@ export const useGroupStore = create<GroupStore>()(
             },
         }),
         {
-            name: "projectionx-groups",
+            name: "projectx-groups",
             partialize: (state) => ({
                 groups: state.groups,
             }),

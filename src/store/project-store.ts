@@ -1688,7 +1688,7 @@ export const useProjectStore = create<ProjectStore>()(
             setHasHydrated: (state) => set({ _hasHydrated: state }),
         }),
         {
-            name: 'projectionx-project-storage',
+            name: 'projectx-project-storage',
             storage: createJSONStorage(() => idbStorage),
             onRehydrateStorage: () => (state) => {
                 state?.setHasHydrated(true);

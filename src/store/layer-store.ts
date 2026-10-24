@@ -96,7 +96,7 @@ export const useLayerStore = create<LayerState>()(
             }))
         }),
         {
-            name: "projectionx-layer-storage"
+            name: "projectx-layer-storage"
         }
     )
 );

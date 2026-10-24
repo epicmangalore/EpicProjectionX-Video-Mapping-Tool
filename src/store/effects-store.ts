@@ -89,7 +89,7 @@ export const useEffectsStore = create<EffectsState>()(
                 set({ globalEffects: { ...defaultEffectSettings } }),
         }),
         {
-            name: 'projectionx-effects-storage',
+            name: 'projectx-effects-storage',
         }
     )
 );

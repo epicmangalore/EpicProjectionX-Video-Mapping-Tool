@@ -1,7 +1,7 @@
 // Storage Cleanup Utility
 // Run this in the browser console to clear old video files from IndexedDB
 
-import { db } from '@/lib/db';
+import { db, dbReady } from '@/lib/db';
 
 export async function getStorageInfo() {
     if ('storage' in navigator && 'estimate' in navigator.storage) {
@@ -16,6 +16,7 @@ export async function getStorageInfo() {
 }
 
 export async function clearOldFiles(daysOld = 7) {
+    await dbReady;
     const cutoffTime = Date.now() - (daysOld * 24 * 60 * 60 * 1000);
     const oldFiles = await db.files.where('timestamp').below(cutoffTime).toArray();
 
@@ -30,6 +31,7 @@ export async function clearOldFiles(daysOld = 7) {
 }
 
 export async function clearAllFiles() {
+    await dbReady;
     const count = await db.files.count();
     console.log(`Clearing ${count} files from IndexedDB...`);
     await db.files.clear();

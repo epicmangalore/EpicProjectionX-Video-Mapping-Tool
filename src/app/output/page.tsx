@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/storage-migration";
 import { useEffect } from "react";
 import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
 import { useSync } from "@/hooks/useSync";

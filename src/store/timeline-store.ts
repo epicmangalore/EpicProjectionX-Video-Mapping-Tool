@@ -325,7 +325,7 @@ export const useTimelineStore = create<TimelineState>()(
             },
         }),
         {
-            name: 'projectionx-timeline-storage',
+            name: 'projectx-timeline-storage',
             partialize: (state) => ({
                 duration: state.duration,
                 loop: state.loop,

@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/storage-migration";
 import { ProjectionCanvas } from "@/components/canvas/ProjectionCanvas";
 import { SurfaceProperties } from "@/components/panels/SurfaceProperties";
 import { TimelinePanel } from "@/components/panels/TimelinePanel";
